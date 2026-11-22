@@ -119,16 +119,17 @@ vertical resolution = 480
 
 [tweaks]
 training save = prompt
+display = fit
 ```
 
 | Setting | What it does |
 | --- | --- |
-| `full screen` | `true` to play full screen, `false` (the default) for a window. |
-| `horizontal resolution`, `vertical resolution` | The screen mode. The game runs at 640x480; 800x600 and 1024x768 work with the `-debug` option. |
+| `full screen` | `true` to play full screen at your desktop's resolution, `false` (the default) for a window. |
+| `horizontal resolution`, `vertical resolution` | The window's size when it opens: any size, 640x480 by default. You can resize the window afterwards. With `display = original`, the screen mode instead: 640x480, or 800x600 and 1024x768 with the `-debug` option. |
 | `diskpath` | Your Rock Raiders folder, so you can start the game from anywhere. Empty means "the folder I was started in". |
 | `savepath` | Where your saves go. Empty keeps them in the game's own `Data\Saves` folder, like the original. |
 | `3d device` | Leave empty to pick the best one automatically: your graphics card when it can, or a software renderer otherwise. `Miniwin driver (SDL3 GPU HAL)` forces the graphics card and `Miniwin driver (Miniwin Emulation)` forces the software renderer. |
-| `training save` | See [Improvements](#small-improvements-over-the-original) below. |
+| `training save`, `display` | See [Improvements](#small-improvements-over-the-original) below. |
 
 The original game's command-line options still work too: `-window`,
 `-nosound`, `-best` (skip the settings and pick a screen mode automatically)
@@ -143,6 +144,14 @@ can switch them off.
   finishing a training mission, so quitting threw that progress away without
   warning. lrr-portable opens the Save Game screen when you finish one. Don't
   want it? Set `training save = off`.
+- **Any window size, and a sharper 3D view.** Resize the window as you like,
+  or play full screen at your desktop's resolution. The game's 640x480
+  picture fills as much of the window as it can, with black bars at the
+  sides or top and bottom when the window isn't 4:3. The 3D view is drawn
+  at the window's resolution on your graphics card, and the menus and
+  panels are scaled up: pixel-sharp at exact multiples such as 1280x960,
+  smoothed at other sizes. Want the original's fixed 640x480 window? Set
+  `display = original`.
 - **Skip the LEGO logo movie** with a key or click, like the other intro
   movies.
 - **Closing the window quits** from menus, movies and loading screens,

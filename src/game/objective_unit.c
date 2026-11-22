@@ -331,6 +331,10 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
     snprintf(buff, sizeof(buff),
             // STRING: LEGORR 0x004a81e0
             "ObjectiveImage%ix%i", screenWidth, screenHeight);
+    /* [divergence:layout-fallback] Lego.cfg lays the interface out only for
+     * 640x480; another mode reads that layout instead of finding none. */
+    if (block_get_strptr(config, string_path_join(gameName, levelName, buff, NULL)) == NULL)
+        snprintf(buff, sizeof(buff), "ObjectiveImage%ix%i", 640, 480);
     if ((str = block_get_strptr(config, string_path_join(gameName, levelName,
                                                          buff, NULL)))) {
         s = string_duplicate(str);
@@ -355,6 +359,9 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
     snprintf(buff, sizeof(buff),
             // STRING: LEGORR 0x004a81c4
             "ObjectiveAcheivedImage%ix%i", screenWidth, screenHeight);
+    /* [divergence:layout-fallback] As ObjectiveImage. */
+    if (block_get_strptr(config, string_path_join(gameName, levelName, buff, NULL)) == NULL)
+        snprintf(buff, sizeof(buff), "ObjectiveAcheivedImage%ix%i", 640, 480);
     if ((str = block_get_strptr(config, string_path_join(gameName, levelName,
                                                          buff, NULL)))) {
         s = string_duplicate(str);
@@ -396,6 +403,9 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
     snprintf(buff, sizeof(buff),
             // STRING: LEGORR 0x004a8190
             "ObjectiveFailedImage%ix%i", screenWidth, screenHeight);
+    /* [divergence:layout-fallback] As ObjectiveImage. */
+    if (block_get_strptr(config, string_path_join(gameName, levelName, buff, NULL)) == NULL)
+        snprintf(buff, sizeof(buff), "ObjectiveFailedImage%ix%i", 640, 480);
     if ((str = block_get_strptr(config, string_path_join(gameName, levelName,
                                                          buff, NULL)))) {
         s = string_duplicate(str);

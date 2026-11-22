@@ -3496,10 +3496,12 @@ void front_play_movie(struct G98CMovie* movie, int skippable)
     float timer;
     RECT rect;
 
+    /* [divergence:movie-fill] The movie fills the screen in any mode; the
+     * original drew it at 640x480, in the top-left corner of a larger mode. */
     rect.left = 0;
     rect.top = 0;
-    rect.right = 640;
-    rect.bottom = 480;
+    rect.right = s_display_w;
+    rect.bottom = s_display_h;
     timer = 0.0f;
     if (movie_update(movie, 1.0f, (struct RECT*)&rect)) {
         while (1) {

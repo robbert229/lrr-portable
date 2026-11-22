@@ -867,11 +867,17 @@ int lego_game_config_init(void)
 
                 // STRING: LEGORR 0x004a3a08
                 snprintf(buff, sizeof(buff), "NextButton%ix%i", display_width_get(), display_height_get());
+                /* [divergence:layout-fallback] As Panels: the 640x480 layout. */
+                if (block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main", buff, 0)) == NULL)
+                    snprintf(buff, sizeof(buff), "NextButton%ix%i", 640, 480);
                 imageNameStr = block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main", buff, 0));
                 if (imageNameStr != NULL && (legoGlobs_NextButtonImage = image_load_bmp_scaled(imageNameStr, 0, 0)) != NULL) {
                     image_setup_trans(legoGlobs_NextButtonImage, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
                     // STRING: LEGORR 0x004a39f4
                     snprintf(buff, sizeof(buff), "NextButtonPos%ix%i", display_width_get(), display_height_get());
+                    /* [divergence:layout-fallback] As Panels: the 640x480 layout. */
+                    if (block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main", buff, 0)) == NULL)
+                        snprintf(buff, sizeof(buff), "NextButtonPos%ix%i", 640, 480);
                     if ((posString = block_get_str_copy(cfgStr, string_path_join(s_engine_config_root, "Main", buff, 0))) != NULL) {
                         if (sound_variant_split(posString, posArgvStr, ",") == 2) {
                             legoGlobs_NextButtonPos[0] = (float)atof(posArgvStr[0]);
@@ -882,11 +888,17 @@ int lego_game_config_init(void)
                 }
                 // STRING: LEGORR 0x004a39e4
                 snprintf(buff, sizeof(buff), "BackButton%ix%i", display_width_get(), display_height_get());
+                /* [divergence:layout-fallback] As Panels: the 640x480 layout. */
+                if (block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main", buff, 0)) == NULL)
+                    snprintf(buff, sizeof(buff), "BackButton%ix%i", 640, 480);
                 imageNameStr = block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main", buff, 0));
                 if (imageNameStr != NULL && (legoGlobs_BackButtonImage = image_load_bmp_scaled(imageNameStr, 0, 0)) != NULL) {
                     image_setup_trans(legoGlobs_BackButtonImage, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
                     // STRING: LEGORR 0x004a39d0
                     snprintf(buff, sizeof(buff), "BackButtonPos%ix%i", display_width_get(), display_height_get());
+                    /* [divergence:layout-fallback] As Panels: the 640x480 layout. */
+                    if (block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main", buff, 0)) == NULL)
+                        snprintf(buff, sizeof(buff), "BackButtonPos%ix%i", 640, 480);
                     if ((posString = block_get_str_copy(cfgStr, string_path_join(s_engine_config_root, "Main", buff, 0))) != NULL) {
                         if (sound_variant_split(posString, posArgvStr, ",") == 2) {
                             legoGlobs_BackButtonPos[0] = (float)atof(posArgvStr[0]);
@@ -9019,6 +9031,10 @@ void lego_panels_config_entry_apply(struct BlockRec* config,
 
     // STRING: LEGORR 0x004a47d8
     snprintf(buff, sizeof(buff), "Panels%ix%i", screenWidth, screenHeight);
+    /* [divergence:layout-fallback] Lego.cfg lays the interface out only for
+     * 640x480; another mode reads that layout instead of finding none. */
+    if (block_subgroup(config, string_path_join(s_engine_config_root, buff, 0)) == NULL)
+        snprintf(buff, sizeof(buff), "Panels%ix%i", 640, 480);
     for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, buff, 0));
          arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
         if (ui_panel_name_table_lookup(arrayItem->key, &panelType)) {
@@ -9054,6 +9070,9 @@ void lego_panel_button_layout_config_load(struct BlockRec* config,
 
     // STRING: LEGORR 0x004a47e4
     snprintf(buff, sizeof(buff), "Buttons%ix%i", screenWidth, screenHeight);
+    /* [divergence:layout-fallback] As Panels: the 640x480 layout. */
+    if (block_subgroup(config, string_path_join(s_engine_config_root, buff, 0)) == NULL)
+        snprintf(buff, sizeof(buff), "Buttons%ix%i", 640, 480);
     if ((arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, buff, 0))) != NULL) {
         do {
             if (ui_panel_name_table_lookup(arrayItem->key, (int*)&panelType)) {

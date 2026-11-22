@@ -1,0 +1,251 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sat, 21 Nov 2026 23:09:33 -0800
+Subject: [PATCH] feat(miniwin): filter 2D images by whether the fit's scale is
+ whole
+
+2D images were drawn nearest-neighbour whenever they were scaled up. At a
+scale that is not a whole number that draws pixels of uneven widths, which
+shimmer and make text ragged. Images, and the render target's present to the
+window, are now nearest-neighbour when the scale is a whole number
+(Miniwin_IsIntegerScale), so every pixel stays square and sharp, and
+bilinear otherwise.
+
+Filtered, an image's edge pixels would blend in the texels just outside its
+source rectangle, such as a font sheet's next glyph or grid lines. The SDL
+GPU backend therefore maps the centres of the rectangle's edge texels to the
+centres of its edge pixels, so nothing outside it is sampled.
+
+This changes how scaled 2D images look in every client, Lego Island's
+included: smooth rather than blocky at fractional scales.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/include/miniwin/miniwinpresentation.h b/miniwin/include/miniwin/miniwinpresentation.h
+index 02d55c8..d33bb2b 100644
+--- a/miniwin/include/miniwin/miniwinpresentation.h
++++ b/miniwin/include/miniwin/miniwinpresentation.h
+@@ -13,6 +13,9 @@ struct SDL_Window;
+ //
+ // - The 3D device renders at the window's pixel size, unless
+ //   Miniwin_SetRenderResolution asks for the virtual display's size.
++// - 2D images are scaled through the fit: nearest-neighbour when the scale
++//   is an exact integer, so each pixel stays square and sharp, and bilinear
++//   otherwise, so pixels of uneven widths do not shimmer.
+ // - The mouse messages, GetCursorPos and SetCursorPos use virtual display
+ //   coordinates. A point over a bar lies outside the virtual display: its
+ //   coordinates are negative, or past the display's width or height.
+@@ -30,6 +33,10 @@ struct ViewportTransform {
+ // centred.
+ ViewportTransform Miniwin_FitTransform(int virtualW, int virtualH, int windowW, int windowH);
+ 
++// Whether a fit's scale is an exact whole number (1, 2, 3, ...), for which
++// nearest-neighbour scaling is exact.
++bool Miniwin_IsIntegerScale(float scale);
++
+ // Where the 3D device renders.
+ enum class MiniwinRenderResolution {
+ 	// The window's pixels: the 3D view at the window's resolution (or the
+diff --git a/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp b/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp
+index d2ca55c..1ebe128 100644
+--- a/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp
++++ b/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp
+@@ -314,6 +314,18 @@ Direct3DRMSDL3GPURenderer::Direct3DRMSDL3GPURenderer(
+ 	m_virtualWidth = width;
+ 	m_virtualHeight = height;
+ 
++	SDL_GPUSamplerCreateInfo linearInfo = {};
++	linearInfo.min_filter = SDL_GPU_FILTER_LINEAR;
++	linearInfo.mag_filter = SDL_GPU_FILTER_LINEAR;
++	linearInfo.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_LINEAR;
++	linearInfo.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
++	linearInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
++	linearInfo.address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
++	m_uiLinearSampler = SDL_CreateGPUSampler(m_device, &linearInfo);
++	if (!m_uiLinearSampler) {
++		SDL_LogError(LOG_CATEGORY_MINIWIN, "Failed to create sampler: %s", SDL_GetError());
++	}
++
+ 	SDL_Surface* dummySurface = SDL_CreateSurface(1, 1, SDL_PIXELFORMAT_RGBA32);
+ 	if (!dummySurface) {
+ 		SDL_LogError(LOG_CATEGORY_MINIWIN, "Failed to create surface: %s", SDL_GetError());
+@@ -362,6 +374,9 @@ Direct3DRMSDL3GPURenderer::~Direct3DRMSDL3GPURenderer()
+ 	}
+ 	SDL_ReleaseGPUSampler(m_device, m_sampler);
+ 	SDL_ReleaseGPUSampler(m_device, m_uiSampler);
++	if (m_uiLinearSampler) {
++		SDL_ReleaseGPUSampler(m_device, m_uiLinearSampler);
++	}
+ 	if (m_dummyTexture) {
+ 		SDL_ReleaseGPUTexture(m_device, m_dummyTexture);
+ 	}
+@@ -945,7 +960,8 @@ void Direct3DRMSDL3GPURenderer::Flip()
+ 
+ 	// The render target fills the window: it has the window's size, or its
+ 	// aspect at a lower resolution (Miniwin_RenderSize), and the window may
+-	// have been resized since the target was.
++	// have been resized since the target was. A target shown at a whole
++	// multiple of its size keeps square pixels; any other size is filtered.
+ 	SDL_GPUBlitInfo blit = {};
+ 	blit.source.texture = m_transferTexture;
+ 	blit.source.w = m_width;
+@@ -956,7 +972,9 @@ void Direct3DRMSDL3GPURenderer::Flip()
+ 	blit.load_op = SDL_GPU_LOADOP_DONT_CARE;
+ 	blit.flip_mode = SDL_FLIP_NONE;
+ 	bool sameSize = blit.destination.w == (Uint32) m_width && blit.destination.h == (Uint32) m_height;
+-	blit.filter = sameSize ? SDL_GPU_FILTER_NEAREST : SDL_GPU_FILTER_LINEAR;
++	bool wholeMultiple = Miniwin_IsIntegerScale((float) blit.destination.w / m_width) &&
++						 Miniwin_IsIntegerScale((float) blit.destination.h / m_height);
++	blit.filter = sameSize || wholeMultiple ? SDL_GPU_FILTER_NEAREST : SDL_GPU_FILTER_LINEAR;
+ 	blit.cycle = false;
+ 	SDL_BlitGPUTexture(m_cmdbuf, &blit);
+ 	SDL_SubmitGPUCommandBuffer(m_cmdbuf);
+@@ -986,6 +1004,7 @@ void Direct3DRMSDL3GPURenderer::Draw2DImage(
+ 
+ 	SDL_GPUTexture* tex;
+ 	SDL_Rect expandedDstRect;
++	bool wholeScale = true;
+ 	if (textureId == NO_TEXTURE_ID) {
+ 		expandedDstRect = dstRect;
+ 		tex = m_dummyTexture;
+@@ -1002,15 +1021,47 @@ void Direct3DRMSDL3GPURenderer::Draw2DImage(
+ 			static_cast<int>(std::round(static_cast<float>(surface->m_surface->w) * scaleX)),
+ 			static_cast<int>(std::round(static_cast<float>(surface->m_surface->h) * scaleY)),
+ 		};
++		wholeScale = Miniwin_IsIntegerScale(scaleX * m_viewportTransform.scale) &&
++					 Miniwin_IsIntegerScale(scaleY * m_viewportTransform.scale);
++	}
++
++	if (!wholeScale && m_uiLinearSampler) {
++		// Filtered, the image's edge pixels would blend in the texels just
++		// outside the source rectangle: the next glyph of a font, or a
++		// sheet's grid lines. So the centres of its edge texels go to the
++		// centres of the rectangle's edge pixels, and nothing outside it is
++		// ever sampled.
++		auto surface = static_cast<DirectDrawSurfaceImpl*>(m_textures[textureId].texture->m_surface);
++		auto axis = [](int pixels, int texels, int srcOffset, int pixelStart, float& origin, float& scale) {
++			if (pixels > 1 && texels > 1) {
++				scale = static_cast<float>(pixels - 1) / (texels - 1);
++				origin = pixelStart + 0.5f - (srcOffset + 0.5f) * scale;
++			}
++			else {
++				scale = static_cast<float>(pixels) / texels;
++				origin = pixelStart - srcOffset * scale;
++			}
++		};
++		float originX, originY, texelScaleX, texelScaleY;
++		axis(x2 - x1, srcRect.w, srcRect.x, x1, originX, texelScaleX);
++		axis(y2 - y1, srcRect.h, srcRect.y, y1, originY, texelScaleY);
++		D3DVALUE matrix[4][4] = {
++			{surface->m_surface->w * texelScaleX, 0, 0, 0},
++			{0, surface->m_surface->h * texelScaleY, 0, 0},
++			{0, 0, 1, 0},
++			{originX, originY, 0, 1}
++		};
++		memcpy(m_uniforms.worldViewMatrix, matrix, sizeof(matrix));
++	}
++	else {
++		Create2DTransformMatrix(
++			expandedDstRect,
++			m_viewportTransform.scale,
++			m_viewportTransform.offsetX,
++			m_viewportTransform.offsetY,
++			m_uniforms.worldViewMatrix
++		);
+ 	}
+-
+-	Create2DTransformMatrix(
+-		expandedDstRect,
+-		m_viewportTransform.scale,
+-		m_viewportTransform.offsetX,
+-		m_viewportTransform.offsetY,
+-		m_uniforms.worldViewMatrix
+-	);
+ 
+ 	CreateOrthographicProjection((float) m_width, (float) m_height, m_uniforms.projection);
+ 
+@@ -1024,7 +1075,13 @@ void Direct3DRMSDL3GPURenderer::Draw2DImage(
+ 	m_fragmentShadingData.shininess = 0.0f;
+ 	m_fragmentShadingData.useTexture = 1;
+ 
+-	SDL_GPUTextureSamplerBinding samplerBinding = {tex, m_uiSampler};
++	// Nearest-neighbour at a whole-number scale keeps every pixel square;
++	// at any other scale it would draw pixels of uneven widths, so filter.
++	SDL_GPUSampler* sampler = m_uiSampler;
++	if (!wholeScale && m_uiLinearSampler) {
++		sampler = m_uiLinearSampler;
++	}
++	SDL_GPUTextureSamplerBinding samplerBinding = {tex, sampler};
+ 	SDL_BindGPUFragmentSamplers(m_renderPass, 0, &samplerBinding, 1);
+ 	SDL_PushGPUVertexUniformData(m_cmdbuf, 0, &m_uniforms, sizeof(m_uniforms));
+ 	SDL_PushGPUFragmentUniformData(m_cmdbuf, 0, &m_fragmentShadingData, sizeof(m_fragmentShadingData));
+diff --git a/miniwin/src/d3drm/backends/software/renderer.cpp b/miniwin/src/d3drm/backends/software/renderer.cpp
+index 764d93b..7142ccf 100644
+--- a/miniwin/src/d3drm/backends/software/renderer.cpp
++++ b/miniwin/src/d3drm/backends/software/renderer.cpp
+@@ -1058,6 +1058,14 @@ void Direct3DRMSoftwareRenderer::Clear(float r, float g, float b)
+ 
+ void Direct3DRMSoftwareRenderer::Flip()
+ {
++	// The picture fills the window: square pixels at a whole multiple of
++	// its size, filtered at any other.
++	int outputWidth = m_width;
++	int outputHeight = m_height;
++	SDL_GetCurrentRenderOutputSize(m_renderer, &outputWidth, &outputHeight);
++	bool wholeMultiple = Miniwin_IsIntegerScale((float) outputWidth / m_width) &&
++						 Miniwin_IsIntegerScale((float) outputHeight / m_height);
++	SDL_SetTextureScaleMode(m_uploadBuffer, wholeMultiple ? SDL_SCALEMODE_NEAREST : SDL_SCALEMODE_LINEAR);
+ 	SDL_UpdateTexture(m_uploadBuffer, nullptr, m_renderedImage->pixels, m_renderedImage->pitch);
+ 	SDL_RenderTexture(m_renderer, m_uploadBuffer, nullptr, nullptr);
+ 	SDL_RenderPresent(m_renderer);
+@@ -1090,7 +1098,10 @@ void Direct3DRMSoftwareRenderer::Draw2DImage(
+ 		return;
+ 	}
+ 
+-	bool isUpscaling = centeredRect.w > srcRect.w || centeredRect.h > srcRect.h;
++	// Nearest-neighbour at a whole-number scale keeps every pixel square;
++	// at any other scale it would draw pixels of uneven widths, so filter.
++	bool wholeScale = Miniwin_IsIntegerScale((float) centeredRect.w / srcRect.w) &&
++					  Miniwin_IsIntegerScale((float) centeredRect.h / srcRect.h);
+ 
+ 	SDL_Surface* surface = m_textures[textureId].cached;
+ 	SDL_UnlockSurface(surface);
+@@ -1099,7 +1110,7 @@ void Direct3DRMSoftwareRenderer::Draw2DImage(
+ 		&srcRect,
+ 		m_renderedImage,
+ 		&centeredRect,
+-		isUpscaling ? SDL_SCALEMODE_NEAREST : SDL_SCALEMODE_LINEAR
++		wholeScale ? SDL_SCALEMODE_NEAREST : SDL_SCALEMODE_LINEAR
+ 	);
+ 	SDL_LockSurface(surface);
+ }
+diff --git a/miniwin/src/ddraw/presentation.cpp b/miniwin/src/ddraw/presentation.cpp
+index f018653..35a97ea 100644
+--- a/miniwin/src/ddraw/presentation.cpp
++++ b/miniwin/src/ddraw/presentation.cpp
+@@ -42,6 +42,12 @@ ViewportTransform Miniwin_FitTransform(int virtualW, int virtualH, int windowW,
+ 	return {scale, offsetX, offsetY};
+ }
+ 
++bool Miniwin_IsIntegerScale(float scale)
++{
++	float whole = std::round(scale);
++	return whole >= 1.0f && std::fabs(scale - whole) < 1.0e-3f;
++}
++
+ void Miniwin_SetRenderResolution(MiniwinRenderResolution resolution)
+ {
+ 	g_renderResolution = resolution;
+diff --git a/miniwin/src/internal/d3drmrenderer_sdl3gpu.h b/miniwin/src/internal/d3drmrenderer_sdl3gpu.h
+index b84717d..90c3936 100644
+--- a/miniwin/src/internal/d3drmrenderer_sdl3gpu.h
++++ b/miniwin/src/internal/d3drmrenderer_sdl3gpu.h
+@@ -199,6 +199,8 @@ class Direct3DRMSDL3GPURenderer : public Direct3DRMRenderer {
+ 	SDL_GPUBuffer* m_vertexBuffer = nullptr;
+ 	SDL_GPUSampler* m_sampler;
+ 	SDL_GPUSampler* m_uiSampler;
++	// 2D images at a scale that is not a whole number (Miniwin_IsIntegerScale).
++	SDL_GPUSampler* m_uiLinearSampler = nullptr;
+ 	SDL_GPUCommandBuffer* m_cmdbuf = nullptr;
+ 	SDL_GPURenderPass* m_renderPass = nullptr;
+ 	SDL_GPUFence* m_uploadFence = nullptr;
