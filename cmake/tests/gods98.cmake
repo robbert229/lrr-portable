@@ -69,3 +69,6 @@ lrr_unit_test(g98_024 SOURCES ${ENGINE_DIR}/test_g98_024.cpp LABELS g98_024)
 
 # Copy a retained-mode frame tree and verify walk termination and local transforms.
 lrr_unit_test(animclone SOURCES ${ENGINE_DIR}/test_animclone.cpp LABELS animclone)
+
+# Check packed BMP scanline strides and the default 256-entry palette.
+lrr_unit_test(g98_026 SOURCES ${ENGINE_DIR}/test_g98_026.cpp LABELS g98_026)
