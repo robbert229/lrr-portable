@@ -101,3 +101,8 @@ lrr_unit_test(camera_control SOURCES ${GAME_DIR}/test_camera_control.cpp LABELS 
 
 # Live object work eligibility and capacity of the teleport request queue.
 lrr_unit_test(legoobject_unit SOURCES ${GAME_DIR}/test_legoobject_unit.cpp LABELS legoobject_unit)
+
+# Spotlight dimmer transitions and movement limits relative to the light.
+lrr_unit_test(lighteffects SOURCES ${GAME_DIR}/test_lighteffects.cpp
+  WRAP render_object_set_packed_rgba_from_float_channels ddiscene_object_position_get
+  LABELS lighteffects)
