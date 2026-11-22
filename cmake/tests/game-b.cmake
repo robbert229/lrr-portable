@@ -27,3 +27,6 @@ lrr_unit_test(objinfo SOURCES ${GAME_DIR}/test_objinfo.cpp
 # Panel lookup, hit bounds, control geometry and slide state.
 lrr_unit_test(panel_unit SOURCES ${GAME_DIR}/test_panel_unit.cpp
   WRAP Image_DisplayScaled LABELS panel_unit)
+
+# Cursor name lookup and temporary override expiry.
+lrr_unit_test(pointer SOURCES ${GAME_DIR}/test_pointer.cpp LABELS pointer)
