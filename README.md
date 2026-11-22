@@ -69,6 +69,7 @@ full screen = false
 horizontal resolution = 640
 vertical resolution = 480
 3d device =
+window scale = 1
 ```
 
 Point `savepath` elsewhere to move the saves. Leave it empty to keep the
@@ -81,11 +82,17 @@ isle-portable does for Lego Island's `CONFIG.EXE`:
 - `full screen`: `true` for full screen, `false` (the default) for a window.
 - `horizontal resolution` and `vertical resolution`: the game's mode, 640x480.
   800x600 and 1024x768 work with `-debug`; any other size falls back to
-  640x480.
+  640x480, with a warning in the log. These set the size the game renders
+  at, not the window's size; for a bigger window use `window scale`.
 - `3d device`: a device as the original's dialog listed it, such as
   `Miniwin driver (Miniwin Emulation)` or
   `Miniwin driver (Miniwin Paletted Software)`. Empty picks the default
   device.
+- `window scale`: makes the window a whole multiple of the game's mode, 1 to
+  8. `2` shows the 640x480 game in a 1280x960 window, `3` in 1920x1440. The
+  game still renders at its mode; each frame is stretched with sharp,
+  nearest-neighbour pixels, and the mouse is scaled to match. Full screen
+  ignores it.
 
 Keys added after the file was written take their defaults. The shipped exe's
 `-best` flag still skips the settings and picks a mode by itself. `--ini <path>` reads another configuration file. Save

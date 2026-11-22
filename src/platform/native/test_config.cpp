@@ -83,12 +83,14 @@ int main(void)
     CHECK(text.find("full screen") != std::string::npos &&
               text.find("horizontal resolution") != std::string::npos &&
               text.find("vertical resolution") != std::string::npos &&
-              text.find("3d device") != std::string::npos,
+              text.find("3d device") != std::string::npos &&
+              text.find("window scale") != std::string::npos,
           "default: the display settings are written");
     const LRR_DisplayConfig* display = LRR_GetDisplayConfig();
     CHECK(!display->fullScreen && display->width == 640 && display->height == 480 &&
               display->device[0] == '\0',
           "default: a 640x480 window on the default device");
+    CHECK(display->windowScale == 1, "default: an unscaled window");
 
     /* A later run reads the file the user edited. */
     write_text(defaultIni, "[" LRR_CONFIG_SECTION "]\nsavepath = " + root + "/elsewhere/\n");
@@ -128,6 +130,14 @@ int main(void)
     CHECK(display->fullScreen, "display: full screen");
     CHECK(display->width == 800 && display->height == 600, "display: the resolution");
     CHECK(strcmp(display->device, "Miniwin driver (Miniwin Emulation)") == 0, "display: the device");
+
+    /* The window scale, and out-of-range values falling back to 1. */
+    write_text(custom, "[" LRR_CONFIG_SECTION "]\nWindow Scale = 3\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetDisplayConfig()->windowScale == 3, "scale: 3");
+    write_text(custom, "[" LRR_CONFIG_SECTION "]\nWindow Scale = 0\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetDisplayConfig()->windowScale == 1, "scale: 0 is 1");
+    write_text(custom, "[" LRR_CONFIG_SECTION "]\nWindow Scale = 99\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetDisplayConfig()->windowScale == 1, "scale: 99 is 1");
 
     /* A file without them takes the defaults again. */
     write_text(custom, "[" LRR_CONFIG_SECTION "]\nother = 1\n");

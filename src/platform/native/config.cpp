@@ -6,6 +6,7 @@
 
 #include <SDL3/SDL.h>
 #include <iniparser.h>
+#include <miniwin/windows.h>
 
 #include "gods98/files_native.h"
 
@@ -33,7 +34,7 @@
 
 namespace {
 
-constexpr LRR_DisplayConfig kDefaultDisplay = {false, 640, 480, ""};
+constexpr LRR_DisplayConfig kDefaultDisplay = {false, 640, 480, "", 1};
 
 LRR_DisplayConfig g_display = kDefaultDisplay;
 
@@ -65,6 +66,7 @@ dictionary* DefaultConfig(const std::string& prefPath)
     iniparser_set(dict, LRR_CONFIG_XRES, std::to_string(kDefaultDisplay.width).c_str());
     iniparser_set(dict, LRR_CONFIG_YRES, std::to_string(kDefaultDisplay.height).c_str());
     iniparser_set(dict, LRR_CONFIG_DEVICE, kDefaultDisplay.device);
+    iniparser_set(dict, LRR_CONFIG_WINDOWSCALE, std::to_string(kDefaultDisplay.windowScale).c_str());
 
 #ifdef __3DS__
     N3DS_SetupDefaultConfigOverrides(dict);
@@ -159,6 +161,18 @@ bool LRR_LoadConfig(const char* iniPath)
     g_display.width = iniparser_getint(dict, LRR_CONFIG_XRES, g_display.width);
     g_display.height = iniparser_getint(dict, LRR_CONFIG_YRES, g_display.height);
     SDL_strlcpy(g_display.device, iniparser_getstring(dict, LRR_CONFIG_DEVICE, ""), sizeof(g_display.device));
+    int windowScale = iniparser_getint(dict, LRR_CONFIG_WINDOWSCALE, g_display.windowScale);
+    if (windowScale < 1 || windowScale > LRR_CONFIG_MAX_WINDOW_SCALE) {
+        SDL_LogWarn(
+            SDL_LOG_CATEGORY_APPLICATION,
+            "Window Scale %d is not between 1 and %d; using 1",
+            windowScale,
+            LRR_CONFIG_MAX_WINDOW_SCALE
+        );
+        windowScale = 1;
+    }
+    g_display.windowScale = windowScale;
+    MiniwinSetWindowScale(g_display.windowScale);
     iniparser_freedict(dict);
 
 #ifdef __EMSCRIPTEN__

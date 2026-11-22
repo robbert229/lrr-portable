@@ -12,7 +12,9 @@
  * It also holds the display settings that the original's start-up "Mode
  * Selection" dialog (gods98 Init.c) asked for, as isle.ini holds the ones
  * Lego Island's CONFIG.EXE set: full screen or a window, the resolution,
- * and the 3D device. The port starts without the dialog. */
+ * and the 3D device. The port starts without the dialog. legorr:Window
+ * Scale, which the original did not have, enlarges the game's window by an
+ * integer factor. */
 #ifndef LEGORRR_PLATFORM_NATIVE_CONFIG_H
 #define LEGORRR_PLATFORM_NATIVE_CONFIG_H
 
@@ -28,6 +30,7 @@
 #define LRR_CONFIG_XRES "legorr:Horizontal Resolution"
 #define LRR_CONFIG_YRES "legorr:Vertical Resolution"
 #define LRR_CONFIG_DEVICE "legorr:3D Device"
+#define LRR_CONFIG_WINDOWSCALE "legorr:Window Scale"
 
 /* The display settings, in place of the dialog's choices. device is a 3D
  * device's description as DirectDraw.c lists it, e.g. "Miniwin driver
@@ -40,7 +43,14 @@ struct LRR_DisplayConfig {
     int width;
     int height;
     char device[256];
+    /* A window's size as a multiple of the game's mode, 1 to
+     * LRR_CONFIG_MAX_WINDOW_SCALE: the game still renders at its mode, and
+     * miniwin stretches each frame to the window (MiniwinSetWindowScale).
+     * Full screen ignores it. */
+    int windowScale;
 };
+
+#define LRR_CONFIG_MAX_WINDOW_SCALE 8
 
 /* Reads the configuration from `iniPath`, or from LRR_CONFIG_FILE in the
  * preference directory when it is NULL, writing that file with defaults
@@ -50,7 +60,7 @@ struct LRR_DisplayConfig {
 bool LRR_LoadConfig(const char* iniPath);
 
 /* The display settings LRR_LoadConfig read, or the defaults before it
- * runs: a 640x480 window on the dialog's default device. */
+ * runs: an unscaled 640x480 window on the dialog's default device. */
 const LRR_DisplayConfig* LRR_GetDisplayConfig();
 
 #endif /* LEGORRR_PLATFORM_NATIVE_CONFIG_H */

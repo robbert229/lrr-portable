@@ -392,6 +392,13 @@ if(BUILD_TESTING)
   add_test(NAME miniwin_messages COMMAND miniwin_messages_test)
   set_tests_properties(miniwin_messages PROPERTIES LABELS miniwin)
 
+  # miniwin's window scale: a window n times the game's size, which the
+  # game's rectangles and mouse messages do not see.
+  add_executable(miniwin_window_scale_test ${PLATFORM_DIR}/native/test_miniwin_window_scale.cpp)
+  target_link_libraries(miniwin_window_scale_test PRIVATE miniwin)
+  add_test(NAME miniwin_window_scale COMMAND miniwin_window_scale_test)
+  set_tests_properties(miniwin_window_scale PROPERTIES LABELS miniwin)
+
   # miniwin's key messages: Windows virtual-key codes and lParam flags from
   # SDL key events, WM_SYSKEY* for Alt and F10, and Alt+F4 as WM_CLOSE.
   add_executable(miniwin_keys_test ${PLATFORM_DIR}/native/test_miniwin_keys.cpp)

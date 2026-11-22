@@ -29,6 +29,7 @@ Init_Globs initGlobs;
 #include "crt/vc5names.h"
 #include "init_imports.h"
 #include "platform/native/config.h"
+#include <SDL3/SDL_log.h>
 
 #define INIT_DIALOG_MODESELECTION   101
 #define INIT_IDC_DRIVERLIST         1000
@@ -144,6 +145,13 @@ int init_initialise(int setup, int debug, int best, int window,
                     }
                 }
 
+                if (initGlobs.selMode != NULL &&
+                    (initGlobs.selMode->width != (unsigned int)config->width ||
+                     initGlobs.selMode->height != (unsigned int)config->height)) {
+                    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, // [library:config]
+                                "LegoRR.ini asks for %dx%d, which is not one of the game's modes; using %ux%u",
+                                config->width, config->height, initGlobs.selMode->width, initGlobs.selMode->height);
+                }
                 if (initGlobs.selDevice != NULL && initGlobs.selMode != NULL) res = 1;
                 else MessageBoxA(NULL, "No supported screen modes found", "Error", MB_OK);
             } else {

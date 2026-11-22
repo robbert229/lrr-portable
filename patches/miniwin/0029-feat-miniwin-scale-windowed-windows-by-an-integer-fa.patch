@@ -1,0 +1,218 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sat, 21 Nov 2026 16:57:34 -0800
+Subject: [PATCH] feat(miniwin): scale windowed windows by an integer factor
+
+MiniwinSetWindowScale(n) makes a windowed SDL window n times the size
+the program gives it, while the program keeps seeing its own size:
+CreateWindowExA and SetWindowPos scale the SDL window, GetWindowRect,
+GetClientRect and DirectDraw's virtual size divide by the factor, mouse
+messages and GetCursorPos divide positions by it and SetCursorPos
+multiplies them. The software renderers still render at the virtual
+size, and the frame they flip is stretched to the window; the software
+renderer's upload texture uses nearest-neighbour filtering when scaled,
+as the paletted renderer's blit already does. Full screen windows are
+not scaled.
+
+diff --git a/miniwin/include/miniwin/windows.h b/miniwin/include/miniwin/windows.h
+index 1c29d26..f9ca134 100644
+--- a/miniwin/include/miniwin/windows.h
++++ b/miniwin/include/miniwin/windows.h
+@@ -405,6 +405,13 @@ VOID WINAPI Sleep(DWORD dwMilliseconds);
+ 
+ BOOL ClientToScreen(HWND hWnd, LPPOINT lpPoint);
+ 
++// Scales windowed windows by an integer factor: the SDL window is scale times
++// the size a program gives it, and the program still sees its own size in the
++// window and client rectangles, the display's virtual size and mouse
++// positions. The frame is stretched to the window. Full screen windows are
++// not scaled. 1, the default, turns it off.
++void MiniwinSetWindowScale(int scale);
++
+ BOOL OffsetRect(LPRECT lprc, int dx, int dy);
+ 
+ // A region is one rectangle.
+diff --git a/miniwin/src/d3drm/backends/software/renderer.cpp b/miniwin/src/d3drm/backends/software/renderer.cpp
+index 1cb72f0..1b822ac 100644
+--- a/miniwin/src/d3drm/backends/software/renderer.cpp
++++ b/miniwin/src/d3drm/backends/software/renderer.cpp
+@@ -1124,6 +1124,10 @@ void Direct3DRMSoftwareRenderer::Resize(int width, int height, const ViewportTra
+ 	}
+ 	m_uploadBuffer =
+ 		SDL_CreateTexture(m_renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, m_width, m_height);
++	// A scaled window shows the frame's pixels as sharp blocks.
++	if (m_uploadBuffer && MiniwinWindowScale(DDWindow) > 1) {
++		SDL_SetTextureScaleMode(m_uploadBuffer, SDL_SCALEMODE_NEAREST);
++	}
+ 
+ 	m_zBuffer.resize(m_width * m_height);
+ 	SetViewportRect(nullptr);
+diff --git a/miniwin/src/ddraw/ddraw.cpp b/miniwin/src/ddraw/ddraw.cpp
+index 4e0b622..44cd08f 100644
+--- a/miniwin/src/ddraw/ddraw.cpp
++++ b/miniwin/src/ddraw/ddraw.cpp
+@@ -314,6 +314,10 @@ HRESULT DirectDrawImpl::SetCooperativeLevel(HWND hWnd, DDSCLFlags dwFlags)
+ 		if (!SDL_GetWindowSize(sdlWindow, &m_virtualWidth, &m_virtualHeight)) {
+ 			SDL_LogError(LOG_CATEGORY_MINIWIN, "SDL_GetWindowSizeInPixels: %s", SDL_GetError());
+ 		}
++		// The program's size, not the scaled window's.
++		int scale = MiniwinWindowScale(sdlWindow);
++		m_virtualWidth /= scale;
++		m_virtualHeight /= scale;
+ 	}
+ 
+ 	if (sdlWindow) {
+diff --git a/miniwin/src/internal/miniwin.h b/miniwin/src/internal/miniwin.h
+index 1bf0a90..d15d23c 100644
+--- a/miniwin/src/internal/miniwin.h
++++ b/miniwin/src/internal/miniwin.h
+@@ -4,6 +4,10 @@
+ 
+ #define LOG_CATEGORY_MINIWIN (SDL_LOG_CATEGORY_CUSTOM)
+ 
++// MiniwinSetWindowScale's factor for this window: 1 when it is off or the
++// window is full screen.
++int MiniwinWindowScale(SDL_Window* window);
++
+ #ifdef _MSC_VER
+ #define MINIWIN_PRETTY_FUNCTION __FUNCSIG__
+ #else
+diff --git a/miniwin/src/windows/windowmessages.cpp b/miniwin/src/windows/windowmessages.cpp
+index a03c088..a992a5b 100644
+--- a/miniwin/src/windows/windowmessages.cpp
++++ b/miniwin/src/windows/windowmessages.cpp
+@@ -60,7 +60,8 @@ POINT CursorPosition()
+ 	float x = 0.0f;
+ 	float y = 0.0f;
+ 	SDL_GetMouseState(&x, &y);
+-	return POINT{(LONG) x, (LONG) y};
++	int scale = MiniwinWindowScale(SDL_GetMouseFocus());
++	return POINT{(LONG) (x / scale), (LONG) (y / scale)};
+ }
+ 
+ void Post(SDL_Window* window, UINT message, WPARAM wParam, LPARAM lParam)
+@@ -75,9 +76,11 @@ void Post(SDL_Window* window, UINT message, WPARAM wParam, LPARAM lParam)
+ 	PostedMessages().push_back(msg);
+ }
+ 
+-LPARAM MousePosition(float x, float y)
++// A mouse event's position in the window's unscaled client coordinates.
++LPARAM MousePosition(SDL_Window* window, float x, float y)
+ {
+-	return MAKELPARAM((int) x, (int) y);
++	int scale = MiniwinWindowScale(window);
++	return MAKELPARAM((int) (x / scale), (int) (y / scale));
+ }
+ 
+ // The virtual-key code Windows reports for a key: a letter or digit by the
+@@ -306,7 +309,12 @@ void Translate(const SDL_Event& event)
+ 		Post(WindowOf(event.window.windowID), WM_SIZE, 0, MAKELPARAM(event.window.data1, event.window.data2));
+ 		break;
+ 	case SDL_EVENT_MOUSE_MOTION:
+-		Post(WindowOf(event.motion.windowID), WM_MOUSEMOVE, 0, MousePosition(event.motion.x, event.motion.y));
++		Post(
++			WindowOf(event.motion.windowID),
++			WM_MOUSEMOVE,
++			0,
++			MousePosition(WindowOf(event.motion.windowID), event.motion.x, event.motion.y)
++		);
+ 		break;
+ 	case SDL_EVENT_MOUSE_BUTTON_DOWN:
+ 	case SDL_EVENT_MOUSE_BUTTON_UP: {
+@@ -322,7 +330,12 @@ void Translate(const SDL_Event& event)
+ 		else {
+ 			break;
+ 		}
+-		Post(WindowOf(event.button.windowID), message, 0, MousePosition(event.button.x, event.button.y));
++		Post(
++			WindowOf(event.button.windowID),
++			message,
++			0,
++			MousePosition(WindowOf(event.button.windowID), event.button.x, event.button.y)
++		);
+ 		break;
+ 	}
+ 	case SDL_EVENT_KEY_DOWN:
+@@ -380,6 +393,9 @@ HWND CreateWindowExA(
+ 		SDL_LogError(LOG_CATEGORY_MINIWIN, "SDL_CreateWindow: %s", SDL_GetError());
+ 		return NULL;
+ 	}
++	if (int scale = MiniwinWindowScale(window); scale > 1) {
++		SDL_SetWindowSize(window, nWidth * scale, nHeight * scale);
++	}
+ 	SDL_SetWindowPosition(window, X, Y);
+ 	WindowProcedures()[window] = found->second.lpfnWndProc;
+ 	HWND hWnd = reinterpret_cast<HWND>(window);
+@@ -534,6 +550,9 @@ BOOL GetWindowRect(HWND hWnd, LPRECT lpRect)
+ 		if (!SDL_GetWindowPosition(window, &x, &y) || !SDL_GetWindowSize(window, &w, &h)) {
+ 			return FALSE;
+ 		}
++		int scale = MiniwinWindowScale(window);
++		w /= scale;
++		h /= scale;
+ 	}
+ 	SetRect(lpRect, x, y, x + w, y + h);
+ 	return TRUE;
+@@ -543,10 +562,12 @@ BOOL GetClientRect(HWND hWnd, LPRECT lpRect)
+ {
+ 	int w = 0;
+ 	int h = 0;
+-	if (!SDL_GetWindowSize(reinterpret_cast<SDL_Window*>(hWnd), &w, &h)) {
++	SDL_Window* window = reinterpret_cast<SDL_Window*>(hWnd);
++	if (!SDL_GetWindowSize(window, &w, &h)) {
+ 		return FALSE;
+ 	}
+-	SetRect(lpRect, 0, 0, w, h);
++	int scale = MiniwinWindowScale(window);
++	SetRect(lpRect, 0, 0, w / scale, h / scale);
+ 	return TRUE;
+ }
+ 
+@@ -598,7 +619,8 @@ BOOL SetCursorPos(int X, int Y)
+ 	if (!window) {
+ 		return FALSE;
+ 	}
+-	SDL_WarpMouseInWindow(window, (float) X, (float) Y);
++	int scale = MiniwinWindowScale(window);
++	SDL_WarpMouseInWindow(window, (float) (X * scale), (float) (Y * scale));
+ 	return TRUE;
+ }
+ 
+diff --git a/miniwin/src/windows/windows.cpp b/miniwin/src/windows/windows.cpp
+index dfe6e70..c3d4499 100644
+--- a/miniwin/src/windows/windows.cpp
++++ b/miniwin/src/windows/windows.cpp
+@@ -42,6 +42,23 @@ HRESULT IDirectDrawClipper::SetHWnd(DWORD unnamedParam1, HWND hWnd)
+ 	return DD_OK;
+ }
+ 
++namespace {
++int g_windowScale = 1;
++} // namespace
++
++void MiniwinSetWindowScale(int scale)
++{
++	g_windowScale = scale < 1 ? 1 : scale;
++}
++
++int MiniwinWindowScale(SDL_Window* window)
++{
++	if (!window || g_windowScale <= 1 || (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN)) {
++		return 1;
++	}
++	return g_windowScale;
++}
++
+ BOOL SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, UINT uFlags)
+ {
+ 	if (!hWnd) {
+@@ -54,7 +71,8 @@ BOOL SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy,
+ 	}
+ 
+ 	if (!(uFlags & SWP_NOSIZE)) {
+-		SDL_SetWindowSize(sdlWindow, cx, cy);
++		int scale = MiniwinWindowScale(sdlWindow);
++		SDL_SetWindowSize(sdlWindow, cx * scale, cy * scale);
+ 	}
+ 
+ 	if (!(uFlags & SWP_NOMOVE)) {
