@@ -91,3 +91,7 @@ lrr_unit_test(info_unit SOURCES ${GAME_DIR}/test_info_unit.cpp LABELS info_unit)
 # Interface menu slide transitions and independent icon state.
 lrr_unit_test(interface_unit SOURCES ${GAME_DIR}/test_interface_unit.cpp
   WRAP sound_alias_play LABELS interface_unit)
+
+# Lego's level resource accounting and object catalog lookups.
+lrr_unit_test(lego_unit SOURCES ${GAME_DIR}/test_lego_unit.cpp
+  WRAP ui_overlay_animation_advance LABELS lego_unit)
