@@ -137,6 +137,11 @@ the repository without submodules, runs `tools/setup-miniwin.sh` to fetch only
 `miniwin/` and apply `patches/miniwin`, and then runs the native commands from [Tests](#tests). It also
 lints the units (no `LEGORRR_BACKEND_*`, `MINIWIN`, `_MSC_VER`, `_M_IX86` or
 `_WIN32` guards and no `lpVtbl` in `src/`) and runs the Python tool tests in `tools/tests`.
+The build itself treats the compiler warnings in `LRR_LINT_WARNINGS`
+(`CMakeLists.txt`) as errors in the units, `seam_stubs` and `program`, so a
+change that adds one fails the check. Today that is `-Wparentheses` (MSVC
+C4706): an assignment used as a condition. Add a warning to the list only
+once the code builds cleanly with it.
 
 SDL3 comes from a pinned source build of release-3.4.18 (commit `829a65d7`),
 configured headless with `SDL_UNIX_CONSOLE_BUILD` and without X11 or Wayland.

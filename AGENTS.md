@@ -60,7 +60,10 @@ Open PRs for this work against `develop`.
   fixtures only, and runs the Python tool tests in `tools/tests`. Real-data
   tests need licensed inputs, so run them locally.
 - Source files carry SPDX headers; keep them, and follow the surrounding C++
-  style. There is no repository-wide formatter or linter.
+  style. There is no repository-wide formatter. The build lints the
+  units: warnings listed in `LRR_LINT_WARNINGS` in `CMakeLists.txt` are
+  errors, so `native-build` fails on them. Don't put an assignment in a
+  condition (`if (x = f())`); assign first, then test (`if (x != NULL)`).
 - The `// FUNCTION:`, `// GLOBAL:` and `// LIBRARY:` annotations and
   `// PORT-ONLY:` tags in the source come from the matching build on `main`.
   Keep the annotations as a record of original addresses; nothing on
