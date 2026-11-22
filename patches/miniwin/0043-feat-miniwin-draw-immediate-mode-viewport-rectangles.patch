@@ -1,0 +1,1256 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sun, 22 Nov 2026 10:28:17 -0800
+Subject: [PATCH] feat(miniwin): draw immediate mode, viewport rectangles and
+ rectangle clears on OpenGL ES 3
+
+Implement SubmitImmediate, SetViewportRect and ClearRect on the OpenGL ES 3
+backend, with the software backend and the SDL GPU backend as the
+reference, and report it in Miniwin_DeviceDrawsImmediateMode.
+
+- Transform, back-face culling, Direct3D lighting and vertex fog run on
+  the CPU through immediatemode.cpp, as on the other backends. A second
+  program takes the clip-space vertices and applies texture stage 0
+  (point or bilinear through texelFetch, colour-keyed texels discarded),
+  the specular colour and vertex or table fog. Colours are interpolated
+  linearly on screen (GLSL ES 3.00 has no noperspective, so they travel
+  multiplied by w); texture coordinates are perspective-correct. Vertices
+  are shifted half a pixel to sample where Direct3D's rasterizer does.
+- The depth buffer holds Direct3D's z / w for immediate mode, so the
+  depth comparisons map directly and a rectangle clear stores z as given.
+  Rectangle clears are scissored glClears.
+- Draws happen at once. Retained mode gets its program, states and
+  viewport back before its next mesh after an immediate-mode draw, a
+  clear or a 2D image.
+- Viewport rectangles project and clip retained and immediate-mode draws.
+  Viewport rectangles, rectangle clears and 2D images are clipped to the
+  virtual display's fit, so the bars stay black.
+- Textures are keyed (colour key and decal colour) as the software
+  backend keys them, for both modes.
+- The picture follows the resizable window: Flip scales the target to the
+  window's current size, nearest-neighbour at a whole multiple and
+  bilinear otherwise, resolving a multisampled target first; 2D images
+  at a scale that is not whole are filtered with their edge texels
+  mapped to their edge pixels, as on SDL GPU; Download reads the fit
+  (MINIWIN_DUMP_FRAME). The renderer's own ViewportTransform, which hid
+  the base class's and left GetFitRect and GetViewportTransform unset, is
+  gone.
+- Listing: before SetCooperativeLevel gives miniwin its window, the
+  device is tried on a hidden OpenGL window of its own when the client's
+  windows are OpenGL windows (Miniwin_SetOpenGLWindows), and not listed
+  otherwise. SDL GPU is not listed for an OpenGL window on any platform:
+  on Wayland its claim is a protocol error that closes the display
+  connection, as Vulkan finds the window in use on Android.
+- The 'Unsupported number of lights' error is logged once: immediate mode
+  lights with every light.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/src/d3drm/backends/opengles3/renderer.cpp b/miniwin/src/d3drm/backends/opengles3/renderer.cpp
+index 2ce48ec..764b172 100644
+--- a/miniwin/src/d3drm/backends/opengles3/renderer.cpp
++++ b/miniwin/src/d3drm/backends/opengles3/renderer.cpp
+@@ -1,5 +1,7 @@
+ #include "d3drmrenderer_opengles3.h"
+ #include "meshutils.h"
++#include "miniwin.h"
++#include "presentation_impl.h"
+ 
+ #if defined(__APPLE__)
+ #include <TargetConditionals.h>
+@@ -507,6 +509,17 @@ OpenGLES3Renderer::OpenGLES3Renderer(
+ 	glUseProgram(m_shaderProgram);
+ 	glUniform1i(m_lightingModelLoc, static_cast<GLint>(m_lightingModel));
+ 	glUniform1i(m_affineColorLoc, m_renderStyle == D3DRenderStyle::Pixelated);
++
++	glGenSamplers(1, &m_uiLinearSampler);
++	glSamplerParameteri(m_uiLinearSampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
++	glSamplerParameteri(m_uiLinearSampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
++	glSamplerParameteri(m_uiLinearSampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
++	glSamplerParameteri(m_uiLinearSampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
++
++	if (!CreateImmediateProgram()) {
++		SDL_LogError(LOG_CATEGORY_MINIWIN, "OpenGL ES 3: the immediate-mode program failed; immediate mode is off");
++	}
++	glUseProgram(m_shaderProgram);
+ }
+ 
+ OpenGLES3Renderer::~OpenGLES3Renderer()
+@@ -514,6 +527,18 @@ OpenGLES3Renderer::~OpenGLES3Renderer()
+ 	SDL_DestroySurface(m_renderedImage);
+ 	glDeleteTextures(1, &m_dummyTexture);
+ 	glDeleteProgram(m_shaderProgram);
++	if (m_immediateProgram) {
++		glDeleteProgram(m_immediateProgram);
++	}
++	if (m_uiLinearSampler) {
++		glDeleteSamplers(1, &m_uiLinearSampler);
++	}
++	if (m_immediateVBO) {
++		glDeleteBuffers(1, &m_immediateVBO);
++	}
++	if (m_immediateVAO) {
++		glDeleteVertexArrays(1, &m_immediateVAO);
++	}
+ 	glDeleteRenderbuffers(1, &m_colorTarget);
+ 	glDeleteRenderbuffers(1, &m_depthTarget);
+ 	glDeleteFramebuffers(1, &m_fbo);
+@@ -527,8 +552,14 @@ OpenGLES3Renderer::~OpenGLES3Renderer()
+ 
+ void OpenGLES3Renderer::PushLights(const SceneLight* lightsArray, size_t count)
+ {
++	// Immediate mode lights on the CPU, with every light.
++	m_preparedLights.Prepare(lightsArray, count);
++
+ 	if (count > 3) {
+-		SDL_Log("Unsupported number of lights (%d)", static_cast<int>(count));
++		if (!m_warnedLightCount) {
++			SDL_LogError(LOG_CATEGORY_MINIWIN, "Unsupported number of lights (%d)", static_cast<int>(count));
++			m_warnedLightCount = true;
++		}
+ 		count = 3;
+ 	}
+ 
+@@ -562,13 +593,30 @@ Uint32 OpenGLES3Renderer::GetTextureId(IDirect3DRMTexture* iTexture, bool isUI,
+ 	auto texture = static_cast<Direct3DRMTextureImpl*>(iTexture);
+ 	auto surface = static_cast<DirectDrawSurfaceImpl*>(texture->m_surface);
+ 
++	// The texture as both modes sample it: RGBA32, its colour key and decal
++	// colour keyed out to alpha 0, as the software backend keys it.
++	auto upload = [&](GLuint& texId, bool& keyed) {
++		SDL_Surface* rgba = SDL_ConvertSurface(surface->m_surface, SDL_PIXELFORMAT_RGBA32);
++		if (!rgba) {
++			SDL_LogError(LOG_CATEGORY_MINIWIN, "SDL_ConvertSurface (%s)", SDL_GetError());
++			return false;
++		}
++		keyed = KeyImmediateTexture(texture, rgba);
++		bool uploaded = UploadTexture(rgba, texId, isUI);
++		SDL_DestroySurface(rgba);
++		return uploaded;
++	};
++
+ 	for (Uint32 i = 0; i < m_textures.size(); ++i) {
+ 		auto& tex = m_textures[i];
+ 		if (tex.texture == texture) {
+ 			if (tex.version != texture->m_version) {
+ 				glDeleteTextures(1, &tex.glTextureId);
+-				if (UploadTexture(surface->m_surface, tex.glTextureId, isUI)) {
++				tex.glTextureId = 0;
++				if (upload(tex.glTextureId, tex.keyed)) {
+ 					tex.version = texture->m_version;
++					tex.width = surface->m_surface->w;
++					tex.height = surface->m_surface->h;
+ 				}
+ 			}
+ 			return i;
+@@ -576,7 +624,8 @@ Uint32 OpenGLES3Renderer::GetTextureId(IDirect3DRMTexture* iTexture, bool isUI,
+ 	}
+ 
+ 	GLuint texId;
+-	if (!UploadTexture(surface->m_surface, texId, isUI)) {
++	bool keyed = false;
++	if (!upload(texId, keyed)) {
+ 		return NO_TEXTURE_ID;
+ 	}
+ 
+@@ -588,13 +637,14 @@ Uint32 OpenGLES3Renderer::GetTextureId(IDirect3DRMTexture* iTexture, bool isUI,
+ 			tex.glTextureId = texId;
+ 			tex.width = surface->m_surface->w;
+ 			tex.height = surface->m_surface->h;
++			tex.keyed = keyed;
+ 			AddTextureDestroyCallback(i, texture);
+ 			return i;
+ 		}
+ 	}
+ 
+ 	m_textures.push_back(
+-		{texture, texture->m_version, texId, (uint16_t) surface->m_surface->w, (uint16_t) surface->m_surface->h}
++		{texture, texture->m_version, texId, (uint16_t) surface->m_surface->w, (uint16_t) surface->m_surface->h, keyed}
+ 	);
+ 	AddTextureDestroyCallback((Uint32) (m_textures.size() - 1), texture);
+ 	return (Uint32) (m_textures.size() - 1);
+@@ -645,14 +695,37 @@ HRESULT OpenGLES3Renderer::BeginFrame()
+ {
+ 	SDL_GL_MakeCurrent(DDWindow, m_context);
+ 	m_dirty = true;
++	m_transparent = false;
++	UseRetainedState();
++	return DD_OK;
++}
+ 
++// Retained mode draws its meshes with its own program, into the current
++// viewport: opaque meshes first, then transparent ones (EnableTransparency).
++// Called again before a mesh when an immediate-mode draw, a clear or a 2D
++// image changed the program or states in between.
++void OpenGLES3Renderer::UseRetainedState()
++{
++	m_retainedStateLost = false;
+ 	glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
+-	glViewport(0, 0, m_width, m_height);
++	glUseProgram(m_shaderProgram);
++	SetGLViewportAndScissor(m_viewportRect);
+ 
+ 	glEnable(GL_CULL_FACE);
+-	glDisable(GL_BLEND);
++	glCullFace(GL_BACK);
++	glFrontFace(GL_CW);
+ 	glEnable(GL_DEPTH_TEST);
+-	glDepthMask(GL_TRUE);
++	glDepthFunc(GL_LEQUAL);
++	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
++	if (m_transparent) {
++		glEnable(GL_BLEND);
++		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
++		glDepthMask(GL_FALSE);
++	}
++	else {
++		glDisable(GL_BLEND);
++		glDepthMask(GL_TRUE);
++	}
+ 
+ 	SceneLightGLES3 lightData[3];
+ 	int lightCount = std::min(static_cast<int>(m_lights.size()), 3);
+@@ -683,11 +756,15 @@ HRESULT OpenGLES3Renderer::BeginFrame()
+ 	glUniform1i(m_lightCountLoc, lightCount);
+ 	glUniform1i(m_lightingModelLoc, static_cast<GLint>(m_lightingModel));
+ 	glUniform1i(m_affineColorLoc, m_renderStyle == D3DRenderStyle::Pixelated);
+-	return DD_OK;
+ }
+ 
+ void OpenGLES3Renderer::EnableTransparency()
+ {
++	m_transparent = true;
++	if (m_retainedStateLost) {
++		UseRetainedState();
++		return;
++	}
+ 	glEnable(GL_BLEND);
+ 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+ 	glDepthMask(GL_FALSE);
+@@ -702,6 +779,9 @@ void OpenGLES3Renderer::SubmitDraw(
+ 	const Appearance& appearance
+ )
+ {
++	if (m_retainedStateLost) {
++		UseRetainedState();
++	}
+ 	auto& mesh = m_meshs[meshId];
+ 
+ 	glUniformMatrix4fv(m_modelViewMatrixLoc, 1, GL_FALSE, &modelViewMatrix[0][0]);
+@@ -841,6 +921,8 @@ void OpenGLES3Renderer::Resize(int width, int height, const ViewportTransform& v
+ 	glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
+ 
+ 	glViewport(0, 0, m_width, m_height);
++	m_viewportRect = {0, 0, m_width, m_height};
++	m_retainedStateLost = true;
+ }
+ 
+ void OpenGLES3Renderer::Clear(float r, float g, float b)
+@@ -851,10 +933,14 @@ void OpenGLES3Renderer::Clear(float r, float g, float b)
+ 	glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
+ 	glViewport(0, 0, m_width, m_height);
+ 
++	glDisable(GL_SCISSOR_TEST);
+ 	glEnable(GL_DEPTH_TEST);
+ 	glDepthMask(GL_TRUE);
++	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+ 	glClearColor(r, g, b, 1.0f);
++	glClearDepthf(1.0f);
+ 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
++	m_retainedStateLost = true;
+ }
+ 
+ void OpenGLES3Renderer::Flip()
+@@ -864,7 +950,18 @@ void OpenGLES3Renderer::Flip()
+ 		return;
+ 	}
+ 
+-	glBindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo);
++	glDisable(GL_SCISSOR_TEST);
++	m_retainedStateLost = true;
++	// A multisampled target is resolved at its own size first: OpenGL ES
++	// cannot scale while it resolves.
++	GLuint source = m_fbo;
++	if (m_msaa > 1) {
++		glBindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo);
++		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_resolveFBO);
++		glBlitFramebuffer(0, 0, m_width, m_height, 0, 0, m_width, m_height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
++		source = m_resolveFBO;
++	}
++	glBindFramebuffer(GL_READ_FRAMEBUFFER, source);
+ 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+ 
+ 	// This is a workaround for what is (presumably) a driver bug in some WebGL environments (Android Chrome)
+@@ -877,6 +974,20 @@ void OpenGLES3Renderer::Flip()
+ 	glClear(GL_COLOR_BUFFER_BIT);
+ 	glDisable(GL_SCISSOR_TEST);
+ 
++	// The render target fills the window: it has the window's size, or its
++	// aspect at a lower resolution (Miniwin_RenderSize), and the window may
++	// have been resized since the target was. A target shown at a whole
++	// multiple of its size keeps square pixels; any other size is filtered.
++	int windowWidth = m_windowWidth;
++	int windowHeight = m_windowHeight;
++	int pixelWidth, pixelHeight;
++	if (Miniwin_WindowPixelSize(DDWindow, &pixelWidth, &pixelHeight)) {
++		windowWidth = pixelWidth;
++		windowHeight = pixelHeight;
++	}
++	bool sameSize = windowWidth == m_width && windowHeight == m_height;
++	bool wholeMultiple = Miniwin_IsIntegerScale((float) windowWidth / m_width) &&
++						 Miniwin_IsIntegerScale((float) windowHeight / m_height);
+ 	glBlitFramebuffer(
+ 		0,
+ 		0,
+@@ -884,10 +995,10 @@ void OpenGLES3Renderer::Flip()
+ 		m_height,
+ 		0,
+ 		0,
+-		m_windowWidth,
+-		m_windowHeight,
++		windowWidth,
++		windowHeight,
+ 		GL_COLOR_BUFFER_BIT,
+-		m_renderStyle == D3DRenderStyle::Pixelated ? GL_LINEAR : GL_NEAREST
++		sameSize || wholeMultiple ? GL_NEAREST : GL_LINEAR
+ 	);
+ 
+ 	SDL_GL_SwapWindow(DDWindow);
+@@ -901,9 +1012,31 @@ void OpenGLES3Renderer::Draw2DImage(Uint32 textureId, const SDL_Rect& srcRect, c
+ 
+ 	glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
+ 	glViewport(0, 0, m_width, m_height);
++	glUseProgram(m_shaderProgram);
++	m_retainedStateLost = true;
++
++	// The image's pixels in the render target, clipped to the virtual
++	// display's, so that nothing is drawn into the bars.
++	SDL_Rect fit = GetFitRect();
++	int x1 = static_cast<int>(std::round(dstRect.x * m_viewportTransform.scale + m_viewportTransform.offsetX));
++	int y1 = static_cast<int>(std::round(dstRect.y * m_viewportTransform.scale + m_viewportTransform.offsetY));
++	int x2 = x1 + static_cast<int>(std::round(dstRect.w * m_viewportTransform.scale));
++	int y2 = y1 + static_cast<int>(std::round(dstRect.h * m_viewportTransform.scale));
++	const int imageX1 = x1, imageY1 = y1, imageX2 = x2, imageY2 = y2;
++	x1 = std::max(fit.x, std::min(x1, fit.x + fit.w));
++	y1 = std::max(fit.y, std::min(y1, fit.y + fit.h));
++	x2 = std::max(x1, std::min(x2, fit.x + fit.w));
++	y2 = std::max(y1, std::min(y2, fit.y + fit.h));
++	if (x2 == x1 || y2 == y1) {
++		return;
++	}
+ 
+ 	glDisable(GL_DEPTH_TEST);
+ 	glDepthMask(GL_FALSE);
++	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
++	glEnable(GL_CULL_FACE);
++	glCullFace(GL_BACK);
++	glFrontFace(GL_CW);
+ 
+ 	float ambient[] = {1.0f, 1.0f, 1.0f, 1.0f};
+ 	float blank[] = {0.0f, 0.0f, 0.0f, 0.0f};
+@@ -917,10 +1050,13 @@ void OpenGLES3Renderer::Draw2DImage(Uint32 textureId, const SDL_Rect& srcRect, c
+ 	glUniform1i(m_flatLoc, 0);
+ 
+ 	SDL_Rect expandedDstRect;
++	bool wholeScale = true;
+ 	if (textureId != NO_TEXTURE_ID) {
+ 		const GLES3TextureCacheEntry& texture = m_textures[textureId];
+ 		float scaleX = static_cast<float>(dstRect.w) / srcRect.w;
+ 		float scaleY = static_cast<float>(dstRect.h) / srcRect.h;
++		wholeScale = Miniwin_IsIntegerScale(scaleX * m_viewportTransform.scale) &&
++					 Miniwin_IsIntegerScale(scaleY * m_viewportTransform.scale);
+ 		expandedDstRect = {
+ 			static_cast<int>(std::round(dstRect.x - srcRect.x * scaleX)),
+ 			static_cast<int>(std::round(dstRect.y - srcRect.y * scaleY)),
+@@ -942,13 +1078,46 @@ void OpenGLES3Renderer::Draw2DImage(Uint32 textureId, const SDL_Rect& srcRect, c
+ 	}
+ 
+ 	D3DRMMATRIX4D modelView, projection;
+-	Create2DTransformMatrix(
+-		expandedDstRect,
+-		m_viewportTransform.scale,
+-		m_viewportTransform.offsetX,
+-		m_viewportTransform.offsetY,
+-		modelView
+-	);
++	const bool filtered = !wholeScale && m_uiLinearSampler;
++	if (filtered) {
++		// Nearest-neighbour at a scale that is not a whole number draws pixels
++		// of uneven widths, so the image is filtered. Filtered, its edge
++		// pixels would blend in the texels just outside the source rectangle:
++		// the next glyph of a font, or a sheet's grid lines. So the centres
++		// of its edge texels go to the centres of the rectangle's edge
++		// pixels, and nothing outside it is ever sampled.
++		const GLES3TextureCacheEntry& texture = m_textures[textureId];
++		auto axis = [](int pixels, int texels, int srcOffset, int pixelStart, float& origin, float& scale) {
++			if (pixels > 1 && texels > 1) {
++				scale = static_cast<float>(pixels - 1) / (texels - 1);
++				origin = pixelStart + 0.5f - (srcOffset + 0.5f) * scale;
++			}
++			else {
++				scale = static_cast<float>(pixels) / texels;
++				origin = pixelStart - srcOffset * scale;
++			}
++		};
++		float originX, originY, texelScaleX, texelScaleY;
++		axis(imageX2 - imageX1, srcRect.w, srcRect.x, imageX1, originX, texelScaleX);
++		axis(imageY2 - imageY1, srcRect.h, srcRect.y, imageY1, originY, texelScaleY);
++		D3DVALUE matrix[4][4] = {
++			{texture.width * texelScaleX, 0, 0, 0},
++			{0, texture.height * texelScaleY, 0, 0},
++			{0, 0, 1, 0},
++			{originX, originY, 0, 1}
++		};
++		memcpy(modelView, matrix, sizeof(matrix));
++		glBindSampler(0, m_uiLinearSampler);
++	}
++	else {
++		Create2DTransformMatrix(
++			expandedDstRect,
++			m_viewportTransform.scale,
++			m_viewportTransform.offsetX,
++			m_viewportTransform.offsetY,
++			modelView
++		);
++	}
+ 
+ 	glUniformMatrix4fv(m_modelViewMatrixLoc, 1, GL_FALSE, &modelView[0][0]);
+ 	glUniformMatrix4fv(m_worldMatrixLoc, 1, GL_FALSE, &modelView[0][0]);
+@@ -963,24 +1132,24 @@ void OpenGLES3Renderer::Draw2DImage(Uint32 textureId, const SDL_Rect& srcRect, c
+ 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+ 
+ 	glEnable(GL_SCISSOR_TEST);
+-	glScissor(
+-		static_cast<int>(std::round(dstRect.x * m_viewportTransform.scale + m_viewportTransform.offsetX)),
+-		m_height - static_cast<int>(
+-					   std::round((dstRect.y + dstRect.h) * m_viewportTransform.scale + m_viewportTransform.offsetY)
+-				   ),
+-		static_cast<int>(std::round(dstRect.w * m_viewportTransform.scale)),
+-		static_cast<int>(std::round(dstRect.h * m_viewportTransform.scale))
+-	);
++	glScissor(x1, m_height - y2, x2 - x1, y2 - y1);
+ 
+ 	glBindVertexArray(m_uiMeshCache.vao);
+ 	glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(m_uiMeshCache.indices.size()), GL_UNSIGNED_SHORT, nullptr);
+ 	glBindVertexArray(0);
++	if (filtered) {
++		glBindSampler(0, 0);
++	}
+ 
+ 	glDisable(GL_SCISSOR_TEST);
+ }
+ 
+ void OpenGLES3Renderer::Download(SDL_Surface* target)
+ {
++	SDL_GL_MakeCurrent(DDWindow, m_context);
++	// Blits are clipped by the scissor, which a viewport leaves on.
++	glDisable(GL_SCISSOR_TEST);
++	m_retainedStateLost = true;
+ 	glFinish();
+ 
+ 	if (m_msaa > 1) {
+@@ -995,12 +1164,10 @@ void OpenGLES3Renderer::Download(SDL_Surface* target)
+ 
+ 	glReadPixels(0, 0, m_width, m_height, GL_RGBA, GL_UNSIGNED_BYTE, m_renderedImage->pixels);
+ 
+-	SDL_Rect srcRect = {
+-		static_cast<int>(m_viewportTransform.offsetX),
+-		static_cast<int>(m_viewportTransform.offsetY),
+-		static_cast<int>(target->w * m_viewportTransform.scale),
+-		static_cast<int>(target->h * m_viewportTransform.scale),
+-	};
++	// The virtual display's pixels in the render target, whose rows OpenGL
++	// reads from the bottom up, scaled to the target's size.
++	SDL_Rect fit = GetFitRect();
++	SDL_Rect srcRect = {fit.x, m_height - fit.y - fit.h, fit.w, fit.h};
+ 
+ 	SDL_Surface* bufferClone = SDL_CreateSurface(target->w, target->h, SDL_PIXELFORMAT_RGBA32);
+ 	if (!bufferClone) {
+@@ -1008,7 +1175,13 @@ void OpenGLES3Renderer::Download(SDL_Surface* target)
+ 		return;
+ 	}
+ 
+-	SDL_BlitSurfaceScaled(m_renderedImage, &srcRect, bufferClone, nullptr, SDL_SCALEMODE_NEAREST);
++	SDL_BlitSurfaceScaled(
++		m_renderedImage,
++		&srcRect,
++		bufferClone,
++		nullptr,
++		fit.w == target->w && fit.h == target->h ? SDL_SCALEMODE_NEAREST : SDL_SCALEMODE_LINEAR
++	);
+ 
+ 	// Flip image vertically into target
+ 	SDL_Rect rowSrc = {0, 0, bufferClone->w, 1};
+@@ -1031,3 +1204,573 @@ void OpenGLES3Renderer::SetDither(bool dither)
+ 		glDisable(GL_DITHER);
+ 	}
+ }
++
++// ---- immediate mode ---------------------------------------------------------
++
++// Immediate mode's vertices arrive transformed, lit and in clip space: the CPU
++// does Direct3D's transform and lighting (immediatemode.cpp), as for a
++// DirectX 6 HAL device without hardware T&L, exactly as the software and SDL
++// GPU backends do. Colours are interpolated linearly on screen, as Gouraud
++// shading was: GLSL ES 3.00 has no noperspective, so they travel multiplied
++// by w and are divided by the interpolated w. Texture coordinates and the
++// view depth are perspective-correct.
++static const char* const ImmediateVertexShaderSource = R"(#version 300 es
++	precision highp float;
++
++	layout(location = 0) in vec4 a_position; // clip space, Direct3D's z in [0, w]
++	layout(location = 1) in vec4 a_diffuse;
++	layout(location = 2) in vec4 a_specular; // alpha carries the vertex fog factor
++	layout(location = 3) in vec2 a_texCoord;
++
++	// Half a pixel right and down, in clip-space units per unit of w:
++	// Direct3D samples pixels at integer coordinates, OpenGL at their centres.
++	uniform vec2 u_pixelOffset;
++
++	out vec4 v_diffuse;
++	out vec4 v_specular;
++	out float v_w;
++	out vec2 v_texCoord;
++	out float v_viewZ;
++
++	void main() {
++		float w = a_position.w;
++		// Direct3D's depth z / w in [0, 1] is OpenGL's window depth.
++		gl_Position = vec4(a_position.x + u_pixelOffset.x * w, a_position.y + u_pixelOffset.y * w,
++						   2.0 * a_position.z - w, w);
++		v_diffuse = a_diffuse * w;
++		v_specular = a_specular * w;
++		v_w = w;
++		v_texCoord = a_texCoord;
++		v_viewZ = w;
++	}
++)";
++
++// Immediate mode's pixel pipeline: texture stage 0, the specular colour and
++// fog, as the software backend computes them (and the SDL GPU backend's
++// ImmediatePixel.frag.hlsl). Blending and the depth test are the context's.
++static const char* const ImmediateFragmentShaderSource = R"(#version 300 es
++	precision highp float;
++	precision highp int;
++
++	// Direct3D's values for the states this shader reads.
++	const int D3DTA_SELECTMASK = 0x0f;
++	const int D3DTA_TEXTURE = 0x02;
++	const int D3DTA_TFACTOR = 0x03;
++	const int D3DTA_SPECULAR = 0x04;
++	const int D3DTA_COMPLEMENT = 0x10;
++	const int D3DTA_ALPHAREPLICATE = 0x20;
++
++	const int D3DTOP_DISABLE = 1;
++	const int D3DTOP_SELECTARG1 = 2;
++	const int D3DTOP_SELECTARG2 = 3;
++	const int D3DTOP_MODULATE2X = 5;
++	const int D3DTOP_MODULATE4X = 6;
++	const int D3DTOP_ADD = 7;
++
++	const int D3DFOG_EXP = 1;
++	const int D3DFOG_EXP2 = 2;
++	const int D3DFOG_LINEAR = 3;
++
++	const int FOG_NONE = 0;
++	const int FOG_VERTEX = 1;
++
++	in vec4 v_diffuse;
++	in vec4 v_specular;
++	in float v_w;
++	in vec2 v_texCoord;
++	in float v_viewZ;
++
++	uniform highp sampler2D u_texture;
++	uniform bool u_useTexture;
++	uniform bool u_keyed;          // alpha-0 texels stand for a colour key
++	uniform bool u_colorKeyEnable; // and are not drawn
++	uniform bool u_linear;
++	uniform int u_colorOp;
++	uniform ivec2 u_colorArgs;
++	uniform int u_alphaOp;
++	uniform ivec2 u_alphaArgs;
++	uniform bool u_specularEnable;
++	uniform int u_fogKind;
++	uniform int u_fogMode;
++	uniform vec3 u_fogParams; // start, end, density
++	uniform vec3 u_fogColor;
++	uniform float u_diffuseAlpha; // the material's, for the whole draw
++
++	out vec4 fragColor;
++
++	ivec2 TextureSize() {
++		return textureSize(u_texture, 0);
++	}
++
++	// The texel at a wrapped integer position.
++	vec4 Texel(float x, float y) {
++		ivec2 size = TextureSize();
++		int ix = int(mod(x, float(size.x)));
++		int iy = int(mod(y, float(size.y)));
++		return texelFetch(u_texture, ivec2(ix, iy), 0);
++	}
++
++	// Stage 0's texel at (u, v), wrapped, point or bilinear. A keyed texture's
++	// alpha-0 texels are the colour key: with COLORKEYENABLE they are not
++	// drawn (and do not bleed into a filtered neighbour), and the texels that
++	// are drawn are opaque.
++	vec4 SampleTexture(vec2 uv, out bool discardTexel) {
++		discardTexel = false;
++		ivec2 size = TextureSize();
++		float fx = uv.x * float(size.x);
++		float fy = uv.y * float(size.y);
++		if (!u_linear) {
++			vec4 t = Texel(floor(fx), floor(fy));
++			if (u_keyed) {
++				discardTexel = u_colorKeyEnable && t.a == 0.0;
++				t.a = 1.0;
++			}
++			return t;
++		}
++
++		fx -= 0.5;
++		fy -= 0.5;
++		float x0 = floor(fx);
++		float y0 = floor(fy);
++		float ax = fx - x0;
++		float ay = fy - y0;
++		vec4 t[4];
++		t[0] = Texel(x0, y0);
++		t[1] = Texel(x0 + 1.0, y0);
++		t[2] = Texel(x0, y0 + 1.0);
++		t[3] = Texel(x0 + 1.0, y0 + 1.0);
++		float w[4];
++		w[0] = (1.0 - ax) * (1.0 - ay);
++		w[1] = ax * (1.0 - ay);
++		w[2] = (1.0 - ax) * ay;
++		w[3] = ax * ay;
++		bool keyOut = u_keyed && u_colorKeyEnable;
++		vec4 o = vec4(0.0);
++		float coverage = 0.0;
++		for (int i = 0; i < 4; ++i) {
++			float wi = keyOut ? w[i] * t[i].a : w[i];
++			o.rgb += wi * t[i].rgb;
++			o.a += w[i] * t[i].a;
++			coverage += wi;
++		}
++		if (keyOut) {
++			if (coverage < 0.5) {
++				discardTexel = true;
++				return o;
++			}
++			return vec4(o.rgb / coverage, 1.0);
++		}
++		if (u_keyed) {
++			o.a = 1.0;
++		}
++		return o;
++	}
++
++	// A texture stage argument. Stage 0's CURRENT is the diffuse colour.
++	float StageArg(int arg, float diffuse, float texel, float diffuseAlpha, float texelAlpha) {
++		bool alpha = (arg & D3DTA_ALPHAREPLICATE) != 0;
++		float value;
++		int select = arg & D3DTA_SELECTMASK;
++		if (select == D3DTA_TEXTURE) {
++			value = alpha ? texelAlpha : texel;
++		}
++		else if (select == D3DTA_TFACTOR) {
++			value = 1.0;
++		}
++		else if (select == D3DTA_SPECULAR) {
++			value = 0.0;
++		}
++		else { // DIFFUSE, CURRENT
++			value = alpha ? diffuseAlpha : diffuse;
++		}
++		return (arg & D3DTA_COMPLEMENT) != 0 ? 1.0 - value : value;
++	}
++
++	float StageOp(int op, float arg1, float arg2, float current) {
++		if (op == D3DTOP_DISABLE) {
++			return current;
++		}
++		if (op == D3DTOP_SELECTARG1) {
++			return arg1;
++		}
++		if (op == D3DTOP_SELECTARG2) {
++			return arg2;
++		}
++		if (op == D3DTOP_MODULATE2X) {
++			return min(1.0, 2.0 * arg1 * arg2);
++		}
++		if (op == D3DTOP_MODULATE4X) {
++			return min(1.0, 4.0 * arg1 * arg2);
++		}
++		if (op == D3DTOP_ADD) {
++			return min(1.0, arg1 + arg2);
++		}
++		return arg1 * arg2; // MODULATE
++	}
++
++	float Stage(int op, ivec2 args, float diffuse, float texel, float diffuseAlpha, float texelAlpha) {
++		return StageOp(
++			op,
++			StageArg(args.x, diffuse, texel, diffuseAlpha, texelAlpha),
++			StageArg(args.y, diffuse, texel, diffuseAlpha, texelAlpha),
++			diffuse
++		);
++	}
++
++	// Direct3D's fog factor at view depth z: 1 leaves the colour, 0 is all fog.
++	float FogFactor(float z) {
++		float start = u_fogParams.x;
++		float end = u_fogParams.y;
++		float density = u_fogParams.z;
++		float f = 1.0;
++		if (u_fogMode == D3DFOG_LINEAR) {
++			f = end != start ? (end - z) / (end - start) : (z < start ? 1.0 : 0.0);
++		}
++		else if (u_fogMode == D3DFOG_EXP) {
++			f = exp(-density * z);
++		}
++		else if (u_fogMode == D3DFOG_EXP2) {
++			f = exp(-(density * z) * (density * z));
++		}
++		return clamp(f, 0.0, 1.0);
++	}
++
++	void main() {
++		vec4 diffuse = v_diffuse / v_w;
++		vec4 specular = v_specular / v_w;
++		vec3 color = diffuse.rgb;
++		float alpha = u_diffuseAlpha;
++
++		if (u_useTexture) {
++			bool discardTexel;
++			vec4 t = SampleTexture(v_texCoord, discardTexel);
++			if (discardTexel) {
++				discard;
++			}
++			color.r = Stage(u_colorOp, u_colorArgs, color.r, t.r, u_diffuseAlpha, t.a);
++			color.g = Stage(u_colorOp, u_colorArgs, color.g, t.g, u_diffuseAlpha, t.a);
++			color.b = Stage(u_colorOp, u_colorArgs, color.b, t.b, u_diffuseAlpha, t.a);
++			alpha = Stage(u_alphaOp, u_alphaArgs, u_diffuseAlpha, t.a, u_diffuseAlpha, t.a);
++		}
++		if (u_specularEnable) {
++			color = min(vec3(1.0), color + specular.rgb);
++		}
++		if (u_fogKind != FOG_NONE) {
++			float f = u_fogKind == FOG_VERTEX ? specular.a : FogFactor(v_viewZ);
++			color = f * color + (1.0 - f) * u_fogColor;
++		}
++		fragColor = vec4(color, alpha);
++	}
++)";
++
++bool OpenGLES3Renderer::CreateImmediateProgram()
++{
++	GLuint vs = CompileShader(GL_VERTEX_SHADER, ImmediateVertexShaderSource);
++	GLuint fs = CompileShader(GL_FRAGMENT_SHADER, ImmediateFragmentShaderSource);
++	if (!vs || !fs) {
++		glDeleteShader(vs);
++		glDeleteShader(fs);
++		return false;
++	}
++	GLuint program = glCreateProgram();
++	glAttachShader(program, vs);
++	glAttachShader(program, fs);
++	glLinkProgram(program);
++	glDeleteShader(vs);
++	glDeleteShader(fs);
++	GLint linked = GL_FALSE;
++	glGetProgramiv(program, GL_LINK_STATUS, &linked);
++	if (!linked) {
++		GLint logLength = 0;
++		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logLength);
++		std::vector<char> log(logLength > 0 ? logLength : 1, '\0');
++		glGetProgramInfoLog(program, (GLsizei) log.size(), nullptr, log.data());
++		SDL_LogError(LOG_CATEGORY_MINIWIN, "Immediate-mode program link error: %s", log.data());
++		glDeleteProgram(program);
++		return false;
++	}
++	m_immediateProgram = program;
++
++	m_imPixelOffsetLoc = glGetUniformLocation(program, "u_pixelOffset");
++	m_imTextureLoc = glGetUniformLocation(program, "u_texture");
++	m_imUseTextureLoc = glGetUniformLocation(program, "u_useTexture");
++	m_imKeyedLoc = glGetUniformLocation(program, "u_keyed");
++	m_imColorKeyEnableLoc = glGetUniformLocation(program, "u_colorKeyEnable");
++	m_imLinearLoc = glGetUniformLocation(program, "u_linear");
++	m_imColorOpLoc = glGetUniformLocation(program, "u_colorOp");
++	m_imColorArgsLoc = glGetUniformLocation(program, "u_colorArgs");
++	m_imAlphaOpLoc = glGetUniformLocation(program, "u_alphaOp");
++	m_imAlphaArgsLoc = glGetUniformLocation(program, "u_alphaArgs");
++	m_imSpecularLoc = glGetUniformLocation(program, "u_specularEnable");
++	m_imFogKindLoc = glGetUniformLocation(program, "u_fogKind");
++	m_imFogModeLoc = glGetUniformLocation(program, "u_fogMode");
++	m_imFogParamsLoc = glGetUniformLocation(program, "u_fogParams");
++	m_imFogColorLoc = glGetUniformLocation(program, "u_fogColor");
++	m_imDiffuseAlphaLoc = glGetUniformLocation(program, "u_diffuseAlpha");
++	glUseProgram(program);
++	glUniform1i(m_imTextureLoc, 0);
++
++	glGenVertexArrays(1, &m_immediateVAO);
++	glGenBuffers(1, &m_immediateVBO);
++	glBindVertexArray(m_immediateVAO);
++	glBindBuffer(GL_ARRAY_BUFFER, m_immediateVBO);
++	const GLsizei stride = sizeof(ImmediateGLES3Vertex);
++	glEnableVertexAttribArray(0);
++	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, stride, (const void*) offsetof(ImmediateGLES3Vertex, position));
++	glEnableVertexAttribArray(1);
++	glVertexAttribPointer(
++		1,
++		4,
++		GL_UNSIGNED_BYTE,
++		GL_TRUE,
++		stride,
++		(const void*) offsetof(ImmediateGLES3Vertex, diffuse)
++	);
++	glEnableVertexAttribArray(2);
++	glVertexAttribPointer(
++		2,
++		4,
++		GL_UNSIGNED_BYTE,
++		GL_TRUE,
++		stride,
++		(const void*) offsetof(ImmediateGLES3Vertex, specular)
++	);
++	glEnableVertexAttribArray(3);
++	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, stride, (const void*) offsetof(ImmediateGLES3Vertex, texCoord));
++	glBindVertexArray(0);
++	glBindBuffer(GL_ARRAY_BUFFER, 0);
++	return true;
++}
++
++// A Direct3D blend factor. The render target stands for the display surface,
++// which has no alpha channel: destination alpha reads as one.
++static GLenum ImmediateBlendFactor(DWORD factor)
++{
++	switch (static_cast<D3DBLEND>(factor)) {
++	case D3DBLEND_ZERO:
++		return GL_ZERO;
++	case D3DBLEND_ONE:
++		return GL_ONE;
++	case D3DBLEND_SRCCOLOR:
++		return GL_SRC_COLOR;
++	case D3DBLEND_INVSRCCOLOR:
++		return GL_ONE_MINUS_SRC_COLOR;
++	case D3DBLEND_SRCALPHA:
++		return GL_SRC_ALPHA;
++	case D3DBLEND_INVSRCALPHA:
++		return GL_ONE_MINUS_SRC_ALPHA;
++	case D3DBLEND_DESTALPHA:
++		return GL_ONE;
++	case D3DBLEND_INVDESTALPHA:
++		return GL_ZERO;
++	case D3DBLEND_DESTCOLOR:
++		return GL_DST_COLOR;
++	case D3DBLEND_INVDESTCOLOR:
++		return GL_ONE_MINUS_DST_COLOR;
++	case D3DBLEND_SRCALPHASAT:
++		return GL_ZERO; // min(source alpha, 1 - destination alpha)
++	default:
++		return GL_ONE;
++	}
++}
++
++// A Direct3D z comparison. The depth buffer holds Direct3D's z / w.
++static GLenum ImmediateDepthFunc(DWORD func)
++{
++	switch (static_cast<D3DCMPFUNC>(func)) {
++	case D3DCMP_NEVER:
++		return GL_NEVER;
++	case D3DCMP_LESS:
++		return GL_LESS;
++	case D3DCMP_EQUAL:
++		return GL_EQUAL;
++	case D3DCMP_LESSEQUAL:
++		return GL_LEQUAL;
++	case D3DCMP_GREATER:
++		return GL_GREATER;
++	case D3DCMP_NOTEQUAL:
++		return GL_NOTEQUAL;
++	case D3DCMP_GREATEREQUAL:
++		return GL_GEQUAL;
++	default:
++		return GL_ALWAYS;
++	}
++}
++
++void OpenGLES3Renderer::SetGLViewportAndScissor(const SDL_Rect& rect)
++{
++	const GLint y = m_height - rect.y - rect.h;
++	glViewport(rect.x, y, rect.w, rect.h);
++	glEnable(GL_SCISSOR_TEST);
++	glScissor(rect.x, y, rect.w, rect.h);
++}
++
++// The draw's vertices are lit and culled exactly as the software backend does
++// it (immediatemode.cpp); OpenGL clips and rasterizes them, at once.
++HRESULT OpenGLES3Renderer::SubmitImmediate(const ImmediateDraw& draw)
++{
++	if (!m_immediateProgram) {
++		return DDERR_GENERIC;
++	}
++	SDL_GL_MakeCurrent(DDWindow, m_context);
++	const ImmediateShading shading = DecodeImmediateShading(*draw.state);
++
++	m_immediateVertices.clear();
++	const D3DRMMATRIX4D& p = m_projection;
++	m_transformer.Run(draw, m_preparedLights, shading, [&](const ImmediateLitVertex(&triangle)[3]) {
++		for (const ImmediateLitVertex& v : triangle) {
++			const D3DVECTOR& e = v.position;
++			ImmediateGLES3Vertex out;
++			for (int c = 0; c < 4; ++c) {
++				out.position[c] = p[0][c] * e.x + p[1][c] * e.y + p[2][c] * e.z + p[3][c];
++			}
++			out.diffuse = v.color;
++			out.specular = v.specular;
++			out.texCoord = v.texCoord;
++			m_immediateVertices.push_back(out);
++		}
++	});
++	if (m_immediateVertices.empty() || m_viewportRect.w <= 0 || m_viewportRect.h <= 0) {
++		return DD_OK;
++	}
++
++	GLuint glTexture = m_dummyTexture;
++	bool useTexture = false;
++	bool keyed = false;
++	if (draw.texture && shading.colorOp != static_cast<DWORD>(D3DTOP_DISABLE)) {
++		Uint32 textureId = GetTextureId(draw.texture, false, 1.0f, 1.0f);
++		if (textureId != NO_TEXTURE_ID && m_textures[textureId].glTextureId) {
++			glTexture = m_textures[textureId].glTextureId;
++			useTexture = true;
++			keyed = m_textures[textureId].keyed;
++		}
++	}
++
++	m_dirty = true;
++	m_retainedStateLost = true;
++	glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
++	glUseProgram(m_immediateProgram);
++	SetGLViewportAndScissor(m_viewportRect);
++
++	// Culling is done on the CPU, with the transform and lighting.
++	glDisable(GL_CULL_FACE);
++	if (shading.zEnable) {
++		glEnable(GL_DEPTH_TEST);
++		glDepthFunc(ImmediateDepthFunc(shading.zFunc));
++		glDepthMask(shading.zWrite ? GL_TRUE : GL_FALSE);
++	}
++	else {
++		glDisable(GL_DEPTH_TEST);
++	}
++	if (shading.blend) {
++		glEnable(GL_BLEND);
++		glBlendFuncSeparate(
++			ImmediateBlendFactor(shading.srcBlend),
++			ImmediateBlendFactor(shading.destBlend),
++			GL_ZERO,
++			GL_ONE
++		);
++	}
++	else {
++		glDisable(GL_BLEND);
++	}
++	// The target's alpha is never written: the display surface has none.
++	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
++
++	glUniform2f(m_imPixelOffsetLoc, 1.0f / m_viewportRect.w, -1.0f / m_viewportRect.h);
++	glUniform1i(m_imUseTextureLoc, useTexture ? 1 : 0);
++	glUniform1i(m_imKeyedLoc, keyed ? 1 : 0);
++	glUniform1i(m_imColorKeyEnableLoc, shading.colorKeyEnable ? 1 : 0);
++	glUniform1i(m_imLinearLoc, shading.linear ? 1 : 0);
++	glUniform1i(m_imColorOpLoc, static_cast<GLint>(shading.colorOp));
++	glUniform2i(m_imColorArgsLoc, static_cast<GLint>(shading.colorArg1), static_cast<GLint>(shading.colorArg2));
++	glUniform1i(m_imAlphaOpLoc, static_cast<GLint>(shading.alphaOp));
++	glUniform2i(m_imAlphaArgsLoc, static_cast<GLint>(shading.alphaArg1), static_cast<GLint>(shading.alphaArg2));
++	glUniform1i(m_imSpecularLoc, shading.specular ? 1 : 0);
++	glUniform1i(m_imFogKindLoc, static_cast<GLint>(shading.fog));
++	glUniform1i(m_imFogModeLoc, static_cast<GLint>(shading.fogMode));
++	glUniform3f(m_imFogParamsLoc, shading.fogStart, shading.fogEnd, shading.fogDensity);
++	glUniform3f(m_imFogColorLoc, shading.fogR, shading.fogG, shading.fogB);
++	// The lit colour's alpha is the material's, the same for the whole draw.
++	const float alpha = std::min(1.0f, std::max(0.0f, draw.material.diffuse.a));
++	glUniform1f(m_imDiffuseAlphaLoc, static_cast<Uint8>(alpha * 255.0f + 0.5f) / 255.0f);
++
++	glActiveTexture(GL_TEXTURE0);
++	glBindTexture(GL_TEXTURE_2D, glTexture);
++
++	glBindVertexArray(m_immediateVAO);
++	glBindBuffer(GL_ARRAY_BUFFER, m_immediateVBO);
++	glBufferData(
++		GL_ARRAY_BUFFER,
++		m_immediateVertices.size() * sizeof(ImmediateGLES3Vertex),
++		m_immediateVertices.data(),
++		GL_STREAM_DRAW
++	);
++	glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(m_immediateVertices.size()));
++	glBindVertexArray(0);
++	glBindBuffer(GL_ARRAY_BUFFER, 0);
++	return DD_OK;
++}
++
++SDL_Rect OpenGLES3Renderer::ToRenderPixels(const D3DRECT& rect) const
++{
++	float scale = m_viewportTransform.scale;
++	int x1 = static_cast<int>(std::lround(rect.x1 * scale + m_viewportTransform.offsetX));
++	int y1 = static_cast<int>(std::lround(rect.y1 * scale + m_viewportTransform.offsetY));
++	int x2 = static_cast<int>(std::lround(rect.x2 * scale + m_viewportTransform.offsetX));
++	int y2 = static_cast<int>(std::lround(rect.y2 * scale + m_viewportTransform.offsetY));
++	SDL_Rect fit = GetFitRect();
++	x1 = std::max(fit.x, std::min(x1, fit.x + fit.w));
++	y1 = std::max(fit.y, std::min(y1, fit.y + fit.h));
++	x2 = std::max(x1, std::min(x2, fit.x + fit.w));
++	y2 = std::max(y1, std::min(y2, fit.y + fit.h));
++	return {x1, y1, x2 - x1, y2 - y1};
++}
++
++void OpenGLES3Renderer::SetViewportRect(const D3DRECT* rect)
++{
++	m_viewportRect = rect ? ToRenderPixels(*rect) : SDL_Rect{0, 0, m_width, m_height};
++	m_retainedStateLost = true;
++}
++
++// OpenGL clears a scissored rectangle of the target and of the depth buffer
++// directly. The depth buffer holds Direct3D's z / w for immediate-mode draws,
++// so z is stored as it is; the far plane, 1, is the far plane for retained
++// mode too.
++HRESULT OpenGLES3Renderer::ClearRect(const D3DRECT& rect, DWORD flags, D3DCOLOR color, float z)
++{
++	const bool target = (flags & D3DCLEAR_TARGET) != 0;
++	const bool zbuffer = (flags & D3DCLEAR_ZBUFFER) != 0;
++	if (!target && !zbuffer) {
++		return DD_OK;
++	}
++	SDL_Rect pixels = ToRenderPixels(rect);
++	if (pixels.w <= 0 || pixels.h <= 0) {
++		return DD_OK;
++	}
++	SDL_GL_MakeCurrent(DDWindow, m_context);
++	m_dirty = true;
++	m_retainedStateLost = true;
++	glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
++	glEnable(GL_SCISSOR_TEST);
++	glScissor(pixels.x, m_height - pixels.y - pixels.h, pixels.w, pixels.h);
++	GLbitfield mask = 0;
++	if (target) {
++		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
++		glClearColor(
++			((color >> 16) & 0xff) / 255.0f,
++			((color >> 8) & 0xff) / 255.0f,
++			(color & 0xff) / 255.0f,
++			1.0f
++		);
++		mask |= GL_COLOR_BUFFER_BIT;
++	}
++	if (zbuffer) {
++		glDepthMask(GL_TRUE);
++		glClearDepthf(std::min(1.0f, std::max(0.0f, z)));
++		mask |= GL_DEPTH_BUFFER_BIT;
++	}
++	glClear(mask);
++	glDisable(GL_SCISSOR_TEST);
++	return DD_OK;
++}
+diff --git a/miniwin/src/d3drm/d3drmrenderer.cpp b/miniwin/src/d3drm/d3drmrenderer.cpp
+index 5718a8a..3641f85 100644
+--- a/miniwin/src/d3drm/d3drmrenderer.cpp
++++ b/miniwin/src/d3drm/d3drmrenderer.cpp
+@@ -383,6 +383,11 @@ bool Miniwin_DeviceDrawsImmediateMode(const GUID& guid)
+ 	if (SDL_memcmp(&guid, &SOFTWARE_GUID, sizeof(GUID)) == 0) {
+ 		return true;
+ 	}
++#endif
++#ifdef USE_OPENGLES3
++	if (SDL_memcmp(&guid, &OpenGLES3_GUID, sizeof(GUID)) == 0) {
++		return true;
++	}
+ #endif
+ 	return false;
+ }
+@@ -459,10 +464,26 @@ Direct3DRMRenderer* CreateDirect3DRMRenderer(
+ 	return nullptr;
+ }
+ 
++// Whether the device draws into an OpenGL window: DDWindow's, or before
++// SetCooperativeLevel gives one, the kind CreateWindowExA makes.
++static bool DrawsIntoOpenGLWindow()
++{
++	if (DDWindow) {
++		return (SDL_GetWindowFlags(DDWindow) & SDL_WINDOW_OPENGL) != 0;
++	}
++	return Miniwin_GetOpenGLWindows();
++}
++
+ void Direct3DRMRenderer_EnumDevices(const IDirect3DMiniwin* d3d, LPD3DENUMDEVICESCALLBACK cb, void* ctx)
+ {
+ #ifdef USE_SDL_GPU
+-	Direct3DRMSDL3GPU_EnumDevice(cb, ctx);
++	// SDL GPU cannot claim an OpenGL window, whose surface SDL has already
++	// bound to EGL: on Wayland the second presenter is a protocol error that
++	// closes the display connection, and on Android Vulkan finds the window
++	// in use. So it is not listed for one.
++	if (!DrawsIntoOpenGLWindow()) {
++		Direct3DRMSDL3GPU_EnumDevice(cb, ctx);
++	}
+ #endif
+ #ifdef USE_OPENGLES3
+ 	OpenGLES3Renderer_EnumDevice(d3d, cb, ctx);
+diff --git a/miniwin/src/internal/d3drmrenderer_opengles3.h b/miniwin/src/internal/d3drmrenderer_opengles3.h
+index e21273b..7de3cda 100644
+--- a/miniwin/src/internal/d3drmrenderer_opengles3.h
++++ b/miniwin/src/internal/d3drmrenderer_opengles3.h
+@@ -3,6 +3,7 @@
+ #include "d3drmrenderer.h"
+ #include "d3drmtexture_impl.h"
+ #include "ddraw_impl.h"
++#include "immediatemode.h"
+ 
+ #if defined(__APPLE__)
+ #include <TargetConditionals.h>
+@@ -25,8 +26,22 @@ struct GLES3TextureCacheEntry {
+ 	GLuint glTextureId;
+ 	uint16_t width;
+ 	uint16_t height;
++	// Alpha-0 texels stand for a colour key or decal colour rather than for
++	// real alpha (immediate mode).
++	bool keyed;
+ };
+ 
++// Immediate mode's vertex, transformed and lit on the CPU: clip-space
++// position (Direct3D's z in [0, w]), diffuse and specular colours (the
++// specular alpha is the vertex fog factor) and texture coordinates.
++struct ImmediateGLES3Vertex {
++	float position[4];
++	SDL_Color diffuse;
++	SDL_Color specular;
++	TexCoord texCoord;
++};
++static_assert(sizeof(ImmediateGLES3Vertex) == 32);
++
+ struct GLES3MeshCacheEntry {
+ 	const MeshGroup* meshGroup;
+ 	int version;
+@@ -84,12 +99,23 @@ class OpenGLES3Renderer : public Direct3DRMRenderer {
+ 	void Draw2DImage(Uint32 textureId, const SDL_Rect& srcRect, const SDL_Rect& dstRect, FColor color) override;
+ 	void Download(SDL_Surface* target) override;
+ 	void SetDither(bool dither) override;
++	HRESULT SubmitImmediate(const ImmediateDraw& draw) override;
++	void SetViewportRect(const D3DRECT* rect) override;
++	HRESULT ClearRect(const D3DRECT& rect, DWORD flags, D3DCOLOR color, float z) override;
+ 
+ private:
+ 	void AddTextureDestroyCallback(Uint32 id, IDirect3DRMTexture* texture);
+ 	void AddMeshDestroyCallback(Uint32 id, IDirect3DRMMesh* mesh);
+ 	GLES3MeshCacheEntry GLES3UploadMesh(const MeshGroup& meshGroup, bool forceUV = false);
+ 	bool UploadTexture(SDL_Surface* source, GLuint& outTexId, bool isUI);
++	// Immediate mode draws at once, with its own program and states; the
++	// retained-mode program and states come back before the next mesh.
++	bool CreateImmediateProgram();
++	void UseRetainedState();
++	// The viewport rectangle (render pixels, top-left origin) as OpenGL's
++	// glViewport and glScissor take it, from the bottom left.
++	void SetGLViewportAndScissor(const SDL_Rect& rect);
++	SDL_Rect ToRenderPixels(const D3DRECT& rect) const;
+ 
+ 	MeshGroup m_uiMesh;
+ 	GLES3MeshCacheEntry m_uiMeshCache;
+@@ -113,6 +139,8 @@ class OpenGLES3Renderer : public Direct3DRMRenderer {
+ 	GLuint m_depthTarget = 0;
+ 	GLuint m_shaderProgram = 0;
+ 	GLuint m_dummyTexture = 0;
++	// Filters 2D images drawn at a scale that is not a whole number.
++	GLuint m_uiLinearSampler = 0;
+ 	GLint m_posLoc;
+ 	GLint m_normLoc;
+ 	GLint m_texLoc;
+@@ -130,11 +158,65 @@ class OpenGLES3Renderer : public Direct3DRMRenderer {
+ 	GLint m_lightingModelLoc;
+ 	GLint m_affineColorLoc;
+ 	GLint m_flatLoc;
+-	ViewportTransform m_viewportTransform;
++
++	// Retained mode's state since BeginFrame: whether EnableTransparency was
++	// called, and whether something else (an immediate-mode draw, a clear or
++	// a 2D image) changed the program or states since.
++	bool m_transparent = false;
++	bool m_retainedStateLost = false;
++
++	// Immediate mode.
++	PreparedLights m_preparedLights;
++	ImmediateTransformer m_transformer;
++	SDL_Rect m_viewportRect = {0, 0, 0, 0}; // render pixels, top-left origin
++	std::vector<ImmediateGLES3Vertex> m_immediateVertices;
++	GLuint m_immediateProgram = 0;
++	GLuint m_immediateVAO = 0;
++	GLuint m_immediateVBO = 0;
++	GLint m_imPixelOffsetLoc = -1;
++	GLint m_imTextureLoc = -1;
++	GLint m_imUseTextureLoc = -1;
++	GLint m_imKeyedLoc = -1;
++	GLint m_imColorKeyEnableLoc = -1;
++	GLint m_imLinearLoc = -1;
++	GLint m_imColorOpLoc = -1;
++	GLint m_imColorArgsLoc = -1;
++	GLint m_imAlphaOpLoc = -1;
++	GLint m_imAlphaArgsLoc = -1;
++	GLint m_imSpecularLoc = -1;
++	GLint m_imFogKindLoc = -1;
++	GLint m_imFogModeLoc = -1;
++	GLint m_imFogParamsLoc = -1;
++	GLint m_imFogColorLoc = -1;
++	GLint m_imDiffuseAlphaLoc = -1;
++	bool m_warnedLightCount = false;
+ };
+ 
+ inline static void OpenGLES3Renderer_EnumDevice(const IDirect3DMiniwin* d3d, LPD3DENUMDEVICESCALLBACK cb, void* ctx)
+ {
++	// A client may list the devices before SetCooperativeLevel gives miniwin
++	// its window. If its windows are OpenGL windows (Miniwin_SetOpenGLWindows),
++	// the device is tried on a hidden OpenGL window of its own; otherwise it
++	// could not draw into the client's window and is not listed.
++	SDL_Window* probe = nullptr;
++	if (!DDWindow) {
++		if (!Miniwin_GetOpenGLWindows()) {
++			return;
++		}
++		SDL_PropertiesID props = SDL_CreateProperties();
++		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, 64);
++		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, 64);
++		SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN, true);
++		Miniwin_SetupWindowCreateProperties(props);
++		probe = SDL_CreateWindowWithProperties(props);
++		SDL_DestroyProperties(props);
++		if (!probe) {
++			SDL_Log("OpenGL ES 3: no window to try the device on (%s)", SDL_GetError());
++			return;
++		}
++		DDWindow = probe;
++	}
++
+ 	Direct3DRMRenderer* device = OpenGLES3Renderer::Create(
+ 		640,
+ 		480,
+@@ -143,12 +225,16 @@ inline static void OpenGLES3Renderer_EnumDevice(const IDirect3DMiniwin* d3d, LPD
+ 		d3d->GetLightingModel(),
+ 		d3d->GetRenderStyle()
+ 	);
+-	if (!device) {
++	const bool created = device != nullptr;
++	delete device;
++	if (probe) {
++		DDWindow = nullptr;
++		SDL_DestroyWindow(probe);
++	}
++	if (!created) {
+ 		return;
+ 	}
+ 
+-	delete device;
+-
+ 	D3DDEVICEDESC halDesc = {};
+ 	halDesc.dcmColorModel = D3DCOLOR_RGB;
+ 	halDesc.dwFlags = D3DDD_DEVICEZBUFFERBITDEPTH;

@@ -18,6 +18,7 @@
 #include <SDL3/SDL.h>
 
 #include <miniwin/windows.h>
+#include <miniwin/miniwindevice.h>
 
 #include "platform/native/config.h"
 
@@ -89,6 +90,13 @@ int main(int argc, char** argv)
     if (!LRR_LoadConfig(iniPath)) {
         SDL_Quit();
         return 1;
+    }
+    /* WinMain creates its window before it lists the 3D devices, and
+     * miniwin lists its OpenGL devices only on an OpenGL window. */
+    const char* device = LRR_GetDisplayConfig()->device;
+    if (LRR_UseOpenGLWindow(device, LRR_Default3DDevice())) {
+        SDL_Log("The 3D device is expected to be an OpenGL device: creating an OpenGL window");
+        Miniwin_SetOpenGLWindows(true);
     }
     int result = WinMain(NULL, NULL, const_cast<LPSTR>(arguments.c_str()), SW_SHOWNORMAL);
     SDL_Quit();

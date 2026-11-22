@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // The Direct3D device the miniwin rendering tests draw with. By default it
 // is the software renderer on SDL's dummy video driver, which CI runs. Set
-// MINIWIN_TEST_DEVICE to another device's name (such as "SDL3 GPU HAL") and
-// MINIWIN_TEST_VIDEO_DRIVER to a driver it can draw on (such as "offscreen")
-// to run the same checks on another backend; a test whose device miniwin
-// does not offer exits with kMiniwinTestSkip.
+// MINIWIN_TEST_DEVICE to another device's name (such as "SDL3 GPU HAL" or
+// "OpenGL ES 3.0 HAL") and MINIWIN_TEST_VIDEO_DRIVER to a driver it can
+// draw on (such as "offscreen") to run the same checks on another backend;
+// a test whose device miniwin does not offer exits with kMiniwinTestSkip.
 #pragma once
 
 #include <miniwin/d3d.h>
@@ -24,6 +24,19 @@ inline const char* MiniwinTestVideoDriver()
 {
     const char* driver = SDL_getenv("MINIWIN_TEST_VIDEO_DRIVER");
     return driver && *driver ? driver : "dummy";
+}
+
+// The flags of the test's window: an OpenGL device draws only into an
+// OpenGL window (Miniwin_SetupWindowCreateProperties), and miniwin lists it
+// only for one.
+inline SDL_WindowFlags MiniwinTestWindowFlags(const char* device)
+{
+    return SDL_strstr(device, "OpenGL") ? SDL_WINDOW_OPENGL : 0;
+}
+
+inline SDL_WindowFlags MiniwinTestWindowFlags()
+{
+    return MiniwinTestWindowFlags(MiniwinTestDevice());
 }
 
 inline bool MiniwinTestDefaultDevice()
