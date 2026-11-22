@@ -147,12 +147,15 @@ endif()
 # miniwin builds through upstream's own miniwin/CMakeLists.txt, which picks
 # each platform's renderer backends: software and palette software, SDL GPU,
 # OpenGL 1.x and OpenGL ES 2/3 where their libraries are found, DirectX 9 on
-# Windows, Citro3D, GXM and Glide on the consoles that have them
-# (ISLE_RENDERER_SOFTWARE and ISLE_RENDERER_SDLGPU switch the first two). The
-# software backend is the last hardware device miniwin enumerates on the
-# desktop, so it stays the device the game picks; the patches implement
-# immediate-mode drawing on it alone so far.
+# Windows, Citro3D on 3DS, GXM on Vita and Glide on DOS
+# (ISLE_RENDERER_SOFTWARE and ISLE_RENDERER_SDLGPU switch the software and SDL
+# GPU backends). On the desktop the software backend is the last hardware
+# device miniwin enumerates, so it stays the device the game picks; the
+# patches implement immediate-mode drawing on it alone so far.
 add_subdirectory("${MINIWIN}" "${CMAKE_CURRENT_BINARY_DIR}/miniwin")
+if(NOT ISLE_RENDERER_SOFTWARE)
+  message(WARNING "ISLE_RENDERER_SOFTWARE is OFF: the game will pick a backend that does not draw the level yet")
+endif()
 # The machine miniwin emulates for the game: a 16-bit RGB565 display (the
 # units convert images to 16-bit only), and the software renderer described as
 # a hardware device, since Init.c's -best accepts only HAL devices.
