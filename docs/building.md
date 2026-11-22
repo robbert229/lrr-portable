@@ -128,7 +128,7 @@ same events and builds the port on macOS arm64 (`macos-latest`), macOS Intel
 `tools/setup-miniwin.sh`, then the commands from [Tests](#tests) with Ninja and
 a Release build; SDL3 is the static build configure fetches at
 `LRR_SDL3_GIT_TAG`, with SDL's default drivers. The `--wrap` tests need GNU ld
-options and are skipped on macOS. The build turns off fused multiply-add
+options and are not built on macOS. The build turns off fused multiply-add
 (`-ffp-contract=off`), which Clang otherwise uses on arm64.
 
 
