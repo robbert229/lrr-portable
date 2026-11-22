@@ -74,3 +74,6 @@ lrr_unit_test(teleporter SOURCES ${GAME_DIR}/test_teleporter.cpp
   WRAP legoobject_run_through_lists_skip_upgrade_parts legoobject_transform_position_get
        level_current_terrain_get camera_get_topdown_world_pos
   LABELS teleporter)
+
+# Message formatting, replacement rules and tutorial text reset.
+lrr_unit_test(text SOURCES ${GAME_DIR}/test_text.cpp LABELS text)
