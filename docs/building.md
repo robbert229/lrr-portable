@@ -186,12 +186,15 @@ log to `sdmc:/3ds/SDL_Log.txt`. Movies are off (`LRR_MOVIES`).
 
 It needs a New 3DS. The menus hold about 60 MB of heap besides libctru's
 32 MB linear heap, more than an Old 3DS gives an application, so the `.cia`
-asks for the New 3DS's 124 MB mode (`template.rsf`). miniwin lists Citro3D,
+asks for the New 3DS's 124 MB mode (`template.rsf`); the `.3dsx` gets what
+the Homebrew Launcher gives it. These figures come from Azahar on the
+software device at the main menu; a level has not been measured yet. miniwin lists Citro3D,
 the palette software renderer and the software renderer here; the default
 device is Citro3D (`3ds/config.h`), but until Citro3D draws immediate mode
 the game passes over it to the software renderer, which draws the level far
-too slowly on the 3DS's CPU and shows its frames uncropped on the top
-screen. On the SD card, where every lookup is a slow service call, the
+too slowly on the 3DS's CPU and shows its frames unscaled, so cropped, on
+the top screen. Presenting the frame (miniwin's 3DS path draws for the
+320x240 bottom screen) comes with the Citro3D work. On the SD card, where every lookup is a slow service call, the
 path mapping (`files_native.cpp`) reads each directory once and matches
 case from that listing.
 

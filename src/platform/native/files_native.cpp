@@ -180,6 +180,14 @@ std::string MatchCase(const std::string& dir, const std::string& part, const std
     return match.found.empty() ? part : match.found;
 }
 
+/* `part` under `base` ("" for the working directory; "/" or "sdmc:/" for
+ * a root). */
+std::string JoinPath(const std::string& base, const std::string& part)
+{
+    if (base.empty()) return part;
+    return base.back() == '/' ? base + part : base + "/" + part;
+}
+
 /* The host path for a Windows one: each component that does not exist as
  * spelled takes the spelling of an entry that matches it without case.
  * Each lookup is a filesystem call, so a path that exists as spelled is
@@ -190,25 +198,30 @@ std::string HostPath(const char* path)
     ToHostSeparators(text);
     std::string resolved;
     size_t start = 0;
-    if (!text.empty() && text[0] == '/') {
-        resolved = "/";
-        start = 1;
-    }
-    else if (!g_diskPath.empty() && !IsAbsolute(text)) {
-        /* [library:config] A relative path is taken from the diskpath, as
-         * the original takes it from the working directory. */
-        resolved = g_diskPath;
-    }
-    else if (!g_diskPath.empty() && text.compare(0, g_diskPath.size(), g_diskPath) == 0 &&
-             text.size() > g_diskPath.size() && text[g_diskPath.size()] == '/') {
+    if (!g_diskPath.empty() && text.compare(0, g_diskPath.size(), g_diskPath) == 0 &&
+        text.size() > g_diskPath.size() && text[g_diskPath.size()] == '/') {
         /* Inside the diskpath, as File_Initialise's paths are: it exists. */
         resolved = g_diskPath;
         start = g_diskPath.size() + 1;
     }
+    else if (!text.empty() && text[0] == '/') {
+        resolved = "/";
+        start = 1;
+    }
+    else if (IsAbsolute(text)) {
+        /* A drive or device root, "C:/" or "sdmc:/". */
+        start = text.find('/');
+        start = start == std::string::npos ? text.size() : start + 1;
+        resolved = text.substr(0, start);
+    }
+    else if (!g_diskPath.empty()) {
+        /* [library:config] A relative path is taken from the diskpath, as
+         * the original takes it from the working directory. */
+        resolved = g_diskPath;
+    }
     if (!kKeepListings && IsPlainRelative(text.substr(start))) {
         SDL_PathInfo info;
-        std::string whole = resolved.empty() ? text :
-            (resolved == "/" ? "/" : resolved + "/") + text.substr(start);
+        const std::string whole = JoinPath(resolved, text.substr(start));
         if (SDL_GetPathInfo(whole.c_str(), &info)) return whole;
     }
     while (start <= text.size()) {
@@ -217,17 +230,9 @@ std::string HostPath(const char* path)
         std::string part = text.substr(start, end - start);
         start = end + 1;
         if (part.empty() || part == ".") continue;
-        std::string dir = resolved.empty() ? "." : resolved;
-        std::string candidate = resolved.empty() ? part :
-            (resolved == "/" ? "/" + part : resolved + "/" + part);
-        if (part != "..") {
-            const std::string spelled = MatchCase(dir, part, candidate);
-            if (spelled != part) {
-                candidate = resolved.empty() ? spelled :
-                    (resolved == "/" ? "/" + spelled : resolved + "/" + spelled);
-            }
-        }
-        resolved = candidate;
+        const std::string dir = resolved.empty() ? "." : resolved;
+        if (part != "..") part = MatchCase(dir, part, JoinPath(resolved, part));
+        resolved = JoinPath(resolved, part);
     }
     return resolved;
 }
