@@ -36,3 +36,8 @@ lrr_unit_test(entity_cell_effects SOURCES ${GAME_DIR}/test_entity_cell_effects.c
     entity_indexed_record_word_at_b4_get stats_table_word_at_b8
     legoobject_build_placement_command_setup legoobject_build_placement_alternate_command_setup
   LABELS entity_cell_effects)
+
+# Damage number slot exhaustion, expiry, and eligibility.
+lrr_unit_test(screen_effect_quads SOURCES ${GAME_DIR}/test_screen_effect_quads.cpp
+  WRAP scene_render_lock_toggle entity_state_flags_get
+  LABELS screen_effect_quads)
