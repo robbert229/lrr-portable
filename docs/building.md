@@ -81,7 +81,7 @@ rectangle clears; ADR 0008, step 6), and miniwin reports which do
 else the first device that can (a device the file names wins): on the desktop SDL GPU, which needs a
 Vulkan, Metal or Direct3D 12 device, falling back to the software renderer
 (`3d device = Miniwin driver (Miniwin Emulation)` selects it); on Android
-and the web the software renderer. The
+OpenGL ES 3, and on the web the software renderer. The
 per-platform defaults are in `src/platform/native/<platform>/config.h`, and
 `device_choice_test` checks them against each platform's device list.
 
@@ -94,7 +94,9 @@ context (a desktop OpenGL 4.3 or later driver provides one). On an OpenGL
 window miniwin does not list SDL GPU, which cannot share the window with EGL
 (on Wayland the attempt closes the display connection). OpenGL ES 2 and
 OpenGL 1.x are listed there too but cannot draw the level: OpenGL ES 3 is
-the oldest OpenGL the port draws with. The `miniwin_*_gles3` tests run the
+the oldest OpenGL the port draws with. miniwin tries OpenGL ES 3 on a hidden
+window of its own before listing it; where a platform has only one window
+(Android), it tries it on the game's OpenGL window instead. The `miniwin_*_gles3` tests run the
 rendering checks on OpenGL ES 3 where SDL's offscreen driver offers an
 OpenGL ES 3 context through EGL (`LRR_MINIWIN_GLES3_VIDEO_DRIVER` picks
 another driver), and are skipped elsewhere, as on CI.
@@ -354,19 +356,21 @@ Movies are off (`LRR_MOVIES`), as Android has no FFmpeg.
 **ABIs.** The APK holds `arm64-v8a` and `x86_64`: 64-bit ARM is every
 phone and tablet sold in recent years (Google Play requires 64-bit code),
 and `x86_64` runs in the emulator and on Chromebooks. `armeabi-v7a` and
-`x86` are left out. Devices that run only 32-bit code are old or low-end,
-and the software renderer would be too slow on them. Each ABI adds about
-3 MB to the APK and another full build to CI. Both still build:
+`x86` are left out: devices that run only 32-bit code are old or low-end
+and a shrinking share, and each ABI adds about 3 MB to the APK and another
+full build to CI. Both still build:
 `./gradlew assembleDebug -PabiFilters=arm64-v8a,armeabi-v7a,x86_64,x86`.
 
 **Display.** The game is landscape and full screen (`full screen = true`
 is Android's default in `LegoRR.ini`): an Android window always fills the
 screen, and the full-screen mode is what lets miniwin fit the game's 640x480
-into it. The default 3D device is the software renderer
-(`ANDROID_DEFAULT_3D_DEVICE`), which draws on every device. SDL GPU needs
-Vulkan, which many devices and emulators lack or implement badly; set
-`3d device = Miniwin driver (SDL3 GPU HAL)` in `LegoRR.ini` to try it.
-OpenGL ES 3 (#925) does not draw the level yet.
+into it. The default 3D device is OpenGL ES 3 (`ANDROID_DEFAULT_3D_DEVICE`),
+which every device from Android 4.3 on supports, in the OpenGL window its
+name asks for. The software renderer is the fallback when OpenGL ES 3 cannot
+be set up, and `3d device = Miniwin driver (Miniwin Emulation)` selects it.
+SDL GPU is usually not listed on Android: it cannot share the OpenGL window,
+and upstream lists it there only once DirectDraw has a window, after the game
+has listed its devices.
 
 **Game data.** The app reads the game data from its external files
 directory, `/sdcard/Android/data/io.github.robbert229.LegoRR/files/`
@@ -388,8 +392,9 @@ Push `Music` the same way, and `chmod` it too. The `chmod` matters: a
 directory that `adb push` creates belongs to the shell user, and the app
 cannot read it until the directory is opened to all users. The files pushed
 straight into `files/`, like the WADs, are readable without it. Without the
-`chmod`, the menu crashes the first time it plays an animation from
-`Data/AVI`. Movies are off, so the `.avi` files in `Data/AVI` (about
+`chmod` the game still runs, but without what it reads from `Data`, such as
+the menu's animations from `Data/AVI` and the sounds in `Data/Sounds`. #909
+tracks a better way in. Movies are off, so the `.avi` files in `Data/AVI` (about
 370 MB) can be left out; keep the `.flh` files beside them. Don't edit
 `LegoRR.ini` in place with `adb shell`, because the file it writes belongs
 to the shell user and the app can no longer write it. Pull the file, edit
@@ -398,14 +403,12 @@ the app deletes the directory and everything in it, including the saves.
 
 **Touch.** SDL turns a touch into mouse events: a tap moves the pointer to
 the finger and presses and releases the left button, and miniwin passes
-those on as `WM_MOUSEMOVE` and `WM_LBUTTON*`. Tapping clicks in the menus,
-and in a level a press of a frame or more clicks too. Not done yet: a right
-click (cancelling, and some menus), scrolling the map other than by moving
-the pointer to the screen's edge, zooming, a keyboard for the keys the game
-uses (Space to skip messages, Escape for the pause menu, typing a save's
-name), and Android's Back button. A tap shorter than one game frame can be
-missed in a level, because the level reads the button state once per frame.
-A mouse and keyboard work.
+those on as `WM_MOUSEMOVE` and `WM_LBUTTON*`. A press of a frame or more
+clicks, in the menus and in a level; a tap shorter than one game frame can
+be missed, because the game reads the button state once per frame. A mouse
+and keyboard work. #986 tracks what touch still lacks: a right click,
+scrolling and zooming the map, the keys the game asks for (Space, Escape,
+typing a save's name) and Android's Back button.
 
 **Signing.** CI builds only the debug APK, signed with Android's debug key,
 so it installs for testing. `./gradlew assembleRelease` gives an unsigned,

@@ -151,23 +151,33 @@ int main(void)
     const auto nxNoGpu = List({kGles3, kPaletteSw});
     CHECK(Is(Choose(nxNoGpu, "", NX_DEFAULT_3D_DEVICE), kGles3), "Switch without SDL GPU: OpenGL ES 3");
 
-    /* Android: the software renderer, even before SDL GPU, which needs
-     * Vulkan (issue #927); a device LegoRR.ini names still wins. */
-    CHECK(Is(ANDROID_DEFAULT_3D_DEVICE, kSoftware), "Android: software by default");
-    const auto android = List({kSdlGpu, kGles3, kGles2, kPaletteSw, kSoftware});
-    CHECK(Is(Choose(android, "", ANDROID_DEFAULT_3D_DEVICE), kSoftware), "Android: the software renderer");
-    CHECK(Is(Choose(android, kSdlGpu, ANDROID_DEFAULT_3D_DEVICE), kSdlGpu),
+    /* Android: OpenGL ES 3, in the OpenGL window its name asks for (issue
+     * #927). SDL GPU is usually not listed there (upstream lists it only
+     * once DirectDraw has a window); the software renderer is the fallback.
+     * A device LegoRR.ini names still wins. */
+    CHECK(Is(ANDROID_DEFAULT_3D_DEVICE, kGles3), "Android: OpenGL ES 3 by default");
+    CHECK(LRR_UseOpenGLWindow("", ANDROID_DEFAULT_3D_DEVICE), "Android: an OpenGL window by default");
+    CHECK(!LRR_UseOpenGLWindow(kSoftware, ANDROID_DEFAULT_3D_DEVICE),
+          "Android: no OpenGL window for a configured software device");
+    const auto android = List({kGles3, kGles2, kPaletteSw, kSoftware});
+    CHECK(Is(Choose(android, "", ANDROID_DEFAULT_3D_DEVICE), kGles3), "Android: OpenGL ES 3");
+    CHECK(Is(Choose(android, kSoftware, ANDROID_DEFAULT_3D_DEVICE), kSoftware),
+          "Android: an explicit software device wins");
+    const auto androidGpu = List({kSdlGpu, kGles3, kGles2, kPaletteSw, kSoftware});
+    CHECK(Is(Choose(androidGpu, "", ANDROID_DEFAULT_3D_DEVICE), kGles3),
+          "Android: OpenGL ES 3 before SDL GPU when both are listed");
+    CHECK(Is(Choose(androidGpu, kSdlGpu, ANDROID_DEFAULT_3D_DEVICE), kSdlGpu),
           "Android: an explicit SDL GPU device wins");
-    CHECK(Is(Choose(android, kGles3, ANDROID_DEFAULT_3D_DEVICE), kGles3),
-          "Android: an explicit OpenGL ES 3 device wins, though it cannot draw the level yet");
-    auto androidNoSoftware = android;
-    androidNoSoftware[4].failed = true;
-    CHECK(Is(Choose(androidNoSoftware, "", ANDROID_DEFAULT_3D_DEVICE), kSdlGpu),
-          "Android: the software renderer failed, then SDL GPU");
+    auto androidGlFailed = android;
+    androidGlFailed[0].failed = true;
+    CHECK(Is(Choose(androidGlFailed, "", ANDROID_DEFAULT_3D_DEVICE), kSoftware),
+          "Android: OpenGL ES 3 failed, then the software renderer");
+    CHECK(Is(Choose(List({kPaletteSw, kSoftware}), "", ANDROID_DEFAULT_3D_DEVICE), kSoftware),
+          "Android without OpenGL ES 3: the software renderer");
 
     /* iOS: SDL GPU (Metal); the software renderer is listed but too slow. */
     CHECK(Is(IOS_DEFAULT_3D_DEVICE, kSdlGpu), "iOS: SDL GPU by default");
-    CHECK(Is(Choose(android, "", IOS_DEFAULT_3D_DEVICE), kSdlGpu), "iOS: SDL GPU");
+    CHECK(Is(Choose(androidGpu, "", IOS_DEFAULT_3D_DEVICE), kSdlGpu), "iOS: SDL GPU");
 
     /* The web: the software renderer, even if SDL GPU or OpenGL ES 3 were
      * listed, as WebGL cannot present from WinMain's worker. */
