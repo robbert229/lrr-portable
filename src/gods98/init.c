@@ -11,8 +11,11 @@
  * names in snake case.
  *
  * The original links this object after the import libraries, like
- * LATE-001 (finding 608). miniwin has no dialog resources, so the
- * mode-selection dialog fails; -best selects a mode without it. */
+ * LATE-001 (finding 608). The port has no dialog resources: as
+ * isle-portable reads isle.ini in place of Lego Island's CONFIG.EXE, a
+ * [library:config] substitution takes the dialog's choices from LegoRR.ini
+ * (platform/native/config.h). The dialog procedure and its helpers stay,
+ * uncalled. */
 #include "init.h"
 
 // GLOBAL: LEGORR 0x005580a0
@@ -25,6 +28,7 @@ Init_Globs initGlobs;
 
 #include "crt/vc5names.h"
 #include "init_imports.h"
+#include "platform/native/config.h"
 
 #define INIT_DIALOG_MODESELECTION   101
 #define INIT_IDC_DRIVERLIST         1000
@@ -34,7 +38,9 @@ Init_Globs initGlobs;
 #define INIT_IDC_WINDOW             1005
 #define INIT_IDC_MODELISTTEXT       1006
 
-static INT_PTR CALLBACK init_dialog_handler(HWND hWndDlg, UINT message,
+/* Uncalled on the port: the [library:config] substitution in
+ * init_initialise stands in for the dialog. */
+[[maybe_unused]] static INT_PTR CALLBACK init_dialog_handler(HWND hWndDlg, UINT message,
                                          WPARAM wParam, LPARAM lParam);
 void init_set_full_screen(HWND hWndDlg, BOOL on);
 void init_set_mode_list(HWND hWndDlg);
@@ -104,8 +110,45 @@ int init_initialise(int setup, int debug, int best, int window,
                 return 0;
             }
         } else if (setup) {
-            res = DialogBoxParamA((HINSTANCE)g_main_instance_handle, MAKEINTRESOURCE(INIT_DIALOG_MODESELECTION),
-                                  (HWND)g_platform_cursor_window_handle, init_dialog_handler, 0);
+            /* [library:config] In place of the "Mode Selection" dialog: its
+             * choices come from LegoRR.ini. The driver is the dialog's
+             * default, the first; the device is the file's, else the one
+             * the dialog selects, the last hardware device; the mode is the
+             * file's resolution if it is valid, else the dialog's default,
+             * the first valid mode. */
+            const LRR_DisplayConfig* config = LRR_GetDisplayConfig(); // [library:config]
+            unsigned int loop;
+
+            res = 0;
+            initGlobs.selFullScreen = config->fullScreen;
+            initGlobs.selDevice = NULL;
+            initGlobs.selMode = NULL;
+            if (directdraw_enum_devices(initGlobs.selDriver, initGlobs.devices, &initGlobs.deviceCount)) {
+                for (loop = 0; loop < initGlobs.deviceCount; loop++) {
+                    if (initGlobs.devices[loop].flags & DIRECTDRAW_FLAG_DEVICE_HARDWARE) initGlobs.selDevice = &initGlobs.devices[loop];
+                }
+                for (loop = 0; loop < initGlobs.deviceCount; loop++) {
+                    if (strcmp(initGlobs.devices[loop].desc, config->device) == 0) initGlobs.selDevice = &initGlobs.devices[loop];
+                }
+                if (initGlobs.selDevice == NULL && initGlobs.deviceCount) initGlobs.selDevice = &initGlobs.devices[0];
+
+                directdraw_enum_modes(initGlobs.selDriver, initGlobs.selFullScreen, initGlobs.modes, &initGlobs.modeCount);
+                for (loop = 0; loop < initGlobs.modeCount; loop++) {
+                    if (init_is_valid_mode(loop)) {
+                        if (initGlobs.selMode == NULL) initGlobs.selMode = &initGlobs.modes[loop];
+                        if (initGlobs.modes[loop].width == (unsigned int)config->width &&
+                            initGlobs.modes[loop].height == (unsigned int)config->height) {
+                            initGlobs.selMode = &initGlobs.modes[loop];
+                            break;
+                        }
+                    }
+                }
+
+                if (initGlobs.selDevice != NULL && initGlobs.selMode != NULL) res = 1;
+                else MessageBoxA(NULL, "No supported screen modes found", "Error", MB_OK);
+            } else {
+                MessageBoxA(NULL, "Please install DirectX version 6 or later", "Error", MB_OK);
+            }
         }
 
         if (res == 1) {
@@ -123,7 +166,9 @@ int init_initialise(int setup, int debug, int best, int window,
 }
 
 // FUNCTION: LEGORR 0x0049d2f0
-static INT_PTR CALLBACK init_dialog_handler(HWND hWndDlg, UINT message,
+/* Uncalled on the port: the [library:config] substitution in
+ * init_initialise stands in for the dialog. */
+[[maybe_unused]] static INT_PTR CALLBACK init_dialog_handler(HWND hWndDlg, UINT message,
                                          WPARAM wParam, LPARAM lParam)
 {
     unsigned int mode;

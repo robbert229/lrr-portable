@@ -46,7 +46,7 @@ Open PRs for this work against `develop`.
   ([ADR 0009](docs/adr/0009-miniwin-patches-in-this-repository.md)). `make setup`, `make build`, and
   `make run` configure, build, and launch; `make run` starts `LegoRR` in
   `WAD_DIR` (the game data directory) with `RUN_ARGS` (default
-  `-best -window`). For tests, run `cmake -S . -B build`, then
+  none: the display settings come from `LegoRR.ini`). For tests, run `cmake -S . -B build`, then
   `cmake --build build` and `ctest --test-dir build --output-on-failure`
   (`make test` does the same).
 - CI runs one required check, `native-build`

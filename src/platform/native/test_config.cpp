@@ -2,7 +2,7 @@
 /* test_config — the port's configuration file (platform/native/config.h),
  * as isle-portable's isle.ini: written with defaults in the preference
  * directory the first time, read from there or from an explicit path, and
- * applied to the save directory. XDG_DATA_HOME points the preference
+ * applied to the save directory and the display settings. XDG_DATA_HOME points the preference
  * directory into the fixture. */
 #include <stdio.h>
 #include <stdlib.h>
@@ -79,6 +79,16 @@ int main(void)
               text.find(prefDir) != std::string::npos,
           "default: savepath is the preference directory");
     CHECK(save_path() == prefDir, "default: the save directory is the preference directory");
+    /* iniparser writes its keys in lower case, and reads them in any. */
+    CHECK(text.find("full screen") != std::string::npos &&
+              text.find("horizontal resolution") != std::string::npos &&
+              text.find("vertical resolution") != std::string::npos &&
+              text.find("3d device") != std::string::npos,
+          "default: the display settings are written");
+    const LRR_DisplayConfig* display = LRR_GetDisplayConfig();
+    CHECK(!display->fullScreen && display->width == 640 && display->height == 480 &&
+              display->device[0] == '\0',
+          "default: a 640x480 window on the default device");
 
     /* A later run reads the file the user edited. */
     write_text(defaultIni, "[" LRR_CONFIG_SECTION "]\nsavepath = " + root + "/elsewhere/\n");
@@ -106,6 +116,26 @@ int main(void)
     write_text(custom, "[" LRR_CONFIG_SECTION "]\nother = 1\n");
     CHECK(LRR_LoadConfig(custom.c_str()) && save_path() == prefDir,
           "explicit: no savepath takes the preference directory");
+
+    /* The display settings, in place of the Mode Selection dialog. */
+    write_text(custom, "[" LRR_CONFIG_SECTION "]\n"
+                       "Full Screen = true\n"
+                       "Horizontal Resolution = 800\n"
+                       "Vertical Resolution = 600\n"
+                       "3D Device = Miniwin driver (Miniwin Emulation)\n");
+    CHECK(LRR_LoadConfig(custom.c_str()), "display: loads");
+    display = LRR_GetDisplayConfig();
+    CHECK(display->fullScreen, "display: full screen");
+    CHECK(display->width == 800 && display->height == 600, "display: the resolution");
+    CHECK(strcmp(display->device, "Miniwin driver (Miniwin Emulation)") == 0, "display: the device");
+
+    /* A file without them takes the defaults again. */
+    write_text(custom, "[" LRR_CONFIG_SECTION "]\nother = 1\n");
+    CHECK(LRR_LoadConfig(custom.c_str()), "display defaults: loads");
+    display = LRR_GetDisplayConfig();
+    CHECK(!display->fullScreen && display->width == 640 && display->height == 480 &&
+              display->device[0] == '\0',
+          "display defaults: a 640x480 window on the default device");
 
     /* An explicit file that does not load fails, as isle-portable's does. */
     CHECK(!LRR_LoadConfig((root + "/missing.ini").c_str()), "explicit: a missing file fails");

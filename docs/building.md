@@ -24,8 +24,10 @@ make run WAD_DIR=/path/to/game
 `LegoRR` is the units' `WinMain` (ADR 0007): it runs in the game directory,
 opens `LegoRR0.wad` and `LegoRR1.wad` there, and takes the shipped exe's flags
 (`-best`, `-window`, `-nosound`, `-debug`, ...). `make run` passes `RUN_ARGS`,
-`-best -window` by default; `-best` picks a display mode without the
-mode-selection dialog, which miniwin cannot show. miniwin supplies the
+none by default. Where the original showed its "Mode Selection" dialog, the
+port reads the display settings from `LegoRR.ini`, as isle-portable reads
+`isle.ini` in place of Lego Island's `CONFIG.EXE`; `-best` still picks a mode
+by itself, and `-window` then runs it in a window. miniwin supplies the
 Windows-compatible interfaces over SDL3 on every host, Windows included; the
 build does not require Wine. The file layer's substitution, including
 directory listings and the save directory, is in
