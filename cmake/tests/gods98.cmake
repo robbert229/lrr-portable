@@ -20,3 +20,6 @@ lrr_unit_test(main SOURCES ${ENGINE_DIR}/test_main.cpp LABELS main)
 
 # Parse nested block text and check wildcard lookups, sibling traversal and typed values.
 lrr_unit_test(gods98_config SOURCES ${ENGINE_DIR}/test_config.cpp LABELS config)
+
+# Check projected triangle geometry, intersections and matrix composition.
+lrr_unit_test(maths SOURCES ${ENGINE_DIR}/test_maths.cpp LABELS maths)
