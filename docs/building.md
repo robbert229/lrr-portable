@@ -70,8 +70,13 @@ targets, Vita and DOS.
 miniwin emulates a 16-bit RGB565 display and describes its software renderer
 as a hardware device, which is what `-best` looks for (see the
 `MINIWIN_PIXELFORMAT` and `MINIWIN_SOFTWARE_HAL` definitions in
-`CMakeLists.txt`). For a headless run, use SDL's offscreen driver and have
-miniwin write each presented frame to a file:
+`CMakeLists.txt`). miniwin builds through upstream's `miniwin/CMakeLists.txt`,
+which adds each platform's renderer backends: SDL GPU, plus OpenGL 1.x and
+OpenGL ES 2 and 3 when CMake finds their libraries, DirectX 9 on Windows, and
+the console backends. The software renderer is still the device the game
+picks, and so far it is the only backend that draws the level. For a
+headless run, use SDL's offscreen driver and have miniwin write each
+presented frame to a file:
 
 ```sh
 cd /path/to/game
