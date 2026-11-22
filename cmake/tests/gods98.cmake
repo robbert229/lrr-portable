@@ -11,3 +11,6 @@ lrr_unit_test(container SOURCES ${ENGINE_DIR}/test_container.cpp LABELS containe
 # Validate viewport sizing, camera, clipping and field on a dummy-driver device.
 lrr_unit_test(viewports SOURCES ${ENGINE_DIR}/test_viewports.cpp
   LABELS viewports ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Pin token boundaries, escape decoding, hash normalization and boolean spellings.
+lrr_unit_test(utils SOURCES ${ENGINE_DIR}/test_utils.cpp LABELS utils)
