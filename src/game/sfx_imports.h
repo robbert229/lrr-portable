@@ -80,8 +80,8 @@ uint32_t render_object_color_vector_set(void* record, unsigned long block, float
  * port entry with the original's contract and C linkage, so thin
  * unannotated adapters in sfx_port.cpp stand in. */
 void* sfx_mesh_load_texture_adapter(const char* basePath, const char* name,
-                                    unsigned int* width,
-                                    unsigned int* height);         /* 00482e70 */
+                                    unsigned long* width,
+                                    unsigned long* height);         /* 00482e70 */
 void sfx_mesh_set_group_texture_adapter(void* mesh, unsigned long group,
                                         void* texture);            /* 004830c0 */
 

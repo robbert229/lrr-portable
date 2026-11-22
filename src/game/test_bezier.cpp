@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "game/bezier.h"
+#include "game/animation_object_record.h"
 
 static int s_failures = 0;
 
@@ -137,16 +138,15 @@ int main(void)
               "a single-point curve answers its only point");
     }
 
-    /* SceneObjectModeIsOne: the +0x28 word. */
+    /* SceneObjectModeIsOne: AnimationObject.cameraFlipDir (+0x28 on Win32). */
     {
-        unsigned char object[0x40];
-        int mode = 1;
-        memset(object, 0, sizeof object);
-        memcpy(object + 0x28, &mode, sizeof mode);
-        CHECK(scene_object_mode_is_one(object) == 1, "mode 1 is one");
-        mode = 2;
-        memcpy(object + 0x28, &mode, sizeof mode);
-        CHECK(scene_object_mode_is_one(object) == 0, "mode 2 is not one");
+        AnimationObject object;
+        memset(&object, 0, sizeof object);
+        object.cameraNullName = (char*)"Camera";
+        object.cameraFlipDir = 1;
+        CHECK(scene_object_mode_is_one(&object) == 1, "mode 1 is one");
+        object.cameraFlipDir = 2;
+        CHECK(scene_object_mode_is_one(&object) == 0, "mode 2 is not one");
     }
 
     if (s_failures == 0) {

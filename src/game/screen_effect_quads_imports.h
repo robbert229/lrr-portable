@@ -13,6 +13,7 @@
 
 #include "gods98/avi_player.h"
 #include "gods98/container.h"
+#include "gods98/container_record.h"
 #include "gods98/record.h"
 #include "gods98/view.h"
 
@@ -118,8 +119,8 @@ uint32_t render_object_color_vector_set(void* record, unsigned long block, float
  * record_from_mesh_unit.hpp), so natively the existing unannotated
  * adapters stand in: sfx_port.cpp's (sfx.c) and lws_port.cpp's (lws.c). */
 void* sfx_mesh_load_texture_adapter(const char* basePath, const char* name,
-                                    unsigned int* width,
-                                    unsigned int* height);        /* 00482e70 */
+                                    unsigned long* width,
+                                    unsigned long* height);        /* 00482e70 */
 uint32_t mesh_group_material_values_set(void* mesh, unsigned long group, float value,
                                         unsigned long type);                /* 00483420 */
 

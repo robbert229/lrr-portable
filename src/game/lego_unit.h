@@ -381,9 +381,10 @@ void lego_level_debug_input_cell_mutator_dispatch(int bx, int by, struct Lego_Ob
 struct BlockRec;
 
 /* legoGlobs.config (005560c0): the first field, so &legoGlobs_config is
- * the address of legoGlobs itself, and Lego_Gods_Go zeroes the original's
- * 0xef8 bytes from it: sizeof(struct Lego_Globs) (lego_globs.h). */
-#define LEGO_GLOBS_SIZE 0xef8
+ * the address of legoGlobs itself, and Lego_Gods_Go zeroes
+ * sizeof(struct Lego_Globs) bytes from it (lego_globs.h): 0xef8 on Win32,
+ * more on 64-bit, where the struct's pointers are 8 bytes. */
+#define LEGO_GLOBS_SIZE sizeof(struct Lego_Globs)
 extern char* legoGlobs_healthText;              /* 00556e9c ToolTipInfo */
 extern char* legoGlobs_toolsText;               /* 00556eb0 */
 extern char* legoGlobs_carryObjectText;         /* 00556eb4 */
@@ -529,9 +530,10 @@ unsigned int lego_stats_level_record_count_for_stat_type(int objType); /* 0042ef
 
 /* ---- part 2 declarations, group 2E (0042efc0-0042f6f0): begin ---- */
 
-/* Win32 RECT, as Lego_PlayMovie's destination area. */
+/* Win32 RECT, as Lego_PlayMovie's destination area. RECT's LONG fields
+ * are 32-bit; long is 64-bit on LP64 targets. */
 typedef struct LegoRect2E {
-    long left, top, right, bottom;
+    int32_t left, top, right, bottom;
 } LegoRect2E;
 
 /* Stand-ins (lego_unit.c). */

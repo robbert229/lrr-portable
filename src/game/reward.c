@@ -607,7 +607,7 @@ int reward_prepare_results(void)
     if ((current = reward_level_get(level->rewardKey)) == NULL) return 0;
 
     if (rewardGlobs.level.saveHasCapture) {
-        memcpy(current->saveCapture, rewardGlobs.level.saveCapture,
+        memcpy(&current->saveCapture, &rewardGlobs.level.saveCapture,
                sizeof(current->saveCapture));
         current->saveHasCapture = 1;
     }
@@ -1229,7 +1229,9 @@ void reward_save_menu(void)
     void* save;
     RewardLevel* current;
     uint32_t render[6];
-    uint32_t snapshot[46];
+    /* The current save slot's copy: a whole Front_SaveData (0xb8 bytes on
+     * Win32, 0xc0 on 64-bit, where it holds an 8-byte pointer). */
+    Front_SaveData snapshot;
 
     save_slot_open();
     inGame = is_in_game();
@@ -1238,7 +1240,7 @@ void reward_save_menu(void)
         sav_record_ptr_target(REWARD_LEVEL_INDEX(level->name));
         slot = save_slot_get_target();
         save = sav_build_ctx_target();
-        front_campaign_snapshot_create(snapshot);
+        front_campaign_snapshot_create(&snapshot);
         current = reward_current_level_get();
         if (!inGame && level_objective_result_get((const struct Lego_Level*)level)) {
             do {
@@ -1251,7 +1253,7 @@ void reward_save_menu(void)
                 }
                 if (sav_build_ctx_target()) {
                     if (sav_build_ctx_target() != save && save) {
-                        options_context_copy_and_replace_resource_target(snapshot);
+                        options_context_copy_and_replace_resource_target(&snapshot);
                         save_mark_record(NULL, REWARD_LEVEL_INDEX(
                             ((RewardLegoLevel*)level_current_owner_get())->name));
                         save_write_record_target(REWARD_LEVEL_INDEX(level->name),
@@ -1797,8 +1799,16 @@ void reward_level_serialize(const RewardLevel* level, unsigned char* image)
 
     reward_image_put_word(image, 0x0000, (uint32_t)level->enabled);
     reward_image_put_word(image, 0x0004, (uint32_t)level->saveHasCapture);
-    for (i = 0; i < 8; i++)
-        reward_image_put_word(image, 0x0008 + i * 4, level->saveCapture[i]);
+    /* saveCapture (+0x0008), the Win32 Image: its surface and nextFree
+     * pointer slots hold no data. */
+    reward_image_put_word(image, 0x0008, 0); /* surface */
+    reward_image_put_word(image, 0x000c, level->saveCapture.width);
+    reward_image_put_word(image, 0x0010, level->saveCapture.height);
+    reward_image_put_word(image, 0x0014, level->saveCapture.penZero);
+    reward_image_put_word(image, 0x0018, level->saveCapture.pen255);
+    reward_image_put_word(image, 0x001c, level->saveCapture.penZeroRGB);
+    reward_image_put_word(image, 0x0020, level->saveCapture.flags);
+    reward_image_put_word(image, 0x0024, 0); /* nextFree */
     /* buildingCounts.names (+0x0028): 100 pointer slots. */
     memset(image + 0x0028, 0, 100 * 4);
     reward_image_put_word(image, 0x01b8, level->buildingCounts.count);
@@ -1822,8 +1832,14 @@ void reward_level_parse(const unsigned char* image, RewardLevel* level)
 
     level->enabled = (int)reward_image_word(image, 0x0000);
     level->saveHasCapture = (int)reward_image_word(image, 0x0004);
-    for (i = 0; i < 8; i++)
-        level->saveCapture[i] = reward_image_word(image, 0x0008 + i * 4);
+    level->saveCapture.surface = NULL;
+    level->saveCapture.width = reward_image_word(image, 0x000c);
+    level->saveCapture.height = reward_image_word(image, 0x0010);
+    level->saveCapture.penZero = reward_image_word(image, 0x0014);
+    level->saveCapture.pen255 = reward_image_word(image, 0x0018);
+    level->saveCapture.penZeroRGB = reward_image_word(image, 0x001c);
+    level->saveCapture.flags = reward_image_word(image, 0x0020);
+    level->saveCapture.nextFree = NULL;
     for (i = 0; i < 100; i++) level->buildingCounts.names[i] = NULL;
     level->buildingCounts.count = reward_image_word(image, 0x01b8);
     level->buildingCounts.gridCount = reward_image_word(image, 0x01bc);
