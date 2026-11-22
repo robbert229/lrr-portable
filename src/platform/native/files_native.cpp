@@ -20,6 +20,20 @@
 
 namespace {
 
+std::string g_savePath;
+std::string g_diskPath;
+
+/* A directory as configured, without the trailing separator that would
+ * double up once a name is added. */
+std::string TrimDirectory(const char* path)
+{
+    std::string dir = path != NULL ? path : "";
+    while (dir.size() > 1 && (dir.back() == '/' || dir.back() == '\\')) {
+        dir.pop_back();
+    }
+    return dir;
+}
+
 struct CaseMatch {
     const char* want;
     std::string found;
@@ -50,6 +64,15 @@ std::string HostPath(const char* path)
     if (!text.empty() && text[0] == '/') {
         resolved = "/";
         start = 1;
+    }
+    else if (!g_diskPath.empty() && !(text.size() > 1 && text[1] == ':')) {
+        /* [library:config] A relative path is taken from the diskpath, as
+         * the original takes it from the working directory. The diskpath
+         * is the host's own and is used as written. */
+        resolved = g_diskPath;
+        for (char& c : resolved) {
+            if (c == '\\') c = '/';
+        }
     }
     while (start <= text.size()) {
         size_t end = text.find('/', start);
@@ -103,8 +126,6 @@ void FillFindData(const FindSearch& search, const std::string& name,
     }
 }
 
-std::string g_savePath;
-
 } // namespace
 
 extern "C" {
@@ -131,12 +152,7 @@ FILE* files_native_fopen(const char* path, const char* mode)
 
 void files_native_set_save_path(const char* path)
 {
-    g_savePath = path != NULL ? path : "";
-    /* A trailing separator would double up once files.c adds "\\name". */
-    while (g_savePath.size() > 1 &&
-           (g_savePath.back() == '/' || g_savePath.back() == '\\')) {
-        g_savePath.pop_back();
-    }
+    g_savePath = TrimDirectory(path);
     if (!g_savePath.empty()) {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Saving games in \"%s\"", g_savePath.c_str());
     }
@@ -145,6 +161,21 @@ void files_native_set_save_path(const char* path)
 const char* files_native_save_path(void)
 {
     return g_savePath.empty() ? NULL : g_savePath.c_str();
+}
+
+/* --- the data directory ----------------------------------------------- */
+
+void files_native_set_disk_path(const char* path)
+{
+    g_diskPath = TrimDirectory(path);
+    if (!g_diskPath.empty()) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Reading game data from \"%s\"", g_diskPath.c_str());
+    }
+}
+
+const char* files_native_disk_path(void)
+{
+    return g_diskPath.empty() ? NULL : g_diskPath.c_str();
 }
 
 void files_native_save_slot_written(int slot)
@@ -182,7 +213,9 @@ long files_native_findfirst(const char* filespec,
     if (pattern == "*.*") pattern = "*";
 
     FindSearch search;
-    search.dir = dir == "." || dir == "/" ? dir : HostPath(dir.c_str());
+    /* [library:config] The working directory's listing is the diskpath's. */
+    if (dir == "." && !g_diskPath.empty()) search.dir = HostPath(".");
+    else search.dir = dir == "." || dir == "/" ? dir : HostPath(dir.c_str());
     search.next = 0;
     int count = 0;
     char** names = SDL_GlobDirectory(search.dir.c_str(), pattern.c_str(),

@@ -260,6 +260,12 @@ if(BUILD_TESTING)
   target_link_libraries(files_test PRIVATE units)
   add_test(NAME files COMMAND files_test)
   set_tests_properties(files PROPERTIES LABELS files)
+  # Files.c's start-up with the data directory from the diskpath
+  # ([library:config]).
+  add_executable(diskpath_test ${ENGINE_DIR}/test_diskpath.cpp)
+  target_link_libraries(diskpath_test PRIVATE units)
+  add_test(NAME diskpath COMMAND diskpath_test)
+  set_tests_properties(diskpath PROPERTIES LABELS files)
   add_executable(config_test ${PLATFORM_DIR}/native/test_config.cpp)
   target_link_libraries(config_test PRIVATE units)
   add_test(NAME config COMMAND config_test)

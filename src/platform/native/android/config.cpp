@@ -24,4 +24,6 @@ void Android_SetupDefaultConfigOverrides(dictionary* p_dictionary)
     }
 
     iniparser_set(p_dictionary, LRR_CONFIG_SAVEPATH, savedata.c_str());
+    // The game data (Data and the WADs) in the external storage directory.
+    iniparser_set(p_dictionary, LRR_CONFIG_DISKPATH, (std::string(data ? data : "") + "/").c_str());
 }

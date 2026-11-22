@@ -2,7 +2,7 @@
 /* test_config — the port's configuration file (platform/native/config.h),
  * as isle-portable's isle.ini: written with defaults in the preference
  * directory the first time, read from there or from an explicit path, and
- * applied to the save directory and the display settings. XDG_DATA_HOME points the preference
+ * applied to the save directory, the data directory and the display settings. XDG_DATA_HOME points the preference
  * directory into the fixture. */
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,6 +52,12 @@ static std::string save_path(void)
     return path != NULL ? path : "";
 }
 
+static std::string disk_path(void)
+{
+    const char* path = files_native_disk_path();
+    return path != NULL ? path : "";
+}
+
 int main(void)
 {
     char cwd[1024];
@@ -85,6 +91,8 @@ int main(void)
               text.find("vertical resolution") != std::string::npos &&
               text.find("3d device") != std::string::npos,
           "default: the display settings are written");
+    CHECK(text.find("diskpath") != std::string::npos, "default: diskpath is written");
+    CHECK(files_native_disk_path() == NULL, "default: the data is read from the working directory");
     const LRR_DisplayConfig* display = LRR_GetDisplayConfig();
     CHECK(!display->fullScreen && display->width == 640 && display->height == 480 &&
               display->device[0] == '\0',
@@ -116,6 +124,16 @@ int main(void)
     write_text(custom, "[" LRR_CONFIG_SECTION "]\nother = 1\n");
     CHECK(LRR_LoadConfig(custom.c_str()) && save_path() == prefDir,
           "explicit: no savepath takes the preference directory");
+
+    /* diskpath names the directory that holds Data and the WADs. */
+    write_text(custom, "[" LRR_CONFIG_SECTION "]\ndiskpath = " + root + "/install/\n");
+    CHECK(LRR_LoadConfig(custom.c_str()), "diskpath: loads");
+    CHECK(disk_path() == root + "/install", "diskpath: the data directory follows the file");
+
+    /* A file without it (or with it empty) keeps the working directory. */
+    write_text(custom, "[" LRR_CONFIG_SECTION "]\nother = 1\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && files_native_disk_path() == NULL,
+          "diskpath: none keeps the working directory");
 
     /* The display settings, in place of the Mode Selection dialog. */
     write_text(custom, "[" LRR_CONFIG_SECTION "]\n"
