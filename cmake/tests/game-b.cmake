@@ -96,3 +96,7 @@ lrr_unit_test(vehicle_model SOURCES ${GAME_DIR}/test_vehicle_model.cpp
 # Pool connectivity and opening and sealing an outlet.
 lrr_unit_test(water SOURCES ${GAME_DIR}/test_water.cpp
   WRAP scene_render_lock_toggle terrain_map_block_vertices_get LABELS water)
+
+# Weapon configuration defaults and overrides, hit bounds and model timers.
+lrr_unit_test(weapons SOURCES ${GAME_DIR}/test_weapons.cpp
+  WRAP lego_entity_type_pair_lookup building_upgrade_admission_check LABELS weapons)
