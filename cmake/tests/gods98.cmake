@@ -14,3 +14,6 @@ lrr_unit_test(viewports SOURCES ${ENGINE_DIR}/test_viewports.cpp
 
 # Pin token boundaries, escape decoding, hash normalization and boolean spellings.
 lrr_unit_test(utils SOURCES ${ENGINE_DIR}/test_utils.cpp LABELS utils)
+
+# Exercise command-line options and texture-management flags without starting the game.
+lrr_unit_test(main SOURCES ${ENGINE_DIR}/test_main.cpp LABELS main)
