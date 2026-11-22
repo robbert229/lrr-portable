@@ -30,3 +30,7 @@ lrr_unit_test(panel_unit SOURCES ${GAME_DIR}/test_panel_unit.cpp
 
 # Cursor name lookup and temporary override expiry.
 lrr_unit_test(pointer SOURCES ${GAME_DIR}/test_pointer.cpp LABELS pointer)
+
+# Priority configuration, ordering, toggle state and reset.
+lrr_unit_test(priorities SOURCES ${GAME_DIR}/test_priorities.cpp
+  WRAP media_action_feedback_sound_dispatch LABELS priorities)
