@@ -6690,6 +6690,7 @@ void legoobject_flagged_vector_step_command_issue(Lego_Object* obj, float* dir)
         unsigned int* yList;
         unsigned int count;
         unsigned int* xList;
+        int searched;
         Point2F wPos;
         LegoObjJ_Point2I toBlockPos;
 
@@ -6697,20 +6698,27 @@ void legoobject_flagged_vector_step_command_issue(Lego_Object* obj, float* dir)
         legoobject_transform_position_get(obj, &wPos.x, &wPos.y);
         legoobject_vector2d_ray_end_point(&wPos.x, &wPos.x, dir, legoGlobs_MiniFigureRunAway);
         if (terrain_map_world_to_block(Lego_GetMap(), wPos.x, wPos.y, &toBlockPos.x, &toBlockPos.y)) {
+            searched = 0;
             if (toBlockPos.x == blockPos.x && toBlockPos.y == blockPos.y) {
-                /* A one-block route: the original frees these stack
-                 * addresses below as well. */
+                /* A one-block route from the stack. The original frees
+                 * these stack addresses below too, which its CRT let
+                 * pass and glibc aborts on; the port frees only the
+                 * route search's lists. */
                 xList = (unsigned int*)&blockPos.x;
                 yList = (unsigned int*)&blockPos.y;
                 count = 1;
-            } else if (!legoobject_terrain_neighbor_path_check(obj, blockPos.x, blockPos.y,
+            } else if (legoobject_terrain_neighbor_path_check(obj, blockPos.x, blockPos.y,
                            toBlockPos.x, toBlockPos.y, &xList, &yList, &count, NULL, NULL)) {
+                searched = 1;
+            } else {
                 return;
             }
             if (legoobject_route_setup_and_marker_associate(obj, count, xList, yList, &wPos.x))
                 ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].flags |= 0x40;
-            free(xList);
-            free(yList);
+            if (searched) {
+                free(xList);
+                free(yList);
+            }
             obj->flags1 |= 0x800000;
             idle_register(LEGOOBJ_SLOT(obj));
         }
