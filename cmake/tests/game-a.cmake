@@ -98,3 +98,6 @@ lrr_unit_test(lego_unit SOURCES ${GAME_DIR}/test_lego_unit.cpp
 
 # Camera zoom range, free movement, and acceleration on a normalized direction.
 lrr_unit_test(camera_control SOURCES ${GAME_DIR}/test_camera_control.cpp LABELS camera_control)
+
+# Live object work eligibility and capacity of the teleport request queue.
+lrr_unit_test(legoobject_unit SOURCES ${GAME_DIR}/test_legoobject_unit.cpp LABELS legoobject_unit)
