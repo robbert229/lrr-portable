@@ -7,7 +7,7 @@
 #
 # The run has no game data, so the game stops at once; what it shows is that
 # the signed bundle starts and writes its default LegoRR.ini.
-set -euo pipefail
+set -euxo pipefail
 
 dmg="${1:?usage: verify.sh <package.dmg>}"
 mnt="$(mktemp -d)"
