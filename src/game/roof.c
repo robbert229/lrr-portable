@@ -16,6 +16,7 @@
  * build lego_unit_imports.h points Lego.c at this unit's names; natively
  * the port serves the callers and nothing calls these. */
 #include <math.h>
+#include "block_grid.h"
 #include <stdlib.h>
 
 #include "crt/vc5names.h"
@@ -105,7 +106,7 @@ void roof_set_block_roof_vertices(unsigned int bx, unsigned int by,
                                   const Roof_Vector3F* pos2,
                                   const Roof_Vector3F* pos3)
 {
-    RoofBlock* block = &roofGlobs.grid[(by * roofGlobs.width) + bx];
+    RoofBlock* block = &roofGlobs.grid[lrr_block_index((by * roofGlobs.width) + bx, roofGlobs.width, roofGlobs.height)];
     Roof_Vertex vertices[4];
     Roof_Vector3F normal = { 0.0f, 0.0f, 0.0f };
     unsigned int faceData[6];
@@ -174,7 +175,7 @@ void roof_update(void)
         roofGlobs.needUpdate = 0;
         for (by = 0; by < roofGlobs.height; by++) {
             for (bx = 0; bx < roofGlobs.width; bx++) {
-                block = &roofGlobs.grid[(by * roofGlobs.width) + bx];
+                block = &roofGlobs.grid[lrr_block_index((by * roofGlobs.width) + bx, roofGlobs.width, roofGlobs.height)];
                 if (block->flags & ROOF_FLAG_UPDATE) {
                     /* The four blocks around each corner, for each corner. */
                     int offsets[4][4][2] = {
@@ -215,7 +216,7 @@ void roof_hide(int hide)
 // FUNCTION: LEGORR 0x004634f0
 void roof_hide_block(unsigned int bx, unsigned int by)
 {
-    RoofBlock* block = &roofGlobs.grid[(by * roofGlobs.width) + bx];
+    RoofBlock* block = &roofGlobs.grid[lrr_block_index((by * roofGlobs.width) + bx, roofGlobs.width, roofGlobs.height)];
 
     container_mesh_hide_group(roofGlobs.contMesh, block->groupID, 0);
     roofGlobs.hiddenList[roofGlobs.hiddenCount++] = block;
@@ -241,7 +242,7 @@ int roof_get_block_plane_normal(unsigned int bx, unsigned int by,
     RoofBlock* block;
 
     if (bx < roofGlobs.width && by < roofGlobs.height) {
-        block = &roofGlobs.grid[(by * roofGlobs.width) + bx];
+        block = &roofGlobs.grid[lrr_block_index((by * roofGlobs.width) + bx, roofGlobs.width, roofGlobs.height)];
         if (!(block->flags & ROOF_FLAG_NOGROUP)) {
             lwo_layer_polygon_vertex_data_read(roofGlobs.contMesh, block->groupID, 0, 4, vertices);
             surface_triangle_normal_calculate(&first.x, &vertices[0].position.x, &vertices[1].position.x, &vertices[2].position.x);

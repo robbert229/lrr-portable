@@ -9,6 +9,11 @@
  * per-user directory unless the file says otherwise. An empty savepath
  * keeps the original's Data\Saves.
  *
+ * It holds the data directory, legorr:diskpath, as isle.ini's
+ * isle:diskpath: the directory that holds Data and the WADs. The original
+ * found them in the working directory, so it only ran when started inside
+ * the install; empty (the default on the desktop) keeps that.
+ *
  * It also holds the display settings that the original's start-up "Mode
  * Selection" dialog (gods98 Init.c) asked for, as isle.ini holds the ones
  * Lego Island's CONFIG.EXE set: full screen or a window, the resolution,
@@ -28,6 +33,7 @@
 #define LRR_CONFIG_FILE "LegoRR.ini"
 #define LRR_CONFIG_SECTION "legorr"
 #define LRR_CONFIG_SAVEPATH "legorr:savepath"
+#define LRR_CONFIG_DISKPATH "legorr:diskpath"
 #define LRR_CONFIG_FULLSCREEN "legorr:Full Screen"
 #define LRR_CONFIG_XRES "legorr:Horizontal Resolution"
 #define LRR_CONFIG_YRES "legorr:Vertical Resolution"
@@ -62,7 +68,8 @@ enum LRR_TrainingSave {
 
 /* Reads the configuration from `iniPath`, or from LRR_CONFIG_FILE in the
  * preference directory when it is NULL, writing that file with defaults
- * when it is missing or empty, and applies it (files_native_set_save_path).
+ * when it is missing or empty, and applies it (files_native_set_save_path,
+ * files_native_set_disk_path).
  * False when an explicit `iniPath` does not load, or the defaults cannot
  * be written. */
 bool LRR_LoadConfig(const char* iniPath);

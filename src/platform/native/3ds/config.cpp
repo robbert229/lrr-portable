@@ -15,4 +15,6 @@ void N3DS_SetupDefaultConfigOverrides(dictionary* p_dictionary)
     // TODO: Save path: can we use libctru FS save data functions? Would be neat, especially for CIA install
     // Extra / at the end causes some issues
     iniparser_set(p_dictionary, LRR_CONFIG_SAVEPATH, "sdmc:/3ds/LegoRR");
+    // The game data (Data and the WADs) beside the saves.
+    iniparser_set(p_dictionary, LRR_CONFIG_DISKPATH, "sdmc:/3ds/LegoRR");
 }

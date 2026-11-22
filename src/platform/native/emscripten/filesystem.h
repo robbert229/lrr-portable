@@ -7,6 +7,9 @@
 #define LEGORRR_PLATFORM_NATIVE_EMSCRIPTEN_FILESYSTEM_H
 
 inline static const char* Emscripten_savePath = "/save";
+/* The data directory (legorr:diskpath): where the game data (Data and the
+ * WADs) is mounted, as isle-portable's "/LEGO". */
+inline static const char* Emscripten_dataPath = "/LegoRR";
 
 bool Emscripten_OPFSDisabled();
 /* Makes the OPFS directories that hold an explicit configuration file. */

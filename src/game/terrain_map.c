@@ -13,6 +13,7 @@
  * functions here that keep a port name are the ones whose callers already
  * use the original's contract (finding 556). */
 #include <math.h>
+#include "block_grid.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -104,31 +105,31 @@ TerrainMap* terrain_map_create(void* root, const char* filename,
                     }
                     for (y = 0; y < map->blockHeight; y++) {
                         for (x = 0; x < map->blockWidth; x++) {
-                            map->blocks[y * map->blockWidth + x].flags = 0x60;
-                            map->blocks[y * map->blockWidth + x].texture = 0;
-                            block = &map->blocks[y * map->blockWidth + x];
+                            map->blocks[lrr_block_index(y * map->blockWidth + x, map->blockWidth, map->blockHeight)].flags = 0x60;
+                            map->blocks[lrr_block_index(y * map->blockWidth + x, map->blockWidth, map->blockHeight)].texture = 0;
+                            block = &map->blocks[lrr_block_index(y * map->blockWidth + x, map->blockWidth, map->blockHeight)];
                             block->height =
                                 (unsigned char)terrain_map_file_block_value(
                                     file, x, y, map->blockWidth);
-                            uv = &map->blocks[y * map->blockWidth + x].uvWobble;
+                            uv = &map->blocks[lrr_block_index(y * map->blockWidth + x, map->blockWidth, map->blockHeight)].uvWobble;
                             uv->x = random_float_range(0.0f, 1.0f);
                             r = random_float_range(0.0f, 1.0f);
                             scale = 1.0f / (float)sqrt(r * r + uv->x * uv->x);
                             uv->x = scale * uv->x;
                             uv->y = scale * r;
-                            uv = &map->blocks[y * map->blockWidth + x].uvWobble;
+                            uv = &map->blocks[lrr_block_index(y * map->blockWidth + x, map->blockWidth, map->blockHeight)].uvWobble;
                             uv->x *= 0.3f;
                             uv->y *= 0.3f;
-                            map->blocks[y * map->blockWidth + x].highlight = 0;
+                            map->blocks[lrr_block_index(y * map->blockWidth + x, map->blockWidth, map->blockHeight)].highlight = 0;
                         }
                     }
                     terrain_map_vertices_build(map);
                     for (y = 0; y < map->gridHeight; y++) {
                         for (x = 0; x < map->gridWidth; x++) {
-                            diffA = map->blocks[y * map->blockWidth + x].height -
-                                    map->blocks[(y + 1) * map->blockWidth + x + 1].height;
-                            diffB = map->blocks[y * map->blockWidth + x + 1].height -
-                                    map->blocks[(y + 1) * map->blockWidth + x].height;
+                            diffA = map->blocks[lrr_block_index(y * map->blockWidth + x, map->blockWidth, map->blockHeight)].height -
+                                    map->blocks[lrr_block_index((y + 1) * map->blockWidth + x + 1, map->blockWidth, map->blockHeight)].height;
+                            diffB = map->blocks[lrr_block_index(y * map->blockWidth + x + 1, map->blockWidth, map->blockHeight)].height -
+                                    map->blocks[lrr_block_index((y + 1) * map->blockWidth + x, map->blockWidth, map->blockHeight)].height;
                             if ((unsigned int)abs(diffA) < (unsigned int)abs(diffB)) {
                                 terrain_map_block_rotated_set(map, x, y, 1);
                             }
@@ -175,9 +176,9 @@ void terrain_map_vertices_build(TerrainMap* map)
                 vertices[i].position.y =
                     map->worldY - (offsets[i].y + (float)y) * map->blockSize;
                 vertices[i].position.z =
-                    -((float)map->blocks[(y + (int)offsets[i].y) *
+                    -((float)map->blocks[lrr_block_index((y + (int)offsets[i].y) *
                                              map->blockWidth +
-                                         x + (int)offsets[i].x]
+                                         x + (int)offsets[i].x, map->blockWidth, map->blockHeight)]
                           .height *
                       roughLevel);
                 if (vertices[i].position.z < map->lowestZ) {
@@ -223,8 +224,8 @@ void terrain_map_block_texture_fade_set(TerrainMap* map, unsigned int bx,
     faceData[2] = 3;
     faceData[4] = 2;
     faceData[5] = 3;
-    if (map->blocks[by * map->blockWidth + bx].texture != texture &&
-        !map->noFade[map->blocks[by * map->blockWidth + bx].texture]) {
+    if (map->blocks[lrr_block_index(by * map->blockWidth + bx, map->blockWidth, map->blockHeight)].texture != texture &&
+        !map->noFade[map->blocks[lrr_block_index(by * map->blockWidth + bx, map->blockWidth, map->blockHeight)].texture]) {
         for (i = 0; i < TERRAIN_MAP_MAX_TRANSITIONS; i++) {
             transition = &map->transitions[i];
             if (!(transition->flags & 1)) {
@@ -247,7 +248,7 @@ void terrain_map_block_texture_fade_set(TerrainMap* map, unsigned int bx,
                     map->transMesh, transition->groupID,
                     packed_grid_cell_value_get(
                         map->textureSet,
-                        map->blocks[by * map->blockWidth + bx].texture));
+                        map->blocks[lrr_block_index(by * map->blockWidth + bx, map->blockWidth, map->blockHeight)].texture));
                 transition->x = bx;
                 transition->y = by;
                 transition->timer = 0.05f;
@@ -307,9 +308,9 @@ int terrain_map_shape_tolerance_check(TerrainMap* map,
                 }
             }
             for (j = 0; j < 4; j++) {
-                if (map->blocks[(vertexOffsets[j].y + shape[i].y) *
+                if (map->blocks[lrr_block_index((vertexOffsets[j].y + shape[i].y) *
                                     map->blockWidth +
-                                vertexOffsets[j].x + shape[i].x]
+                                vertexOffsets[j].x + shape[i].x, map->blockWidth, map->blockHeight)]
                         .flags & TERRAIN_MAP_BLOCK_FLATTENED) {
                     if (vertices[j].z < lowest) lowest = vertices[j].z;
                     if (vertices[j].z > highest) highest = vertices[j].z;
@@ -361,9 +362,9 @@ void terrain_map_shape_flatten(TerrainMap* map,
             terrain_map_block_vertices_get(map, point->x, point->y,
                                            vertices[blockCount]);
             for (j = 0; j < 4; j++) {
-                if (map->blocks[(vertexOffsets[j].y + point->y) *
+                if (map->blocks[lrr_block_index((vertexOffsets[j].y + point->y) *
                                     map->blockWidth +
-                                point->x + vertexOffsets[j].x]
+                                point->x + vertexOffsets[j].x, map->blockWidth, map->blockHeight)]
                         .flags & TERRAIN_MAP_BLOCK_FLATTENED) {
                     if (vertices[blockCount][j].z < lowest) {
                         lowest = vertices[blockCount][j].z;
@@ -391,9 +392,9 @@ void terrain_map_shape_flatten(TerrainMap* map,
     }
     for (i = 0; i < blockCount; i++) {
         for (j = 0; j < 4; j++) {
-            if (!(map->blocks[(vertexOffsets[j].y + s_terrain_map_flatten_blocks[i].y) *
+            if (!(map->blocks[lrr_block_index((vertexOffsets[j].y + s_terrain_map_flatten_blocks[i].y) *
                                   map->blockWidth +
-                              s_terrain_map_flatten_blocks[i].x + vertexOffsets[j].x]
+                              s_terrain_map_flatten_blocks[i].x + vertexOffsets[j].x, map->blockWidth, map->blockHeight)]
                       .flags & TERRAIN_MAP_BLOCK_FLATTENED)) {
                 diff = vertices[i][j].z - average;
                 if (fabs(diff) > half) {
@@ -403,9 +404,9 @@ void terrain_map_shape_flatten(TerrainMap* map,
                         ((diff / diff) * half + average) -
                             vertices[i][j].z);
                 }
-                map->blocks[(s_terrain_map_flatten_blocks[i].y + vertexOffsets[j].y) *
+                map->blocks[lrr_block_index((s_terrain_map_flatten_blocks[i].y + vertexOffsets[j].y) *
                                 map->blockWidth +
-                            s_terrain_map_flatten_blocks[i].x + vertexOffsets[j].x]
+                            s_terrain_map_flatten_blocks[i].x + vertexOffsets[j].x, map->blockWidth, map->blockHeight)]
                     .flags |= TERRAIN_MAP_BLOCK_FLATTENED;
             }
         }
@@ -421,13 +422,13 @@ void terrain_map_block_rotated_set(TerrainMap* map, unsigned int bx,
     unsigned int group;
     unsigned char* flags;
 
-    if ((on && !(map->blocks[by * map->blockWidth + bx].flags &
+    if ((on && !(map->blocks[lrr_block_index(by * map->blockWidth + bx, map->blockWidth, map->blockHeight)].flags &
                  TERRAIN_MAP_BLOCK_ROTATED)) ||
-        (!on && (map->blocks[by * map->blockWidth + bx].flags &
+        (!on && (map->blocks[lrr_block_index(by * map->blockWidth + bx, map->blockWidth, map->blockHeight)].flags &
                  TERRAIN_MAP_BLOCK_ROTATED))) {
         group = map->gridWidth * by + bx;
         lwo_layer_polygon_vertex_data_read(map->mesh, group, 0, 4, vertices);
-        flags = &map->blocks[by * map->blockWidth + bx].flags;
+        flags = &map->blocks[lrr_block_index(by * map->blockWidth + bx, map->blockWidth, map->blockHeight)].flags;
         if (*flags & TERRAIN_MAP_BLOCK_ROTATED) {
             *flags &= ~TERRAIN_MAP_BLOCK_ROTATED;
             temp = vertices[0];
@@ -457,7 +458,7 @@ void terrain_map_block_rotated_set(TerrainMap* map, unsigned int bx,
 void terrain_map_block_vertex_modified(TerrainMap* map, unsigned int vx,
                                        unsigned int vy)
 {
-    map->blocks[map->blockWidth * vy + vx].flags |= TERRAIN_MAP_BLOCK_MODIFIED;
+    map->blocks[lrr_block_index(map->blockWidth * vy + vx, map->blockWidth, map->blockHeight)].flags |= TERRAIN_MAP_BLOCK_MODIFIED;
     map->flags |= TERRAIN_MAP_FLAG_MODIFIED;
 }
 
@@ -469,10 +470,10 @@ void terrain_map_update(TerrainMap* map, float elapsed)
     if (map->flags & TERRAIN_MAP_FLAG_MODIFIED) {
         for (y = 0; y < map->blockHeight; y++) {
             for (x = 0; x < map->blockWidth; x++) {
-                if (map->blocks[y * map->blockWidth + x].flags &
+                if (map->blocks[lrr_block_index(y * map->blockWidth + x, map->blockWidth, map->blockHeight)].flags &
                     TERRAIN_MAP_BLOCK_MODIFIED) {
                     terrain_map_block_vertex_normals_update(map, x, y);
-                    map->blocks[y * map->blockWidth + x].flags &=
+                    map->blocks[lrr_block_index(y * map->blockWidth + x, map->blockWidth, map->blockHeight)].flags &=
                         ~TERRAIN_MAP_BLOCK_MODIFIED;
                 }
             }
@@ -555,13 +556,13 @@ void terrain_map_block_texture_set(TerrainMap* map, unsigned int bx,
         uvOrder[2] = 2;
         uvOrder[3] = 0;
         handle = packed_grid_cell_value_get(map->textureSet, texture);
-        map->blocks[by * map->blockWidth + bx].texture = texture;
-        if (map->blocks[by * map->blockWidth + bx].flags &
+        map->blocks[lrr_block_index(by * map->blockWidth + bx, map->blockWidth, map->blockHeight)].texture = texture;
+        if (map->blocks[lrr_block_index(by * map->blockWidth + bx, map->blockWidth, map->blockHeight)].flags &
             TERRAIN_MAP_BLOCK_ROTATED) {
             direction++;
         }
         animated_texture_frame_set(map->mesh, group, handle);
-        if (!(map->blocks[by * map->blockWidth + bx].flags &
+        if (!(map->blocks[lrr_block_index(by * map->blockWidth + bx, map->blockWidth, map->blockHeight)].flags &
               TERRAIN_MAP_BLOCK_UVWOBBLE)) {
             lwo_layer_polygon_vertex_data_read(map->mesh, group, 0, 4,
                                                vertices);
@@ -628,7 +629,7 @@ int terrain_map_block_highlight_set(TerrainMap* map, int bx,
                                               int by, int highlight)
 {
     int oldHighlight;
-    int index = map->blockWidth * by + bx;
+    uint32_t index = lrr_block_index(map->blockWidth * by + bx, map->blockWidth, map->blockHeight);
 
     oldHighlight = map->blocks[index].highlight;
     map->blocks[index].highlight = (unsigned char)highlight;
@@ -643,14 +644,14 @@ int terrain_map_block_highlight_set(TerrainMap* map, int bx,
 int terrain_map_block_highlight_get(TerrainMap* map, int bx,
                                               int by)
 {
-    return map->blocks[map->blockWidth * by + bx].highlight;
+    return map->blocks[lrr_block_index(map->blockWidth * by + bx, map->blockWidth, map->blockHeight)].highlight;
 }
 
 // FUNCTION: LEGORR 0x0044f570
 void terrain_map_block_highlight_clear(TerrainMap* map, int bx, int by)
 {
     terrain_map_block_emissive_set(map, bx, by, 0, 1.0f, 1.0f, 1.0f);
-    map->blocks[map->blockWidth * by + bx].highlight = 0;
+    map->blocks[lrr_block_index(map->blockWidth * by + bx, map->blockWidth, map->blockHeight)].highlight = 0;
 }
 
 // FUNCTION: LEGORR 0x0044f5c0
@@ -665,7 +666,7 @@ void terrain_map_block_emissive_set(TerrainMap* map, int bx, int by,
     else {
         scene_mesh_color_and_alpha_set(map->mesh, group, 1.0f, 1.0f, 1.0f,
                                        1.0f);
-        map->blocks[map->blockWidth * by + bx].highlight = 0;
+        map->blocks[lrr_block_index(map->blockWidth * by + bx, map->blockWidth, map->blockHeight)].highlight = 0;
     }
 }
 
@@ -805,17 +806,17 @@ void terrain_map_world_normal_get(TerrainMap* map, float x, float y,
     if (!terrain_map_world_to_block(map, x, y, &bx, &by)) return;
     if (!terrain_map_block_vertices_get(map, bx, by, v)) {
         if ((x - v[0].x) + (v[0].y - y) < map->blockSize) {
-            *normal = map->blocks[map->blockWidth * by + bx].normalA;
+            *normal = map->blocks[lrr_block_index(map->blockWidth * by + bx, map->blockWidth, map->blockHeight)].normalA;
         }
         else {
-            *normal = map->blocks[map->blockWidth * by + bx].normalB;
+            *normal = map->blocks[lrr_block_index(map->blockWidth * by + bx, map->blockWidth, map->blockHeight)].normalB;
         }
     }
     else if ((v[1].x - x) + (v[1].y - y) < map->blockSize) {
-        *normal = map->blocks[map->blockWidth * by + bx].normalB;
+        *normal = map->blocks[lrr_block_index(map->blockWidth * by + bx, map->blockWidth, map->blockHeight)].normalB;
     }
     else {
-        *normal = map->blocks[map->blockWidth * by + bx].normalA;
+        *normal = map->blocks[lrr_block_index(map->blockWidth * by + bx, map->blockWidth, map->blockHeight)].normalA;
     }
 }
 
@@ -840,17 +841,17 @@ int terrain_map_world_edge_point_get(TerrainMap* map, float x, float y,
     rotated = terrain_map_block_vertices_get(map, bx, by, v);
     if (!rotated) {
         if ((x - v[0].x) + (v[0].y - y) < map->blockSize) {
-            normal = map->blocks[map->blockWidth * by + bx].normalA;
+            normal = map->blocks[lrr_block_index(map->blockWidth * by + bx, map->blockWidth, map->blockHeight)].normalA;
         }
         else {
-            normal = map->blocks[map->blockWidth * by + bx].normalB;
+            normal = map->blocks[lrr_block_index(map->blockWidth * by + bx, map->blockWidth, map->blockHeight)].normalB;
         }
     }
     else if ((v[1].x - x) + (v[1].y - y) < map->blockSize) {
-        normal = map->blocks[map->blockWidth * by + bx].normalB;
+        normal = map->blocks[lrr_block_index(map->blockWidth * by + bx, map->blockWidth, map->blockHeight)].normalB;
     }
     else {
-        normal = map->blocks[map->blockWidth * by + bx].normalA;
+        normal = map->blocks[lrr_block_index(map->blockWidth * by + bx, map->blockWidth, map->blockHeight)].normalA;
     }
     if (diagonal) {
         if (rotated) {
@@ -925,9 +926,9 @@ float terrain_map_world_z_unmodified_get(TerrainMap* map, float x, float y)
         for (i = 0; i < 4; i++) {
             v[i].x = (offsets[i].x + (float)bx) * map->blockSize + map->worldX;
             v[i].y = map->worldY - (offsets[i].y + (float)by) * map->blockSize;
-            v[i].z = -((float)map->blocks[(by + (int)offsets[i].y) *
+            v[i].z = -((float)map->blocks[lrr_block_index((by + (int)offsets[i].y) *
                                               map->blockWidth +
-                                          bx + (int)offsets[i].x]
+                                          bx + (int)offsets[i].x, map->blockWidth, map->blockHeight)]
                            .height *
                        map->roughLevel);
         }
@@ -955,7 +956,7 @@ void terrain_map_block_first_vertex_get(TerrainMap* map, int bx, int by,
 
     lwo_layer_polygon_vertex_data_read(
         map->mesh, by * map->gridWidth + bx,
-        map->blocks[map->blockWidth * by + bx].flags &
+        map->blocks[lrr_block_index(map->blockWidth * by + bx, map->blockWidth, map->blockHeight)].flags &
             TERRAIN_MAP_BLOCK_ROTATED,
         1, &vertex);
     *position = vertex.position;
@@ -971,7 +972,7 @@ int terrain_map_block_vertices_get(TerrainMap* map, unsigned int bx,
     if (bx < map->gridWidth && by < map->gridHeight) {
         lwo_layer_polygon_vertex_data_read(
             map->mesh, by * map->gridWidth + bx, 0, 4, vertices);
-        if (map->blocks[map->blockWidth * by + bx].flags &
+        if (map->blocks[lrr_block_index(map->blockWidth * by + bx, map->blockWidth, map->blockHeight)].flags &
             TERRAIN_MAP_BLOCK_ROTATED) {
             positions[0] = vertices[1].position;
             positions[1] = vertices[2].position;
@@ -1188,7 +1189,7 @@ void terrain_map_vertex_position_get(TerrainMap* map, unsigned int vx,
         vy--;
         index = -1;
     }
-    if (map->blocks[vy * map->blockWidth + vx].flags &
+    if (map->blocks[lrr_block_index(vy * map->blockWidth + vx, map->blockWidth, map->blockHeight)].flags &
         TERRAIN_MAP_BLOCK_ROTATED) {
         index++;
     }
@@ -1235,23 +1236,23 @@ void terrain_map_block_uv_wobble_set(TerrainMap* map, unsigned int bx,
     unsigned int i;
 
     if (on) {
-        if (!(map->blocks[by * map->blockWidth + bx].flags &
+        if (!(map->blocks[lrr_block_index(by * map->blockWidth + bx, map->blockWidth, map->blockHeight)].flags &
               TERRAIN_MAP_BLOCK_UVWOBBLE)) {
             map->uvWobbles[map->uvWobbleCount].x = (unsigned short)bx;
             map->uvWobbles[map->uvWobbleCount].y = (unsigned short)by;
             map->uvWobbleCount++;
-            map->blocks[by * map->blockWidth + bx].flags |=
+            map->blocks[lrr_block_index(by * map->blockWidth + bx, map->blockWidth, map->blockHeight)].flags |=
                 TERRAIN_MAP_BLOCK_UVWOBBLE;
         }
     }
-    else if (map->blocks[by * map->blockWidth + bx].flags &
+    else if (map->blocks[lrr_block_index(by * map->blockWidth + bx, map->blockWidth, map->blockHeight)].flags &
              TERRAIN_MAP_BLOCK_UVWOBBLE) {
         for (i = 0; i < map->uvWobbleCount; i++) {
             if (map->uvWobbles[i].x == bx && map->uvWobbles[i].y == by) {
                 map->uvWobbleCount--;
                 map->uvWobbles[i].x = map->uvWobbles[map->uvWobbleCount].x;
                 map->uvWobbles[i].y = map->uvWobbles[map->uvWobbleCount].y;
-                map->blocks[by * map->blockWidth + bx].flags &=
+                map->blocks[lrr_block_index(by * map->blockWidth + bx, map->blockWidth, map->blockHeight)].flags &=
                     ~TERRAIN_MAP_BLOCK_UVWOBBLE;
                 break;
             }
@@ -1323,14 +1324,14 @@ void terrain_map_uv_wobble_update(TerrainMap* map, float elapsed)
             x = map->uvWobbles[i].x;
             y = map->uvWobbles[i].y;
             group = map->gridWidth * y + x;
-            rotated = map->blocks[y * map->blockWidth + x].flags &
+            rotated = map->blocks[lrr_block_index(y * map->blockWidth + x, map->blockWidth, map->blockHeight)].flags &
                       TERRAIN_MAP_BLOCK_ROTATED;
             lwo_layer_polygon_vertex_data_read(map->mesh, group, 0, 4,
                                                vertices);
             for (j = 0; j < 4; j++) {
                 k = j;
                 if (rotated) k = (j + 1) & 3;
-                wobble = map->blocks[(y + blockOffsets[j].y) * map->blockWidth + x + blockOffsets[j].x].uvWobble;
+                wobble = map->blocks[lrr_block_index((y + blockOffsets[j].y) * map->blockWidth + x + blockOffsets[j].x, map->blockWidth, map->blockHeight)].uvWobble;
                 cur.x = vertices[k].tu;
                 cur.y = vertices[k].tv;
                 target.x = wobble.x + uvOffsets[j].x;
@@ -1343,7 +1344,7 @@ void terrain_map_uv_wobble_update(TerrainMap* map, float elapsed)
                     wobble.x = random_float_range(0.0f, 1.0f);
                     wobble.y = random_float_range(0.0f, 1.0f);
                     terrain_map_vector2d_normalise(&wobble);
-                    uvw = &map->blocks[(y + blockOffsets[j].y) * map->blockWidth + x + blockOffsets[j].x].uvWobble;
+                    uvw = &map->blocks[lrr_block_index((y + blockOffsets[j].y) * map->blockWidth + x + blockOffsets[j].x, map->blockWidth, map->blockHeight)].uvWobble;
                     wobble.x = (uvw->x + wobble.x) * 0.3f;
                     wobble.y = (uvw->y + wobble.y) * 0.3f;
                     target.x = wobble.x + uvOffsets[j].x;
@@ -1432,8 +1433,8 @@ int terrain_map_block_pair_fades(TerrainMap* map, unsigned int bx1,
     if (by1 != by2 || bx1 != bx2) {
         if (bx1 < map->gridWidth && by1 < map->gridHeight &&
             bx2 < map->gridWidth && by2 < map->gridHeight) {
-            texA = map->blocks[by1 * map->blockWidth + bx1].texture;
-            texB = (char)map->blocks[by2 * map->blockWidth + bx2].texture;
+            texA = map->blocks[lrr_block_index(by1 * map->blockWidth + bx1, map->blockWidth, map->blockHeight)].texture;
+            texB = (char)map->blocks[lrr_block_index(by2 * map->blockWidth + bx2, map->blockWidth, map->blockHeight)].texture;
             if (texA != 0xff && texB != -1) {
                 for (i = 0; i < map->fadePairCount[texA]; i++) {
                     if ((char)map->fadePairs[texA][i] == texB) return 1;
@@ -1455,7 +1456,7 @@ void terrain_map_block_vertex_normal_set(TerrainMap* map, unsigned int bx,
     unsigned int group = map->gridWidth * by + bx;
 
     if (bx < map->gridWidth && by < map->gridHeight) {
-        if (map->blocks[map->blockWidth * by + bx].flags &
+        if (map->blocks[lrr_block_index(map->blockWidth * by + bx, map->blockWidth, map->blockHeight)].flags &
             TERRAIN_MAP_BLOCK_ROTATED) {
             vertex = (vertex + 1) & 3;
         }
@@ -1475,7 +1476,7 @@ int terrain_map_block_vertex_normal_get(TerrainMap* map, unsigned int bx,
     float scale;
 
     if (bx < map->gridWidth && by < map->gridHeight) {
-        block = &map->blocks[by * map->blockWidth + bx];
+        block = &map->blocks[lrr_block_index(by * map->blockWidth + bx, map->blockWidth, map->blockHeight)];
         if (block->flags & TERRAIN_MAP_BLOCK_ROTATED) {
             vertex = (vertex + 1) & 3;
         }
@@ -1483,12 +1484,12 @@ int terrain_map_block_vertex_normal_get(TerrainMap* map, unsigned int bx,
             *normal = block->normalA;
         }
         if (vertex == 2) {
-            *normal = map->blocks[by * map->blockWidth + bx].normalB;
+            *normal = map->blocks[lrr_block_index(by * map->blockWidth + bx, map->blockWidth, map->blockHeight)].normalB;
         }
         if (vertex == 1 || vertex == 3) {
-            *normal = map->blocks[by * map->blockWidth + bx].normalA;
+            *normal = map->blocks[lrr_block_index(by * map->blockWidth + bx, map->blockWidth, map->blockHeight)].normalA;
             terrain_map_vector3d_add(
-                normal, &map->blocks[by * map->blockWidth + bx].normalB,
+                normal, &map->blocks[lrr_block_index(by * map->blockWidth + bx, map->blockWidth, map->blockHeight)].normalB,
                 normal);
             terrain_map_vector3d_normalise(normal);
         }
@@ -1509,7 +1510,7 @@ void terrain_map_block_vertex_offset(TerrainMap* map, unsigned int bx,
     unsigned int group = map->gridWidth * by + bx;
 
     if (bx < map->gridWidth && by < map->gridHeight) {
-        if (map->blocks[map->blockWidth * by + bx].flags &
+        if (map->blocks[lrr_block_index(map->blockWidth * by + bx, map->blockWidth, map->blockHeight)].flags &
             TERRAIN_MAP_BLOCK_ROTATED) {
             vertex = (vertex + 1) & 3;
         }
@@ -1532,11 +1533,11 @@ void terrain_map_block_face_normals_update(TerrainMap* map,
         lwo_layer_polygon_vertex_data_read(map->mesh, by * map->gridWidth + bx,
                                            0, 4, vertices);
         surface_triangle_normal_calculate(
-            &map->blocks[by * map->blockWidth + bx].normalA.x,
+            &map->blocks[lrr_block_index(by * map->blockWidth + bx, map->blockWidth, map->blockHeight)].normalA.x,
             &vertices[0].position.x, &vertices[1].position.x,
             &vertices[3].position.x);
         surface_triangle_normal_calculate(
-            &map->blocks[by * map->blockWidth + bx].normalB.x,
+            &map->blocks[lrr_block_index(by * map->blockWidth + bx, map->blockWidth, map->blockHeight)].normalB.x,
             &vertices[1].position.x, &vertices[2].position.x,
             &vertices[3].position.x);
     }
@@ -1577,7 +1578,7 @@ int terrain_map_block_ray_intersection(TerrainMap* map, int bx, int by,
     rotated = terrain_map_block_vertices_get(map, bx, by, v);
     hitAFound = 0;
     hitBFound = 0;
-    normal = map->blocks[by * map->blockWidth + bx].normalA;
+    normal = map->blocks[lrr_block_index(by * map->blockWidth + bx, map->blockWidth, map->blockHeight)].normalA;
     if (view_ray_intersection_test(&hitA.x, &origin->x, &direction->x,
                                    &v[0].x, &normal.x)) {
         if (!rotated) {
@@ -1605,7 +1606,7 @@ int terrain_map_block_ray_intersection(TerrainMap* map, int bx, int by,
             hitAFound = 1;
         }
     }
-    normal = map->blocks[by * map->blockWidth + bx].normalB;
+    normal = map->blocks[lrr_block_index(by * map->blockWidth + bx, map->blockWidth, map->blockHeight)].normalB;
     if (view_ray_intersection_test(&hitB.x, &origin->x, &direction->x,
                                    &v[2].x, &normal.x)) {
         if (!rotated) {

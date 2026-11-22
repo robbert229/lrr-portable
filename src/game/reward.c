@@ -4,6 +4,7 @@
  * reward.h for the state and the port's split. */
 /* Matching build: LegoObject.c callers call legoobject_unit.c (#575). */
 #include "legoobject_port_aliases.h"
+#include "block_grid.h"
 /* Matching build: Lego.c's state and ResetLevelAndExit under their original
  * names (lego_unit.c, finding 630). Each macro renames a declaration one for
  * one, so the symbol counter does not change (finding 538). Natively the
@@ -650,14 +651,14 @@ int reward_prepare_results(void)
 
     for (x = 0; x < ((TerrainMap*)level->map)->blockWidth; x++) {
         for (y = 0; y < ((TerrainMap*)level->map)->blockHeight; y++) {
-            predug = level->blocks[y * level->width + x].f_02;
+            predug = level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_02;
             current->blockCount++;
             pos[0] = x;
             pos[1] = y;
             terrain_cell_byte_state_classify_current(pos, &crystals, &unusedA, &ore, &unusedB);
             current->itemsArray[REWARD_ITEM_CRYSTALS].total += (float)crystals;
             current->itemsArray[REWARD_ITEM_ORE].total += (float)ore;
-            if (!(level->blocks[y * level->width + x].flags1 & 0x8)) {
+            if (!(level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].flags1 & 0x8)) {
                 if (predug != 1) {
                     current->itemsArray[REWARD_ITEM_DIGGABLE].total =
                         current->itemsArray[REWARD_ITEM_DIGGABLE].total - -1.0f;
@@ -669,7 +670,7 @@ int reward_prepare_results(void)
             } else if (predug != 7 && predug != 6) {
                 current->walls.total = current->walls.total - -1.0f;
             }
-            if (level->blocks[y * level->width + x].flags1 & 0x61100000) {
+            if (level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].flags1 & 0x61100000) {
                 current->walls.actual = current->walls.actual - -1.0f;
                 current->itemsArray[REWARD_ITEM_DIGGABLE].total =
                     current->itemsArray[REWARD_ITEM_DIGGABLE].total - -1.0f;

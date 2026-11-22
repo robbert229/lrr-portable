@@ -74,6 +74,18 @@ FILE* files_native_fopen(const char* path, const char* mode);
 void files_native_set_save_path(const char* path);
 const char* files_native_save_path(void);
 
+/* [library:config]: the data directory. The original finds its data in the
+ * working directory: File_Initialise mounts <program>0.wad to
+ * <program>9.wad there and takes its "Data" directory as the base. As
+ * isle-portable's isle:diskpath, the port can take them from the directory
+ * the configuration's diskpath names (platform/native/config.cpp); then a
+ * relative Windows path maps into it (files_native_host_path), and
+ * File_Initialise starts from it. A relative diskpath is taken from the
+ * working directory when it is set; a path with a drive or scheme
+ * ("C:\\", "sdmc:/") is absolute. NULL or "" keeps the working directory. */
+void files_native_set_disk_path(const char* path);
+const char* files_native_disk_path(void);
+
 /* [library:filesystem]: the host shell's save notifications, as
  * isle-portable's e_saveSlotWritten and e_saveStateChanged game events: a
  * slot's progress was written, or the set of slots changed (a slot was

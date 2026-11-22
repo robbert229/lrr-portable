@@ -32,8 +32,9 @@ the game is likely to crash before you end up completing a mission. We are neari
 
 ## Build and run
 
-Requires a legally owned game copy, CMake, a C++ compiler, and SDL3 development
-headers. Game assets are not included. Place the game assets into the 
+Requires a legally owned game copy, CMake, a C++ compiler, and Git. SDL3 comes
+from an installed package when there is one, and is fetched otherwise. Game
+assets are not included. Place the game assets into the 
 `reference` folder.
 
 ```sh
@@ -65,6 +66,7 @@ writes that file with defaults on first run, in SDL's preference directory:
 ```ini
 [legorr]
 savepath = /home/me/.local/share/lrr-portable/LegoRR/
+diskpath =
 full screen = false
 horizontal resolution = 640
 vertical resolution = 480
@@ -76,6 +78,11 @@ training save = prompt
 
 Point `savepath` elsewhere to move the saves. Leave it empty to keep the
 original's `Data\Saves`.
+
+The original only runs when started inside its install, where it finds `Data`
+and `LegoRR0.wad` to `LegoRR9.wad`. Set `diskpath` to the install directory
+to start the port from anywhere, as isle-portable's `diskpath`. Empty (the
+default) keeps the working directory.
 
 The original asked for the display settings in a "Mode Selection" dialog at
 start-up. The port starts without it and reads them from the same file, as

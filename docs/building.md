@@ -8,13 +8,23 @@ containing `LegoRR0.wad`, `LegoRR1.wad`, and the loose `Data/` files. The
 
 ## Native Linux build
 
-Install CMake 3.20 or later, a C++17 compiler, SDL3 development headers, and Git.
+Install CMake 3.20 or later, a C++17 compiler, and Git.
 `make setup` bootstraps the sparse `3rdparty/isle-portable` miniwin submodule,
 applies the project's patches from `patches/miniwin` to it, and configures
 CMake; `make build` also runs setup. The configuration file reader,
 [iniparser](https://gitlab.com/iniparser/iniparser), comes from an installed
 CMake package when there is one; otherwise configure fetches release v4.2.6,
-the version isle-portable uses.
+the version isle-portable uses. SDL3 works the same way: an installed package
+is used when CMake finds one (point `CMAKE_PREFIX_PATH` at it if it is
+elsewhere), and otherwise configure fetches and builds a static SDL at the
+commit CI uses (release-3.4.18, `829a65d7`). On Xbox (`WINDOWS_STORE`) and
+Switch it fetches isle-portable's SDL forks, and on Android it reads the SDL
+package Gradle builds. The fetched SDL needs SDL's own
+[build dependencies](https://wiki.libsdl.org/SDL3/README-linux#build-dependencies);
+on a host without X11 or Wayland development libraries, configure with
+`-DSDL_X11=OFF -DSDL_WAYLAND=OFF -DSDL_UNIX_CONSOLE_BUILD=ON`. The
+`LRR_SDL3_GIT_REPO` and `LRR_SDL3_GIT_TAG` cache variables pick another SDL
+source.
 
 ```sh
 make build
@@ -49,11 +59,24 @@ cmake --build build
 cd /path/to/game && /path/to/build/LegoRR -best -window
 ```
 
+The game's movies need FFmpeg 7 or later at run time, not at build time:
+`src/library/video_ffmpeg.cpp` loads libavformat, libavcodec, libavutil and
+libswscale with `SDL_LoadObject`, trying the names `CMakeLists.txt` lists for
+the host (`LRR_VIDEO_LIB*`: `.so`, `.dylib` or `.dll`). Without them the game
+skips its movies. `-DLRR_MOVIES=OFF` builds the video library as a stub that
+always reports no movies; it is off already on Emscripten, iOS, the Nintendo
+targets, Vita and DOS.
+
 miniwin emulates a 16-bit RGB565 display and describes its software renderer
 as a hardware device, which is what `-best` looks for (see the
 `MINIWIN_PIXELFORMAT` and `MINIWIN_SOFTWARE_HAL` definitions in
-`CMakeLists.txt`). For a headless run, use SDL's offscreen driver and have
-miniwin write each presented frame to a file:
+`CMakeLists.txt`). miniwin builds through upstream's `miniwin/CMakeLists.txt`,
+which adds each platform's renderer backends: SDL GPU, plus OpenGL 1.x and
+OpenGL ES 2 and 3 when CMake finds their libraries, DirectX 9 on Windows, and
+Citro3D, GXM and Glide on 3DS, Vita and DOS. On the desktop the software
+renderer is still the device the game picks, and so far it is the only
+backend that draws the level. For a headless run, use SDL's offscreen driver
+and have miniwin write each presented frame to a file:
 
 ```sh
 cd /path/to/game
@@ -93,7 +116,10 @@ configured headless with `SDL_UNIX_CONSOLE_BUILD` and without X11 or Wayland.
 The tests use SDL's dummy and offscreen drivers. The build is cached by SDL
 version. `ubuntu-24.04` has no SDL3 development package, so a distro package is
 not used. When you change the SDL version or its build recipe, update
-`SDL_VERSION`, `SDL_COMMIT`, or `SDL_CACHE_VERSION` in the workflow.
+`SDL_VERSION`, `SDL_COMMIT`, or `SDL_CACHE_VERSION` in the workflow, and
+keep `LRR_SDL3_GIT_TAG` in `CMakeLists.txt` on the same commit. An existing
+build directory keeps its cached `LRR_SDL3_GIT_TAG`; delete that entry, or
+the directory, to pick up a new one.
 
 
 ## Sources
