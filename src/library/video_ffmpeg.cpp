@@ -24,11 +24,100 @@
 
 #include <SDL3/SDL.h>
 
-#include <dlfcn.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+/* The build switch (issue #919): with LRR_MOVIES off, this library is a
+ * stub that always reports "no movies"; the units skip their movies as
+ * they do when FFmpeg is missing. On by default. */
+#ifndef LRR_MOVIES
+#define LRR_MOVIES 1
+#endif
+
+#if !LRR_MOVIES
+
+extern "C" {
+
+int video_available(void)
+{
+    return 0;
+}
+
+VideoFile* video_open(const char* path, int withAudio)
+{
+    (void)path;
+    (void)withAudio;
+    return NULL;
+}
+
+void video_close(VideoFile* video)
+{
+    (void)video;
+}
+
+void video_get_size(VideoFile* video, unsigned int* width, unsigned int* height)
+{
+    (void)video;
+    *width = 0;
+    *height = 0;
+}
+
+void video_get_rate(VideoFile* video, unsigned int* rate, unsigned int* scale)
+{
+    (void)video;
+    *rate = 0;
+    *scale = 0;
+}
+
+unsigned int video_get_frame_count(VideoFile* video)
+{
+    (void)video;
+    return 0;
+}
+
+unsigned int video_get_duration(VideoFile* video)
+{
+    (void)video;
+    return 0xffffffffu;
+}
+
+void video_start(VideoFile* video)
+{
+    (void)video;
+}
+
+int video_update(VideoFile* video, void* pixels, long pitch,
+                 unsigned int bitCount, uint32_t redMask, uint32_t greenMask,
+                 uint32_t blueMask)
+{
+    (void)video;
+    (void)pixels;
+    (void)pitch;
+    (void)bitCount;
+    (void)redMask;
+    (void)greenMask;
+    (void)blueMask;
+    return 0;
+}
+
+const void* video_get_frame_dib(VideoFile* video, unsigned int index,
+                                unsigned int bitCount, uint32_t redMask,
+                                uint32_t greenMask, uint32_t blueMask)
+{
+    (void)video;
+    (void)index;
+    (void)bitCount;
+    (void)redMask;
+    (void)greenMask;
+    (void)blueMask;
+    return NULL;
+}
+
+} /* extern "C" */
+
+#else /* LRR_MOVIES */
 
 #ifndef LRR_VIDEO_LIBAVFORMAT
 #define LRR_VIDEO_LIBAVFORMAT \
@@ -93,10 +182,10 @@ struct ChannelLayout {
 struct Lib {
     bool tried;
     bool ok;
-    void* format;
-    void* codec;
-    void* util;
-    void* scale;
+    SDL_SharedObject* format;
+    SDL_SharedObject* codec;
+    SDL_SharedObject* util;
+    SDL_SharedObject* scale;
 
     unsigned (*avformat_version)(void);
     int (*avformat_open_input)(void**, const char*, void*, void*);
@@ -138,32 +227,32 @@ struct Lib {
 
 Lib lib;
 
-/* dlopens the first name in a comma-separated list that loads. */
-void* OpenFirst(const char* names)
+/* Loads the first name in a comma-separated list that opens. */
+SDL_SharedObject* OpenFirst(const char* names)
 {
     char buffer[512];
     SDL_strlcpy(buffer, names, sizeof(buffer));
     char* save = NULL;
     for (char* name = SDL_strtok_r(buffer, ",", &save); name;
          name = SDL_strtok_r(NULL, ",", &save)) {
-        if (void* handle = dlopen(name, RTLD_LAZY | RTLD_LOCAL)) return handle;
+        if (SDL_SharedObject* handle = SDL_LoadObject(name)) return handle;
     }
     return NULL;
 }
 
 template <typename F>
-bool Bind(F& fn, void* handle, const char* name)
+bool Bind(F& fn, SDL_SharedObject* handle, const char* name)
 {
-    *(void**)&fn = dlsym(handle, name);
+    fn = reinterpret_cast<F>(SDL_LoadFunction(handle, name));
     if (!fn) SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "video: no %s", name);
     return fn != NULL;
 }
 
 void CloseLibraries()
 {
-    void* handles[] = { lib.format, lib.codec, lib.util, lib.scale };
-    for (void* handle : handles) {
-        if (handle) dlclose(handle);
+    SDL_SharedObject* handles[] = { lib.format, lib.codec, lib.util, lib.scale };
+    for (SDL_SharedObject* handle : handles) {
+        if (handle) SDL_UnloadObject(handle);
     }
     lib.format = lib.codec = lib.util = lib.scale = NULL;
 }
@@ -225,7 +314,8 @@ bool BindLibraries()
     }
 
     /* Optional: keep FFmpeg's notices out of the game's log. */
-    *(void**)&lib.av_log_set_level = dlsym(lib.util, "av_log_set_level");
+    lib.av_log_set_level = reinterpret_cast<decltype(lib.av_log_set_level)>(
+        SDL_LoadFunction(lib.util, "av_log_set_level"));
     if (lib.av_log_set_level) lib.av_log_set_level(16); /* AV_LOG_ERROR */
 
     lib.sampleU8 = lib.av_get_sample_fmt("u8");
@@ -731,3 +821,5 @@ const void* video_get_frame_dib(VideoFile* video, unsigned int index,
 }
 
 } /* extern "C" */
+
+#endif /* LRR_MOVIES */
