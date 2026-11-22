@@ -6,15 +6,18 @@
 #   packaging/macos/verify.sh build/dist/lrr-portable-*-Darwin-*.dmg
 #
 # The run has no game data, so the game stops at once; what it shows is that
-# the signed bundle starts and writes its default LegoRR.ini.
-set -euxo pipefail
+# the signed bundle starts and writes its default LegoRR.ini. SDL takes the
+# preference directory from the account, not from $HOME, so that file is the
+# real ~/Library/Application Support/lrr-portable/LegoRR/LegoRR.ini, which any
+# launch of the game writes.
+set -euo pipefail
 
 dmg="${1:?usage: verify.sh <package.dmg>}"
 mnt="$(mktemp -d)"
-home="$(mktemp -d)"
+work="$(mktemp -d)"
 cleanup() {
     hdiutil detach -quiet "$mnt" || true
-    rm -rf "$mnt" "$home"
+    rm -rf "$mnt" "$work"
 }
 trap cleanup EXIT
 
@@ -33,9 +36,9 @@ lipo -archs "$app/Contents/MacOS/LegoRR"
 otool -L "$app/Contents/MacOS/LegoRR"
 
 (
-    cd "$home"
-    HOME="$home" SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
+    cd "$work"
+    SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
         "$app/Contents/MacOS/LegoRR" -nosound || echo "LegoRR exited with status $?"
 )
-test -f "$home/Library/Application Support/lrr-portable/LegoRR/LegoRR.ini"
+test -f "$HOME/Library/Application Support/lrr-portable/LegoRR/LegoRR.ini"
 echo "verified $dmg"
