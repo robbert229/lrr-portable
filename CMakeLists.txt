@@ -468,6 +468,12 @@ if(BUILD_TESTING)
   # Skipped (77) where the preference directory cannot be moved into the
   # fixture.
   set_tests_properties(config PROPERTIES LABELS config SKIP_RETURN_CODE 77)
+  # The 3D device Init.c chooses, from synthetic device lists with each
+  # platform's default device.
+  add_executable(device_choice_test ${PLATFORM_DIR}/native/test_device_choice.cpp)
+  target_link_libraries(device_choice_test PRIVATE units)
+  add_test(NAME device_choice COMMAND device_choice_test)
+  set_tests_properties(device_choice PROPERTIES LABELS config)
   add_executable(draw_test ${ENGINE_DIR}/test_draw.cpp)
   target_link_libraries(draw_test PRIVATE units)
   add_test(NAME draw COMMAND draw_test)

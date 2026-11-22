@@ -1,0 +1,72 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sat, 21 Nov 2026 21:16:10 -0800
+Subject: [PATCH] feat(miniwin): report whether a 3D device draws immediate
+ mode
+
+Miniwin_DeviceDrawsImmediateMode(guid) tells a client whether the device
+IDirect3D::EnumDevices lists with that GUID draws immediate mode
+(IDirect3DDevice3::DrawIndexedPrimitive). Only the software and SDL GPU
+backends implement SubmitImmediate; the others return DDERR_UNSUPPORTED.
+A client that draws through immediate mode can then choose its device by
+capability rather than by its position in the list, which changes with
+the platform's backends.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/include/miniwin/miniwind3d.h b/miniwin/include/miniwin/miniwind3d.h
+index 1d9f472..983de79 100644
+--- a/miniwin/include/miniwin/miniwind3d.h
++++ b/miniwin/include/miniwin/miniwind3d.h
+@@ -22,3 +22,10 @@ struct IDirect3DMiniwin : virtual public IUnknown {
+ 	virtual HRESULT RequestRenderStyle(D3DRenderStyle renderStyle) = 0;
+ 	virtual D3DRenderStyle GetRenderStyle() const = 0;
+ };
++
++// Whether the 3D device that IDirect3D::EnumDevices lists with this GUID
++// draws immediate mode (IDirect3DDevice3::DrawIndexedPrimitive). A backend
++// that does not returns DDERR_UNSUPPORTED from it, so a client that draws
++// through immediate mode chooses its device by this, not by its position in
++// the list. False for a GUID no backend in this build lists.
++bool Miniwin_DeviceDrawsImmediateMode(const GUID& guid);
+diff --git a/miniwin/src/d3drm/d3drmrenderer.cpp b/miniwin/src/d3drm/d3drmrenderer.cpp
+index 62024e4..76f6c6b 100644
+--- a/miniwin/src/d3drm/d3drmrenderer.cpp
++++ b/miniwin/src/d3drm/d3drmrenderer.cpp
+@@ -359,6 +359,22 @@ void Miniwin_SetupWindowCreateProperties(SDL_PropertiesID props)
+ #endif
+ }
+ 
++bool Miniwin_DeviceDrawsImmediateMode(const GUID& guid)
++{
++	// The backends that override SubmitImmediate.
++#ifdef USE_SDL_GPU
++	if (SDL_memcmp(&guid, &SDL3_GPU_GUID, sizeof(GUID)) == 0) {
++		return true;
++	}
++#endif
++#ifdef USE_SOFTWARE_RENDER
++	if (SDL_memcmp(&guid, &SOFTWARE_GUID, sizeof(GUID)) == 0) {
++		return true;
++	}
++#endif
++	return false;
++}
++
+ Direct3DRMRenderer* CreateDirect3DRMRenderer(
+ 	const IDirect3DMiniwin* d3d,
+ 	const DDSURFACEDESC& DDSDesc,
+diff --git a/miniwin/src/internal/d3drmrenderer.h b/miniwin/src/internal/d3drmrenderer.h
+index 3621d76..fc12e3a 100644
+--- a/miniwin/src/internal/d3drmrenderer.h
++++ b/miniwin/src/internal/d3drmrenderer.h
+@@ -131,7 +131,8 @@ class Direct3DRMRenderer : public IDirect3DDevice3 {
+ 	virtual void SetDither(bool dither) = 0;
+ 	// Immediate mode: draw one triangle list now, with the device's state.
+ 	// Backends that do not implement it leave DrawIndexedPrimitive
+-	// unsupported.
++	// unsupported. A backend that implements it is listed in
++	// Miniwin_DeviceDrawsImmediateMode too.
+ 	virtual HRESULT SubmitImmediate(const ImmediateDraw& draw) { return DDERR_UNSUPPORTED; }
+ 	// The rectangle 3D drawing is projected into and clipped to, in the
+ 	// game's (virtual) coordinates; nullptr is the whole target. Backends

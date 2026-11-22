@@ -25,6 +25,9 @@ Init_Globs initGlobs;
 #include <stdio.h>
 #include <string.h>
 #include <miniwin/windows.h>
+#include <miniwin/d3d.h>
+#include <miniwin/miniwind3d.h> // [library:config] Miniwin_DeviceDrawsImmediateMode
+#include <SDL3/SDL_log.h>       // [library:config]
 
 #include "crt/vc5names.h"
 #include "init_imports.h"
@@ -55,6 +58,7 @@ int init_initialise(int setup, int debug, int best, int window,
                     const char* noHALMsg)
 {
     int res = 1;
+    LRR_DeviceCandidate candidates[INIT_MAX_DEVICES]; // [library:config]
 
     initGlobs.selDriver = NULL;
     initGlobs.selDevice = NULL;
@@ -112,12 +116,15 @@ int init_initialise(int setup, int debug, int best, int window,
         } else if (setup) {
             /* [library:config] In place of the "Mode Selection" dialog: its
              * choices come from LegoRR.ini. The driver is the dialog's
-             * default, the first; the device is the file's, else the one
-             * the dialog selects, the last hardware device; the mode is the
-             * file's resolution if it is valid, else the dialog's default,
-             * the first valid mode. */
+             * default, the first; the device is chosen by capability
+             * (LRR_ChooseDevice): the file's if it draws the level, else
+             * the platform's default, else the first that draws, never the
+             * dialog's last hardware device; the mode is the file's
+             * resolution if it is valid, else the dialog's default, the
+             * first valid mode. */
             const LRR_DisplayConfig* config = LRR_GetDisplayConfig(); // [library:config]
             unsigned int loop;
+            int chosen;
 
             res = 0;
             initGlobs.selFullScreen = config->fullScreen;
@@ -125,12 +132,12 @@ int init_initialise(int setup, int debug, int best, int window,
             initGlobs.selMode = NULL;
             if (directdraw_enum_devices(initGlobs.selDriver, initGlobs.devices, &initGlobs.deviceCount)) {
                 for (loop = 0; loop < initGlobs.deviceCount; loop++) {
-                    if (initGlobs.devices[loop].flags & DIRECTDRAW_FLAG_DEVICE_HARDWARE) initGlobs.selDevice = &initGlobs.devices[loop];
+                    candidates[loop].desc = initGlobs.devices[loop].desc;
+                    candidates[loop].drawsLevel = Miniwin_DeviceDrawsImmediateMode(initGlobs.devices[loop].guid);
+                    candidates[loop].failed = false;
                 }
-                for (loop = 0; loop < initGlobs.deviceCount; loop++) {
-                    if (strcmp(initGlobs.devices[loop].desc, config->device) == 0) initGlobs.selDevice = &initGlobs.devices[loop];
-                }
-                if (initGlobs.selDevice == NULL && initGlobs.deviceCount) initGlobs.selDevice = &initGlobs.devices[0];
+                chosen = LRR_ChooseDevice(candidates, initGlobs.deviceCount, config->device, LRR_Default3DDevice());
+                if (chosen >= 0) initGlobs.selDevice = &initGlobs.devices[chosen];
 
                 directdraw_enum_modes(initGlobs.selDriver, initGlobs.selFullScreen, initGlobs.modes, &initGlobs.modeCount);
                 for (loop = 0; loop < initGlobs.modeCount; loop++) {
@@ -151,14 +158,27 @@ int init_initialise(int setup, int debug, int best, int window,
             }
         }
 
-        if (res == 1) {
+        /* [library:config] When the display cannot be set up on the chosen
+         * device (SDL GPU listed, but unable to claim the window), it is
+         * marked failed and the next choice tried: the dialog's user would
+         * pick another device. */
+        while (res == 1) {
             if (initGlobs.selFullScreen) {
-                return directdraw_setup(TRUE, initGlobs.selDriver, initGlobs.selDevice, initGlobs.selMode, 0, 0, 320, 200);
+                res = directdraw_setup(TRUE, initGlobs.selDriver, initGlobs.selDevice, initGlobs.selMode, 0, 0, 320, 200);
             } else if (initGlobs.selMode) {
-                return directdraw_setup(FALSE, NULL, initGlobs.selDevice, NULL, 100, 100, initGlobs.selMode->width, initGlobs.selMode->height);
+                res = directdraw_setup(FALSE, NULL, initGlobs.selDevice, NULL, 100, 100, initGlobs.selMode->width, initGlobs.selMode->height);
             } else {
-                return directdraw_setup(FALSE, NULL, initGlobs.selDevice, NULL, 40, 40, 640, 480);
+                res = directdraw_setup(FALSE, NULL, initGlobs.selDevice, NULL, 40, 40, 640, 480);
             }
+            if (res || best || initGlobs.selDevice == NULL) return res;
+
+            int failed = (int)(initGlobs.selDevice - initGlobs.devices); // [library:config]
+            candidates[failed].failed = true;
+            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Cannot set the display up on 3D device \"%s\"", candidates[failed].desc);
+            int chosen = LRR_ChooseDevice(candidates, initGlobs.deviceCount, LRR_GetDisplayConfig()->device, LRR_Default3DDevice());
+            if (chosen < 0) return 0;
+            initGlobs.selDevice = &initGlobs.devices[chosen];
+            res = 1;
         }
     }
 

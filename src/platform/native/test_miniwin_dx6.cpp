@@ -8,10 +8,13 @@
 // Synthetic only: an offscreen SDL window, no game data.
 #include <miniwin/d3drm.h>
 #include <miniwin/ddraw.h>
+#include <miniwin/miniwind3d.h>
 
 #include <SDL3/SDL.h>
 
 #include <stdio.h>
+#include <string>
+#include <vector>
 
 static int failures;
 
@@ -52,6 +55,74 @@ static HRESULT FindSoftwareDevice(LPGUID guid, LPSTR name, LPSTR, LPD3DDEVICEDES
         *found = *guid;
     }
     return DDENUMRET_OK;
+}
+
+struct ListedDevice {
+    GUID guid;
+    std::string name;
+};
+
+static HRESULT ListDevice(LPGUID guid, LPSTR name, LPSTR, LPD3DDEVICEDESC, LPD3DDEVICEDESC,
+                          LPVOID ctx)
+{
+    static_cast<std::vector<ListedDevice>*>(ctx)->push_back({*guid, name});
+    return DDENUMRET_OK;
+}
+
+// Miniwin_DeviceDrawsImmediateMode, which the port chooses its 3D device
+// by (platform/native/config.h): every device miniwin lists here reports
+// whether it draws immediate mode, and a device that reports it draws a
+// triangle list where one that does not returns DDERR_UNSUPPORTED.
+static void CheckImmediateCapability(IDirect3DRM3* d3drm, IDirectDraw* dd, IDirectDrawSurface* surface)
+{
+    IDirect3D2* d3d2 = nullptr;
+    std::vector<ListedDevice> devices;
+    CHECK(dd->QueryInterface(IID_IDirect3D2, (void**) &d3d2) == DD_OK && d3d2);
+    if (d3d2) {
+        d3d2->EnumDevices(ListDevice, &devices);
+        d3d2->Release();
+    }
+    CHECK(!Miniwin_DeviceDrawsImmediateMode(GUID{}));
+    bool software = false;
+    for (ListedDevice& listed : devices) {
+        const bool draws = Miniwin_DeviceDrawsImmediateMode(listed.guid);
+        if (listed.name == "Miniwin Emulation" || listed.name == "SDL3 GPU HAL") {
+            CHECK(draws);
+        }
+        else {
+            CHECK(!draws);
+        }
+        software = software || listed.name == "Miniwin Emulation";
+
+        IDirect3DRMDevice3* device = nullptr;
+        if (!surface || d3drm->CreateDeviceFromSurface(&listed.guid, dd, surface, 0, &device) != DD_OK) {
+            continue; // a device this host cannot create, such as a GPU on the dummy driver
+        }
+        IDirect3DDevice2* imDevice2 = nullptr;
+        IDirect3DDevice3* imDevice = nullptr;
+        if (device->GetDirect3DDevice2(&imDevice2) == DD_OK && imDevice2) {
+            imDevice2->QueryInterface(IID_IDirect3DDevice3, (void**) &imDevice);
+            imDevice2->Release();
+        }
+        CHECK(imDevice != nullptr);
+        if (imDevice) {
+            WORD indices[3] = {0, 1, 2};
+            D3DVERTEX vertices[3] = {};
+            vertices[1].x = 1.0f;
+            vertices[2].y = 1.0f;
+            const HRESULT drawn =
+                imDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, D3DFVF_VERTEX, vertices, 3, indices, 3, 0);
+            if (draws) {
+                CHECK(drawn == DD_OK);
+            }
+            else {
+                CHECK(drawn == DDERR_UNSUPPORTED);
+            }
+            imDevice->Release();
+        }
+        device->Release();
+    }
+    CHECK(software);
 }
 
 static void CheckDirectDraw(IDirectDraw* dd, IDirectDrawSurface** outSurface)
@@ -422,6 +493,10 @@ static void CheckRetainedMode(IDirectDraw* dd, IDirectDrawSurface* surface)
             CheckViewport(d3drm, device, camera);
         }
     }
+    if (device) {
+        device->Release();
+    }
+    CheckImmediateCapability(d3drm, dd, surface);
     if (camera) {
         camera->Release();
     }
