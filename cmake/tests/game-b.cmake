@@ -68,3 +68,9 @@ lrr_unit_test(spiderweb SOURCES ${GAME_DIR}/test_spiderweb.cpp
 
 # Stats level changes, counters and tool lookup.
 lrr_unit_test(entity_stats SOURCES ${GAME_DIR}/test_entity_stats.cpp LABELS entity_stats)
+
+# Teleporter object types, ring distance and instant completion.
+lrr_unit_test(teleporter SOURCES ${GAME_DIR}/test_teleporter.cpp
+  WRAP legoobject_run_through_lists_skip_upgrade_parts legoobject_transform_position_get
+       level_current_terrain_get camera_get_topdown_world_pos
+  LABELS teleporter)
