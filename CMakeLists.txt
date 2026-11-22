@@ -529,6 +529,18 @@ if(BUILD_TESTING)
       "LINKER:--wrap=game_file_close")
     add_test(NAME lws COMMAND lws_test)
     set_tests_properties(lws PROPERTIES LABELS lws)
+    # LegoObject.c keeps a carried object's facing when its carrier stands
+    # still, instead of the original's 0/0 NaN. The carry null and the
+    # carried object's container are stand-ins.
+    add_executable(carried_facing_test ${GAME_DIR}/test_carried_facing.cpp)
+    target_link_libraries(carried_facing_test PRIVATE units)
+    target_link_options(carried_facing_test PRIVATE
+      "LINKER:--wrap=renderer_cached_handle_48_get_or_create"
+      "LINKER:--wrap=ddiscene_object_position_get"
+      "LINKER:--wrap=ddiscene_object_position_set"
+      "LINKER:--wrap=ddiscene_object_pose_method_dispatch")
+    add_test(NAME carried_facing COMMAND carried_facing_test)
+    set_tests_properties(carried_facing PROPERTIES LABELS carried_facing)
   endif()
   add_executable(config_test ${PLATFORM_DIR}/native/test_config.cpp)
   target_link_libraries(config_test PRIVATE units)
