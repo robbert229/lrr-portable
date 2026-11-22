@@ -501,7 +501,10 @@ the Linux packages: a TGZ and an AppImage on `ubuntu-24.04` (with the AppImage
 checks and a smoke run of the image), and the Flatpak on x86_64 and aarch64
 in the `flatpak-github-actions:freedesktop-24.08` container. It is not a
 required check. Every package workflow uploads its packages as artifacts;
-there is no continuous release.
+there is no continuous release. The `release` workflow
+(`.github/workflows/release.yml`) calls `native-hosts` and `native-packages`
+on a `v*` tag, or by hand, and attaches their packages to a draft GitHub
+release; see [Releasing](releasing.md).
 
 The `native-hosts` workflow (`.github/workflows/native-hosts.yml`) runs on the
 same events and builds the port on macOS arm64 (`macos-latest`), macOS Intel
@@ -577,8 +580,15 @@ needs:
   first launch (right-click, Open). With packaging on, the build tree's
   program is `build/LegoRR.app/Contents/MacOS/LegoRR`, which `make run` finds.
   `packaging/macos/verify.sh` checks a DMG.
-- **Windows:** a ZIP with `LegoRR.exe`, `LICENSE` and, for a shared SDL3,
-  `SDL3.dll`.
+- **Windows:** a ZIP with `LegoRR.exe`, `LICENSE.txt`,
+  `THIRD-PARTY-NOTICES.txt`, the Visual C++ runtime DLLs in an MSVC build
+  (`InstallRequiredSystemLibraries`), and `SDL3.dll` for a shared SDL3.
+
+Every package carries `LICENSE` and `THIRD-PARTY-NOTICES.txt`.
+`tools/check_package.py` checks a package for them, and for anything outside
+its allow-list, such as game data. Each package job runs it, except the
+Flatpak jobs, whose bundles the release workflow checks; and
+[Releasing](releasing.md) covers the release workflow that ships them.
 
 The icon is original pixel artwork drawn for this repository
 (`packaging/icons/lrr-portable.svg`, LGPL-3.0-or-later): a drill boring into

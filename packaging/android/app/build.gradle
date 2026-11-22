@@ -119,3 +119,14 @@ tasks.register('downloadSDL3') {
 dependencies {
     implementation files(sdlAar).builtBy('downloadSDL3')
 }
+
+// The licence and the third-party notices travel inside the APK, as in
+// every package (docs/releasing.md): assets/LICENSE and
+// assets/THIRD-PARTY-NOTICES.txt, copied from the repository root.
+def noticesDir = file("${buildDir}/generated/notices")
+tasks.register('copyNotices', Copy) {
+    from(file("${repositoryRoot}/LICENSE"), file("${repositoryRoot}/THIRD-PARTY-NOTICES.txt"))
+    into noticesDir
+}
+android.sourceSets.main.assets.srcDir(noticesDir)
+preBuild.dependsOn('copyNotices')

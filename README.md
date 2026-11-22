@@ -204,7 +204,8 @@ runs it on miniwin and SDL3
 [Build guide](docs/building.md) · [Findings](docs/findings/README.md) ·
 [Pseudocode](docs/decompiles/README.md) · [Tools](tools/README.md) ·
 [Compatibility harness](tools/compat/README.md) ·
-[Repository layout](docs/repository-layout.md) · [Contributor rules](AGENTS.md)
+[Repository layout](docs/repository-layout.md) · [Contributor rules](AGENTS.md) ·
+[Changelog](CHANGELOG.md) · [Releasing](docs/releasing.md)
 
 ## License
 

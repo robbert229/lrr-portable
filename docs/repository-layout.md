@@ -18,7 +18,13 @@ docs/coverage/      Original translation units, function areas and call graph
 docs/adr/           Architecture decision records (build/port decisions)
 reference/          (gitignored) the original, unmodified game files
 unpacked/           (gitignored) 5,845 assets extracted from the .wad archives
-CMakeLists.txt      The CMake build (native, SDL3 + miniwin)
+CMakeLists.txt      The CMake build (native, SDL3 + miniwin); its
+                    project(VERSION) is the version (see releasing.md)
+CHANGELOG.md        Release notes for players, one section per release
+LICENSE             LGPL-3.0-or-later
+THIRD-PARTY-NOTICES.txt
+                    Licences of the libraries the program includes; shipped
+                    in every package with LICENSE
 packaging/          CPack packages, the Linux desktop entry and AppStream
                     metadata, the AppImage and Flatpak recipes, the macOS
                     bundle, the Nintendo 3DS .3dsx and .cia, the Android

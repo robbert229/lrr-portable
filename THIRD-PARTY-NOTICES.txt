@@ -1,0 +1,176 @@
+lrr-portable: third-party notices
+=================================
+
+lrr-portable is free software under the GNU Lesser General Public License,
+version 3 or later (the LICENSE file beside this one). Its source code, for
+every release, is at https://github.com/robbert229/lrr-portable.
+
+lrr-portable contains NO game data. To play, you need your own copy of
+LEGO Rock Raiders for PC (1999). LEGO Rock Raiders, its assets and its
+original program belong to their respective owners. LEGO is a trademark of
+the LEGO Group, which does not sponsor, authorise or endorse this project.
+
+The lrr-portable program includes the following third-party software. Each
+is used under the licence reproduced or named below.
+
+
+-------------------------------------------------------------------------------
+miniwin (isle-portable)
+-------------------------------------------------------------------------------
+Source:  https://github.com/isledecomp/isle-portable (miniwin/), with the
+         patch series in patches/miniwin of the lrr-portable source
+Licence: GNU Lesser General Public License, version 3 or later (the text is
+         in LICENSE)
+
+miniwin stands in for Windows and DirectX on top of SDL3. lrr-portable
+builds it from the isle-portable repository with its own patches applied.
+lrr-portable's packaging recipes, its Emscripten flags and parts of its
+build are also adapted from isle-portable, under the same licence.
+
+Copyright (C) the isledecomp and isle-portable contributors.
+
+
+-------------------------------------------------------------------------------
+SDL 3
+-------------------------------------------------------------------------------
+Source:  https://github.com/libsdl-org/SDL (release 3.4.18, commit
+         829a65d769d935c4852f8159e964312c0957260a)
+Licence: zlib
+
+Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
+
+This software is provided 'as-is', without any express or implied
+warranty.  In no event will the authors be held liable for any damages
+arising from the use of this software.
+
+Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute it
+freely, subject to the following restrictions:
+
+1. The origin of this software must not be misrepresented; you must not
+   claim that you wrote the original software. If you use this software
+   in a product, an acknowledgment in the product documentation would be
+   appreciated but is not required.
+2. Altered source versions must be plainly marked as such, and must not be
+   misrepresented as being the original software.
+3. This notice may not be removed or altered from any source distribution.
+
+SDL includes code from other projects under compatible licences; they are
+listed in its source tree at the commit above.
+
+
+-------------------------------------------------------------------------------
+iniparser
+-------------------------------------------------------------------------------
+Source:  https://gitlab.com/iniparser/iniparser (v4.2.6)
+Licence: MIT
+
+Copyright (c) 2000-2024 by Nicolas Devillard and many contributors
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+
+-------------------------------------------------------------------------------
+miniaudio
+-------------------------------------------------------------------------------
+Source:  https://github.com/mackron/miniaudio (0.11.25)
+Licence: public domain (Unlicense) or MIT No Attribution, at your choice;
+         lrr-portable uses it under MIT No Attribution
+
+Copyright 2025 David Reid
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+-------------------------------------------------------------------------------
+stb_vorbis (shipped with miniaudio as extras/stb_vorbis.c)
+-------------------------------------------------------------------------------
+Licence: MIT or public domain (Unlicense), at your choice; lrr-portable uses
+         it under the MIT licence
+
+Copyright (c) 2017 Sean Barrett
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+-------------------------------------------------------------------------------
+Only in some packages
+-------------------------------------------------------------------------------
+Windows (Visual C++ builds): the ZIP carries Microsoft's Visual C++ runtime
+DLLs (msvcp140*.dll, vcruntime140*.dll), redistributed as Microsoft permits
+for its Visual C++ Redistributable files. They are Microsoft's, not covered
+by lrr-portable's licence.
+
+Windows (MinGW-w64 builds): the program links the GCC runtime libraries
+(under the GCC Runtime Library Exception) and MinGW-w64's winpthreads
+(MIT licence, https://www.mingw-w64.org) statically, and SDL3.dll ships
+beside it.
+
+Android (the APK): SDL3's Java classes and libSDL3.so (zlib, above) and
+LLVM's libc++ (libc++_shared.so; Apache License 2.0 with LLVM Exceptions,
+https://llvm.org/LICENSE.txt) ship inside it.
+
+Nintendo 3DS (.3dsx and .cia): the program links devkitPro's libctru and
+citro3d (both under the zlib licence, as SDL's text above, with their
+authors' copyright: https://github.com/devkitPro/libctru and
+https://github.com/devkitPro/citro3d), and devkitARM's newlib C library and
+GCC runtime libraries (newlib's permissive licences, and the GCC Runtime
+Library Exception).
+
+Linux AppImage: the image starts through the AppImage type 2 runtime
+(MIT licence, https://github.com/AppImage/type2-runtime).
+
+Linux Flatpak: the freedesktop runtime and its FFmpeg extension are
+installed separately by Flatpak and are not part of the package.
+
+
+-------------------------------------------------------------------------------
+Not included: FFmpeg
+-------------------------------------------------------------------------------
+The game's movies play through FFmpeg 7 or newer (https://ffmpeg.org), which
+lrr-portable loads at run time when it is installed on your system. No
+package includes FFmpeg; your copy comes under its own licence.

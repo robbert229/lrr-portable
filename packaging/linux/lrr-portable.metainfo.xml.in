@@ -68,6 +68,6 @@
   </keywords>
 
   <releases>
-    <release version="@LRR_SEMANTIC_VERSION@" type="development" date="@LRR_BUILD_DATE@" />
+    <release version="@LRR_SEMANTIC_VERSION@" type="@LRR_RELEASE_TYPE@" date="@LRR_BUILD_DATE@" />
   </releases>
 </component>

@@ -6,7 +6,9 @@
 #              the icon; packaging/linux also holds the AppImage and Flatpak
 #              recipes the CI packages workflow runs.
 #   - macOS:   a DragNDrop disk image holding LegoRR.app (packaging/macos).
-#   - Windows: a ZIP with LegoRR.exe, and SDL3.dll beside it when SDL is shared.
+#   - Windows: a ZIP with LegoRR.exe, SDL3.dll beside it when SDL is shared,
+#              and the Visual C++ runtime DLLs in an MSVC build.
+# Every package carries LICENSE and THIRD-PARTY-NOTICES.txt.
 # The layout follows isle-portable's packaging/ (LGPL-3.0-or-later; keep the
 # attribution when adapting more of it). No package holds game data: every one
 # expects the owner's own LegoRR0.wad and LegoRR1.wad, found through `diskpath`
@@ -25,12 +27,25 @@ set(LRR_APP_URL "https://github.com/robbert229/lrr-portable")
 string(TIMESTAMP LRR_BUILD_DATE "%Y-%m-%d" UTC)
 # CI numbers the version recorded in the package metadata and the AppStream
 # release by run, as isle-portable does, so that two runs of one version sort
-# apart. File names carry the plain version.
-if("$ENV{GITHUB_ACTIONS}" STREQUAL "true" AND NOT "$ENV{GITHUB_RUN_NUMBER}" STREQUAL "")
+# apart. File names carry the plain version. A run on a tag (the release
+# workflow, docs/releasing.md) records the plain version as a stable release.
+if("$ENV{GITHUB_ACTIONS}" STREQUAL "true" AND NOT "$ENV{GITHUB_RUN_NUMBER}" STREQUAL ""
+    AND NOT "$ENV{GITHUB_REF_TYPE}" STREQUAL "tag")
   set(LRR_SEMANTIC_VERSION "${PROJECT_VERSION}~build$ENV{GITHUB_RUN_NUMBER}")
+  set(LRR_RELEASE_TYPE "development")
+elseif("$ENV{GITHUB_REF_TYPE}" STREQUAL "tag")
+  set(LRR_SEMANTIC_VERSION "${PROJECT_VERSION}")
+  set(LRR_RELEASE_TYPE "stable")
 else()
   set(LRR_SEMANTIC_VERSION "${PROJECT_VERSION}")
+  set(LRR_RELEASE_TYPE "development")
 endif()
+
+# The licence and the third-party notices travel in every package
+# (docs/releasing.md); tools/check_package.py fails a package without them.
+set(LRR_NOTICE_FILES
+  "${PROJECT_SOURCE_DIR}/LICENSE"
+  "${PROJECT_SOURCE_DIR}/THIRD-PARTY-NOTICES.txt")
 
 # Windows puts LegoRR.exe and the licence at the root of its ZIP; elsewhere
 # they go under bin/ and share/doc. These are plain variables, not the cache
@@ -73,9 +88,24 @@ if(WIN32)
   # A shared SDL3 (an installed package; the fetched one is static) travels
   # with the exe, as the post-build step copies it beside the build's.
   install(FILES $<TARGET_RUNTIME_DLLS:program> DESTINATION "${LRR_INSTALL_BINDIR}")
-endif()
-if(NOT APPLE)
-  install(FILES "${PROJECT_SOURCE_DIR}/LICENSE" DESTINATION "${LRR_INSTALL_DOCDIR}")
+  # MSVC links the C++ runtime as DLLs (msvcp140, vcruntime140), which a
+  # Windows without the Visual C++ Redistributable lacks; they go beside
+  # LegoRR.exe. The universal CRT is part of Windows 10 and later.
+  if(MSVC)
+    set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION "${LRR_INSTALL_BINDIR}")
+    set(CMAKE_INSTALL_UCRT_LIBRARIES OFF)
+    include(InstallRequiredSystemLibraries)
+  endif()
+  # Windows opens files by extension.
+  install(FILES "${PROJECT_SOURCE_DIR}/LICENSE" RENAME "LICENSE.txt"
+    DESTINATION "${LRR_INSTALL_DOCDIR}")
+  install(FILES "${PROJECT_SOURCE_DIR}/THIRD-PARTY-NOTICES.txt"
+    DESTINATION "${LRR_INSTALL_DOCDIR}")
+elseif(APPLE)
+  # Inside the bundle (macos/CMakeLists.txt) and beside it in the disk image.
+  install(FILES ${LRR_NOTICE_FILES} DESTINATION ".")
+else()
+  install(FILES ${LRR_NOTICE_FILES} DESTINATION "${LRR_INSTALL_DOCDIR}")
 endif()
 
 # The package name: lrr-portable-0.1.0-Linux-x86_64, -Darwin-arm64,
@@ -97,7 +127,7 @@ set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${LRR_APP_SUMMARY}")
 set(CPACK_PACKAGE_HOMEPAGE_URL "${LRR_APP_URL}")
 # No CPACK_RESOURCE_FILE_LICENSE: DragNDrop would embed it as a licence
 # agreement that a disk image cannot be mounted without accepting. The licence
-# text is installed beside LegoRR in the Linux and Windows packages.
+# and notices are installed beside LegoRR instead (above).
 set(CPACK_PACKAGE_DIRECTORY "dist")
 set(CPACK_PACKAGE_FILE_NAME "lrr-portable-${PROJECT_VERSION}-${LRR_PACKAGE_NAME}")
 if(WIN32)
