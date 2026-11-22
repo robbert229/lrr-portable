@@ -144,25 +144,24 @@ else()
   lrr_fetch_iniparser()
   target_link_libraries(lrr_iniparser INTERFACE iniparser-static)
 endif()
-set(MINIWIN_SOURCES
-  windows/windows.cpp windows/windowmessages.cpp ddraw/ddpalette.cpp ddraw/ddraw.cpp ddraw/ddsurface.cpp
-  ddraw/framebuffer.cpp d3d/d3dmaterial.cpp
-  d3d/d3dviewport.cpp d3drm/d3drm.cpp d3drm/d3drmanimationset.cpp
-  d3drm/d3drmdevice.cpp d3drm/d3drmframe.cpp d3drm/d3drmlight.cpp
-  d3drm/d3drmmesh.cpp d3drm/d3drmmeshbuilder.cpp d3drm/d3drmtexture.cpp
-  d3drm/d3drmuservisual.cpp d3drm/d3drmviewport.cpp d3drm/d3drmrenderer.cpp
-  internal/meshutils.cpp d3drm/backends/software/renderer.cpp
-  d3drm/backends/palettesw/renderer.cpp)
-list(TRANSFORM MINIWIN_SOURCES PREPEND "${MINIWIN}/src/")
-add_library(miniwin STATIC ${MINIWIN_SOURCES})
-target_include_directories(miniwin PUBLIC "${MINIWIN}/include"
-  "${MINIWIN}/src/internal"
-  "${MINIWIN}/src/d3drm/backends/sdl3gpu/shaders/generated")
+# miniwin builds through upstream's own miniwin/CMakeLists.txt, which picks
+# each platform's renderer backends: software and palette software, SDL GPU,
+# OpenGL 1.x and OpenGL ES 2/3 where their libraries are found, DirectX 9 on
+# Windows, Citro3D on 3DS, GXM on Vita and Glide on DOS
+# (ISLE_RENDERER_SOFTWARE and ISLE_RENDERER_SDLGPU switch the software and SDL
+# GPU backends). On the desktop the software backend is the last hardware
+# device miniwin enumerates, so it stays the device the game picks; the
+# patches implement immediate-mode drawing on it alone so far.
+add_subdirectory("${MINIWIN}" "${CMAKE_CURRENT_BINARY_DIR}/miniwin")
+if(NOT ISLE_RENDERER_SOFTWARE)
+  message(WARNING "ISLE_RENDERER_SOFTWARE is OFF: the game will pick a backend that does not draw the level yet")
+endif()
 # The machine miniwin emulates for the game: a 16-bit RGB565 display (the
 # units convert images to 16-bit only), and the software renderer described as
 # a hardware device, since Init.c's -best accepts only HAL devices.
-target_compile_definitions(miniwin PRIVATE MINIWIN USE_SOFTWARE_RENDER USE_PALETTE_SW_RENDER
+target_compile_definitions(miniwin PRIVATE
   MINIWIN_PIXELFORMAT=SDL_PIXELFORMAT_RGB565 MINIWIN_SOFTWARE_HAL)
+# Upstream links SDL privately; the units and tests include SDL beside it.
 target_link_libraries(miniwin PUBLIC SDL3::SDL3)
 if(TARGET miniwin_patches_check)
   add_dependencies(miniwin miniwin_patches_check)
