@@ -38,3 +38,6 @@ lrr_unit_test(priorities SOURCES ${GAME_DIR}/test_priorities.cpp
 # Per-level event translation preserves the message payload.
 lrr_unit_test(ptl SOURCES ${GAME_DIR}/test_ptl.cpp
   WRAP block_open block_close LABELS ptl)
+
+# Radar bounds and the screen/world transforms on a synthetic map.
+lrr_unit_test(radarmap SOURCES ${GAME_DIR}/test_radarmap.cpp LABELS radarmap)
