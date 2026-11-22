@@ -18,9 +18,9 @@
 #include <string.h>
 
 #include "game/info_unit.h"
+#include "gods98/font_api.h"
 #include "gods98/font_record.h"
 
-extern "C" void font_print_f(Font* font, int x, int y, const char* msg, ...);
 /* Pointer.c's Pointer_Initialise: the pointer names a token may name. */
 extern "C" void ui_pointer_cursor_name_registry_init(void);
 
@@ -53,7 +53,7 @@ extern "C" void __wrap_Image_DisplayScaled(Image* image, const Area2F*, const Po
 /* The panel calls info_draw_panel makes; the print records its format and
  * its first image argument. */
 static char s_printed[256];
-static void* s_printedImage;
+static uintptr_t s_printedImage;
 static int s_printCount;
 
 extern "C" void __wrap_panel_text_window_print_f(void*, const char* msg, ...)
@@ -64,7 +64,7 @@ extern "C" void __wrap_panel_text_window_print_f(void*, const char* msg, ...)
     snprintf(s_printed, sizeof(s_printed), "%s", msg);
     if (strstr(msg, "%b")) {
         va_start(args, msg);
-        s_printedImage = va_arg(args, void*);
+        s_printedImage = va_arg(args, uintptr_t);
         va_end(args);
     }
 }
@@ -114,11 +114,11 @@ int main()
     /* Font draws the image "%b" names. */
     memset(&font, 0, sizeof(font));
     s_drawnCount = 0;
-    font_print_f(&font, 0, 0, text, (void*)s_image);
+    font_print_f((const TextureSurface*)&font, 0, 0, text, (uintptr_t)s_image);
     CHECK(s_drawnCount == 1, "Font draws one image");
     CHECK(s_drawnCount >= 1 && s_drawn[0] == s_image, "Font draws the token's image");
     s_drawnCount = 0;
-    font_print_f(&font, 0, 0, "@[x] @[0x12 @[");
+    font_print_f((const TextureSurface*)&font, 0, 0, "@[1] @[0x12] @[0x0000000g00000000] @[0xzzzzzzzz] @[");
     CHECK(s_drawnCount == 0, "Font draws no image for other bracketed text");
     free(text);
 
@@ -143,7 +143,7 @@ int main()
     info_draw_panel(0.0f);
     CHECK(s_printCount == 1, "the panel prints the docked message");
     CHECK(strcmp(s_printed, "Found %b here") == 0, "the panel prints the compiled text");
-    CHECK(s_printedImage == (void*)s_image, "the panel passes the whole image pointer");
+    CHECK(s_printedImage == (uintptr_t)s_image, "the panel passes the whole image pointer");
 
     if (s_failures) {
         printf("%d failure(s)\n", s_failures);

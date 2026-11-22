@@ -169,6 +169,7 @@ These change the original's code where it misbehaves. Each one is marked
 | Unopened movie size | reads a NULL surface | guards it | `movie_unit.cpp` |
 | Region data on failure | frees it twice after a `SetClipList` failure | frees it once | `directdraw.c` |
 | RNC unpacked length | read as a signed long | read as unsigned | `rnc.c` |
+| Info text image tokens | `info_compile_text` writes an uninitialised byte for a `$name$` token that names no image, overruns its image slots past the eighth token and its name buffer past 31 characters, and reads past the text for an unclosed token; Font draws any `@[0x` + 8 characters + `]` as an image | writes nothing for an imageless token, keeps five images and drops the rest, truncates the name, stops at the text's end; Font draws only a full hex address (#904) | `info_unit.c`, `font.c` |
 | `Data\Saves` directory | (n/a: only POSIX paths are affected) | makes `Data/Saves`, not a directory named with a backslash | b4af5d1f |
 
 Many 64-bit and ABI fixes are not listed here. These include reused

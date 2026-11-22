@@ -189,7 +189,7 @@ void info_set_type_play_always(int type, int on)
  * past the text's end for an unclosed token. The port stores each whole
  * pointer, unaligned, writes nothing for a token without an image, drops the
  * tokens past the fifth (so every "%b" has its image), truncates the name
- * and stops at the text's end. */
+ * and stops at the text's end (PORT-ONLY). */
 // FUNCTION: LEGORR 0x00419530
 void info_compile_text(char* text, char** outText)
 {
@@ -647,9 +647,9 @@ void info_draw_panel(float elapsed)
             if (text[len + 1] > 0) {
                 /* The trailer's whole image pointers, read unaligned. */
                 memcpy(images, text + len + 2, sizeof(images));
-                panel_text_window_print_f(panelGlobs.scrollTextWindow, (char*)text, (void*)images[0],
-                                          (void*)images[1], (void*)images[2], (void*)images[3],
-                                          (void*)images[4]);
+                panel_text_window_print_f(panelGlobs.scrollTextWindow, (char*)text, (uintptr_t)images[0],
+                                          (uintptr_t)images[1], (uintptr_t)images[2], (uintptr_t)images[3],
+                                          (uintptr_t)images[4]);
             } else {
                 panel_text_window_print_f(panelGlobs.scrollTextWindow, (char*)text);
             }
