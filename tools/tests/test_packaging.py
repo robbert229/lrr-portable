@@ -97,6 +97,13 @@ class IconTests(unittest.TestCase):
         self.assertTrue(root.tag.endswith("svg"))
         self.assertEqual(root.get("viewBox"), "0 0 512 512")
 
+    def test_svg_root_is_within_the_mime_sniff_window(self):
+        # shared-mime-info recognises SVG only by "<svg" in the first 256
+        # bytes; past that, appstreamcli compose in the Flatpak build reads
+        # the icon as plain XML and fails with icon-file-read-error.
+        data = (PACKAGING / "icons/lrr-portable.svg").read_bytes()
+        self.assertIn(b"<svg", data[:256])
+
     def test_icns_holds_the_expected_png_sizes(self):
         data = (PACKAGING / "macos/AppIcon.icns").read_bytes()
         self.assertEqual(data[:4], b"icns")

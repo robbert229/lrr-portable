@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
-<!-- Original artwork drawn for this repository: a pixel-art drill boring into
-     rock and ore, on a 40x40 grid scaled to 512. Its composition is styled after
-     the original game's drill icon, but it contains none of the game's image data. -->
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" shape-rendering="crispEdges">
+  <!-- Original artwork drawn for this repository: a pixel-art drill boring
+       into rock and ore, on a 40x40 grid scaled to 512. Its composition is
+       styled after the original game's drill icon, but it contains none of the
+       game's image data. Comments stay inside <svg>: MIME sniffing (and so
+       appstreamcli compose) needs "<svg" within the first 256 bytes. -->
   <title>LRR Portable</title>
   <!-- The tile: empty, so the round artwork stands on its own. regenerate.py
        strips it for the Android adaptive icon's foreground. -->
