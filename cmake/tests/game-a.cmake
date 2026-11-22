@@ -47,3 +47,6 @@ lrr_unit_test(dependencies SOURCES ${GAME_DIR}/test_dependencies.cpp
   WRAP block_subgroup lego_entity_type_pair_lookup building_upgrade_admission_check
     legoobject_run_through_lists_skip_upgrade_parts legoobject_task_kind_filtered_search
   LABELS dependencies)
+
+# Terrain detail mesh transform and packed texture selection.
+lrr_unit_test(detail SOURCES ${GAME_DIR}/test_detail.cpp LABELS detail)
