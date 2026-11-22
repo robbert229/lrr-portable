@@ -72,7 +72,7 @@ jobs:
       - name: Package (AppImage)
         run: packaging/linux/appimage/build.sh build
 
-      # The image starts, runs LegoRR and writes its default LegoRR.ini; it
+      # The image starts, runs lrr-portable and writes its default LegoRR.ini; it
       # holds no game data, so the game stops at once.
       - name: Smoke-test the AppImage
         run: |
@@ -81,7 +81,7 @@ jobs:
           cd "$RUNNER_TEMP"
           APPIMAGE_EXTRACT_AND_RUN=1 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
             timeout 60 "$GITHUB_WORKSPACE"/build/dist/lrr-portable-*-Linux-x86_64.AppImage -nosound \
-            || echo "LegoRR exited with status $?"
+            || echo "lrr-portable exited with status $?"
           test -f "$HOME/.local/share/lrr-portable/LegoRR/LegoRR.ini"
 
       - name: Upload packages
@@ -157,6 +157,6 @@ jobs:
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
           bundle: lrr-portable-Linux-${{ matrix.arch }}.flatpak
-          manifest-path: packaging/linux/flatpak/io.github.robbert229.LegoRR.yml
+          manifest-path: packaging/linux/flatpak/io.github.robbert229.lrr_portable.yml
           arch: ${{ matrix.arch }}
           cache-key: flatpak-builder-${{ matrix.arch }}-${{ github.sha }}

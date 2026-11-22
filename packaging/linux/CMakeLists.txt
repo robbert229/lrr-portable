@@ -2,7 +2,7 @@
 # Adapted from isle-portable's packaging/linux/CMakeLists.txt.
 #
 # Injects the application id and the build into the desktop entry and the
-# AppStream metadata, and installs them with the icon beside LegoRR.
+# AppStream metadata, and installs them with the icon beside lrr-portable.
 configure_file(lrr-portable.desktop.in "${LRR_APP_ID}.desktop" @ONLY)
 configure_file(lrr-portable.metainfo.xml.in "${LRR_APP_ID}.metainfo.xml" @ONLY)
 

@@ -5,7 +5,7 @@
 # jobs are not required checks: native-build is the only one. Each native
 # job configures, builds and runs ctest as native-build does, with SDL3
 # fetched by CMake at the pinned commit (CMakeLists.txt, LRR_SDL3_GIT_TAG);
-# the web job builds LegoRR.html, .js and .wasm and uploads them. The Python
+# the web job builds lrr-portable.html, .js and .wasm and uploads them. The Python
 # tool tests and the unit lint run in native-build only. The macOS and
 # Windows jobs also build the CPack package (packaging/) and upload it as an
 # artifact; the Linux packages are in native-packages.
@@ -58,7 +58,7 @@ jobs:
           cmake --build build
           ctest --test-dir build --output-on-failure
 
-      # LegoRR.app in a disk image (packaging/macos): ad-hoc signed, not
+      # lrr-portable.app in a disk image (packaging/macos): ad-hoc signed, not
       # notarized. verify.sh mounts the image and checks the bundle.
       - name: Package (DMG)
         run: |
@@ -233,14 +233,14 @@ jobs:
         run: |
           emcmake cmake -S . -B build-web -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
           cmake --build build-web --target program
-          ls -l build-web/LegoRR.html build-web/LegoRR.js build-web/LegoRR.wasm
+          ls -l build-web/lrr-portable.html build-web/lrr-portable.js build-web/lrr-portable.wasm
 
-      - name: Upload LegoRR.html, .js and .wasm
+      - name: Upload lrr-portable.html, .js and .wasm
         uses: actions/upload-artifact@v4
         with:
-          name: LegoRR-web
+          name: lrr-portable-web
           path: |
-            build-web/LegoRR.html
-            build-web/LegoRR.js
-            build-web/LegoRR.wasm
+            build-web/lrr-portable.html
+            build-web/lrr-portable.js
+            build-web/lrr-portable.wasm
           if-no-files-found: error

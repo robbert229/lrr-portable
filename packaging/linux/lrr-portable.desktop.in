@@ -15,5 +15,5 @@ Keywords=LEGO;Rock Raiders;LRR;
 StartupWMClass=@LRR_APP_ID@
 SingleMainWindow=true
 
-TryExec=LegoRR
-Exec=LegoRR
+TryExec=lrr-portable
+Exec=lrr-portable

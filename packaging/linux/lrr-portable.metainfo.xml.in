@@ -10,7 +10,7 @@
 
   <launchable type="desktop-id">@LRR_APP_ID@.desktop</launchable>
   <provides>
-    <binary>LegoRR</binary>
+    <binary>lrr-portable</binary>
   </provides>
 
   <branding>

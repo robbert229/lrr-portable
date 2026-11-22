@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: LGPL-3.0-or-later
 # Checks a macOS package: mounts the disk image CPack wrote and examines the
-# app bundle inside it, then runs LegoRR once.
+# app bundle inside it, then runs lrr-portable once.
 #
 #   packaging/macos/verify.sh build/dist/lrr-portable-*-Darwin-*.dmg
 #
@@ -22,23 +22,23 @@ cleanup() {
 trap cleanup EXIT
 
 hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$dmg"
-app="$mnt/LegoRR.app"
+app="$mnt/lrr-portable.app"
 plist="$app/Contents/Info.plist"
 
-test -x "$app/Contents/MacOS/LegoRR"
+test -x "$app/Contents/MacOS/lrr-portable"
 test -f "$app/Contents/Resources/AppIcon.icns"
 plutil -lint "$plist"
-test "$(plutil -extract CFBundleIdentifier raw "$plist")" = "io.github.robbert229.LegoRR"
-test "$(plutil -extract CFBundleExecutable raw "$plist")" = "LegoRR"
+test "$(plutil -extract CFBundleIdentifier raw "$plist")" = "io.github.robbert229.lrr_portable"
+test "$(plutil -extract CFBundleExecutable raw "$plist")" = "lrr-portable"
 test "$(plutil -extract CFBundleIconFile raw "$plist")" = "AppIcon.icns"
 codesign --verify --deep --strict --verbose=2 "$app"
-lipo -archs "$app/Contents/MacOS/LegoRR"
-otool -L "$app/Contents/MacOS/LegoRR"
+lipo -archs "$app/Contents/MacOS/lrr-portable"
+otool -L "$app/Contents/MacOS/lrr-portable"
 
 (
     cd "$work"
     SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
-        "$app/Contents/MacOS/LegoRR" -nosound || echo "LegoRR exited with status $?"
+        "$app/Contents/MacOS/lrr-portable" -nosound || echo "lrr-portable exited with status $?"
 )
 test -f "$HOME/Library/Application Support/lrr-portable/LegoRR/LegoRR.ini"
 echo "verified $dmg"

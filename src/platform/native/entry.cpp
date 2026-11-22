@@ -4,10 +4,10 @@
  * does for the shipped LegoRR.exe. miniwin supplies the window and the
  * message pump over SDL3.
  *
- * The command line keeps the program name first, as GetCommandLineA returns
- * it, in Windows form (quoted, with backslash separators): WinMain takes the program
- * name after the last backslash and opens <name>0.wad, <name>1.wad, ... in
- * the working directory. The rest goes to WinMain as lpCmdLine, so the
+ * The command line starts with the program name, as GetCommandLineA returns
+ * it: WinMain opens <name>0.wad, <name>1.wad, ... in the working directory,
+ * so the name is always the original's "LegoRR.exe", whatever this
+ * executable is called. The rest goes to WinMain as lpCmdLine, so the
  * shipped exe's flags (-best, -window, -nosound, -debug, ...) work
  * unchanged.
  *
@@ -56,20 +56,14 @@ int main(int argc, char** argv)
         if (!arguments.empty()) arguments += ' ';
         arguments += QuoteArgument(argv[i]);
     }
-#ifdef __EMSCRIPTEN__
-    /* The web build's argv[0] is "./this.program"; WinMain names the WADs
-     * after the program, so it gets a relative LegoRR, as a native run
-     * from its game directory does. */
-    std::string program = "./LegoRR";
-#else
-    std::string program = argc > 0 ? argv[0] : "LegoRR.exe";
-#endif
-    for (char& c : program) {
-        if (c == '/') c = '\\';
-    }
-    /* Quoted, as the Windows shell starts a program: WinMain ends the
-     * program name at the first quote. */
-    g_commandLine = "\"" + program + "\"";
+    /* WinMain takes the WAD prefix (LegoRR0.wad, LegoRR1.wad) and the
+     * Lego.cfg root token from the program's basename, as the shipped
+     * LegoRR.exe was named. The port's executable is lrr-portable, so it
+     * always passes the original's name in place of argv[0]. It is quoted
+     * and has a directory, as the Windows shell starts a program: WinMain
+     * takes the name after the last backslash and ends it at the first
+     * quote, so a bare "LegoRR.exe" would leave it an empty name. */
+    g_commandLine = "\".\\LegoRR.exe\"";
     if (!arguments.empty()) g_commandLine += " " + arguments;
     seam_command_line = &g_commandLine[0];
 

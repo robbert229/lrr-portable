@@ -9,15 +9,15 @@
 # (build-args); a Flathub submission would have to list them as sources.
 #
 #   flatpak-builder --user --install --force-clean build-dir \
-#       packaging/linux/flatpak/io.github.robbert229.LegoRR.yml
+#       packaging/linux/flatpak/io.github.robbert229.lrr_portable.yml
 #
 # The package holds no game data. The app reads the game's directory (diskpath
 # in LegoRR.ini) read-only from the host locations below.
-id: io.github.robbert229.LegoRR
+id: io.github.robbert229.lrr_portable
 runtime: org.freedesktop.Platform
 runtime-version: "24.08"
 sdk: org.freedesktop.Sdk
-command: LegoRR
+command: lrr-portable
 finish-args:
   - --share=ipc
   - --socket=wayland

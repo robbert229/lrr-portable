@@ -83,7 +83,7 @@ what you were doing when it happened.
 3. **Play.** Listen to the Chief's briefing, pick a mission and start digging.
 
 > **macOS:** the app isn't notarized by Apple, so the first time you open it,
-> right-click `LegoRR.app` and choose **Open**.
+> right-click `lrr-portable.app` and choose **Open**.
 
 ## Your saves
 

@@ -31,8 +31,10 @@ make build
 make run WAD_DIR=/path/to/game
 ```
 
-`LegoRR` is the units' `WinMain` (ADR 0007): it runs in the game directory,
-opens `LegoRR0.wad` and `LegoRR1.wad` there, and takes the shipped exe's flags
+`lrr-portable` is the units' `WinMain` (ADR 0007): it runs in the game
+directory, opens `LegoRR0.wad` and `LegoRR1.wad` there (`entry.cpp` always
+hands `WinMain` the original's program name, `LegoRR.exe`, which names the
+WADs), and takes the shipped exe's flags
 (`-best`, `-window`, `-nosound`, `-debug`, ...). `make run` passes `RUN_ARGS`,
 none by default. Where the original showed its "Mode Selection" dialog, the
 port reads the display settings from `LegoRR.ini`, as isle-portable reads
@@ -56,7 +58,7 @@ that advice when the applied patches are out of date.
 tools/setup-miniwin.sh
 cmake -S . -B build
 cmake --build build
-cd /path/to/game && /path/to/build/LegoRR -best -window
+cd /path/to/game && /path/to/build/lrr-portable -best -window
 ```
 
 The game's movies need FFmpeg 7 or later at run time, not at build time:
@@ -91,7 +93,7 @@ to a file:
 
 ```sh
 cd /path/to/game
-SDL_VIDEODRIVER=offscreen MINIWIN_DUMP_FRAME=/tmp/frame.png /path/to/build/LegoRR -best -window
+SDL_VIDEODRIVER=offscreen MINIWIN_DUMP_FRAME=/tmp/frame.png /path/to/build/lrr-portable -best -window
 ```
 
 Run the binary from a copy of the game directory, or from one whose WADs are
@@ -102,8 +104,8 @@ data. The front end ignores close requests, so stop a headless run with
 ## Web build (Emscripten)
 
 The web build (issue #926) needs [emsdk](https://emscripten.org/docs/getting_started/downloads.html)
-6.0.10, the release isle-portable builds with, and gives `LegoRR.html`,
-`LegoRR.js` and `LegoRR.wasm`. The tests are native programs, so configure
+6.0.10, the release isle-portable builds with, and gives `lrr-portable.html`,
+`lrr-portable.js` and `lrr-portable.wasm`. The tests are native programs, so configure
 without them:
 
 ```sh
@@ -132,7 +134,7 @@ The page needs cross-origin isolation (for `SharedArrayBuffer`), which
 `tools/serve_web.py` gives it:
 
 ```sh
-tools/serve_web.py build-web        # http://127.0.0.1:8000/LegoRR.html
+tools/serve_web.py build-web        # http://127.0.0.1:8000/lrr-portable.html
 ```
 
 The game reads its data from `/LegoRR` (`legorr:diskpath`), and its
@@ -238,12 +240,12 @@ CMake from PowerShell with `-DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl`
 inside a developer environment (`ilammy/msvc-dev-cmd`), because Git Bash's
 `link` would shadow MSVC's linker. MinGW links its C and C++ runtimes
 statically, and a build against a shared SDL3 copies `SDL3.dll` beside
-`LegoRR.exe` (and the tests).
+`lrr-portable.exe` (and the tests).
 
 The same workflow's `web-emscripten` job, also not required, sets up emsdk
 6.0.10 (`emscripten-core/setup-emsdk`), builds the web target as in
-[Web build](#web-build-emscripten) and uploads `LegoRR.html`, `.js` and
-`.wasm` as the `LegoRR-web` artifact.
+[Web build](#web-build-emscripten) and uploads `lrr-portable.html`, `.js`
+and `.wasm` as the `lrr-portable-web` artifact.
 
 
 ## Packages
@@ -255,27 +257,27 @@ install rules and CPack settings from `packaging/`. It follows
 isle-portable's `packaging/` tree, and the same files hold what each host
 needs:
 
-- **Linux:** a TGZ with `LegoRR`, a desktop entry and AppStream metadata
+- **Linux:** a TGZ with `lrr-portable`, a desktop entry and AppStream metadata
   (generated from the templates in `packaging/linux`) and the icon. The
   AppImage is `packaging/linux/appimage/build.sh build`: it installs into
-  `build/AppDir`, lets linuxdeploy copy in the libraries `LegoRR` needs,
+  `build/AppDir`, lets linuxdeploy copy in the libraries `lrr-portable` needs,
   swaps in the project's `AppRun`, and packs it with appimagetool. Both tools
   are pinned releases, checked against a SHA-256. `check.sh` then fails the
   build when anything in the image needs a glibc newer than 2.39 (Ubuntu
   24.04's, the CI host) or a CPU above baseline x86-64. The AppImage is
   x86_64 only. The Flatpak
-  (`packaging/linux/flatpak/io.github.robbert229.LegoRR.yml`, x86_64 and
+  (`packaging/linux/flatpak/io.github.robbert229.lrr_portable.yml`, x86_64 and
   aarch64) builds on the freedesktop 24.08 runtime. It copies the working
   tree, so run `tools/setup-miniwin.sh` first, and it fetches SDL3 during the
   build. Movies in the Flatpak need the runtime's
   `org.freedesktop.Platform.ffmpeg-full//24.08` extension.
-- **macOS:** a DMG holding `LegoRR.app` (`packaging/macos`): `Info.plist`, the
+- **macOS:** a DMG holding `lrr-portable.app` (`packaging/macos`): `Info.plist`, the
   icon, and an ad-hoc signature, which Apple silicon needs to run the binary.
   It is neither Developer ID signed nor notarized, so Gatekeeper asks on the
   first launch (right-click, Open). With packaging on, the build tree's
-  program is `build/LegoRR.app/Contents/MacOS/LegoRR`, which `make run` finds.
+  program is `build/lrr-portable.app/Contents/MacOS/lrr-portable`, which `make run` finds.
   `packaging/macos/verify.sh` checks a DMG.
-- **Windows:** a ZIP with `LegoRR.exe`, `LICENSE` and, for a shared SDL3,
+- **Windows:** a ZIP with `lrr-portable.exe`, `LICENSE` and, for a shared SDL3,
   `SDL3.dll`.
 
 The icon is original artwork drawn for this repository
@@ -284,7 +286,7 @@ with the game's own art, and the repository ships no game data in any package.
 `packaging/icons/regenerate.py` renders the SVG into the macOS bundle's
 `AppIcon.icns`, which is committed.
 
-The application id is `io.github.robbert229.LegoRR`, set once as `LRR_APP_ID`
+The application id is `io.github.robbert229.lrr_portable`, set once as `LRR_APP_ID`
 in `packaging/CMakeLists.txt` and used by the desktop entry, the AppStream
 component, the Flatpak and the bundle identifier. It follows Flathub's
 `io.github.<owner>.<name>` convention for a project on GitHub.

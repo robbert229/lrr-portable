@@ -2,15 +2,14 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 # The AppImage's entry point, in place of linuxdeploy's default.
 #
-# The game opens LegoRR0.wad and LegoRR1.wad in its working directory unless
-# LegoRR.ini's diskpath names another, and names them after the executable:
-# only a binary called LegoRR finds them. So this always runs usr/bin/LegoRR,
-# whatever the AppImage file or a symlink to it is called, and leaves the
-# working directory as the caller set it.
+# It runs usr/bin/lrr-portable, whatever the AppImage file or a symlink to it
+# is called, and leaves the working directory as the caller set it: the game
+# opens LegoRR0.wad and LegoRR1.wad there unless LegoRR.ini's diskpath names
+# another directory.
 HERE="$(dirname "$(readlink -f "${0}")")"
 
 # Prefer the bundled binaries and libraries.
 export PATH="${HERE}/usr/bin:${PATH}"
 export LD_LIBRARY_PATH="${HERE}/usr/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 
-exec "${HERE}/usr/bin/LegoRR" "$@"
+exec "${HERE}/usr/bin/lrr-portable" "$@"

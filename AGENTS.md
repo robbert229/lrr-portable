@@ -51,7 +51,7 @@ cut. Open PRs against `main`.
   with `patches/miniwin` applied by `tools/setup-miniwin.sh`. To change
   miniwin, commit in the submodule and run `tools/miniwin-patches.sh export`
   ([ADR 0009](docs/adr/0009-miniwin-patches-in-this-repository.md)). `make setup`, `make build`, and
-  `make run` configure, build, and launch; `make run` starts `LegoRR` in
+  `make run` configure, build, and launch; `make run` starts `lrr-portable` in
   `WAD_DIR` (the game data directory) with `RUN_ARGS` (default
   none: the display settings come from `LegoRR.ini`). For tests, run `cmake -S . -B build`, then
   `cmake --build build` and `ctest --test-dir build --output-on-failure`

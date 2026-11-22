@@ -2,11 +2,11 @@
 #
 # Packages (issue #922): `cpack` in the build directory writes
 # lrr-portable-<version>-<system>-<arch> to build/dist, from `install()`:
-#   - Linux:   a TGZ with LegoRR, the desktop entry, the AppStream metadata and
+#   - Linux:   a TGZ with lrr-portable, the desktop entry, the AppStream metadata and
 #              the icon; packaging/linux also holds the AppImage and Flatpak
 #              recipes the CI packages workflow runs.
-#   - macOS:   a DragNDrop disk image holding LegoRR.app (packaging/macos).
-#   - Windows: a ZIP with LegoRR.exe, and SDL3.dll beside it when SDL is shared.
+#   - macOS:   a DragNDrop disk image holding lrr-portable.app (packaging/macos).
+#   - Windows: a ZIP with lrr-portable.exe, and SDL3.dll beside it when SDL is shared.
 # The layout follows isle-portable's packaging/ (LGPL-3.0-or-later; keep the
 # attribution when adapting more of it). No package holds game data: every one
 # expects the owner's own LegoRR0.wad and LegoRR1.wad, found through `diskpath`
@@ -15,7 +15,7 @@
 # The reverse-DNS application id, shared by the desktop entry, the AppStream
 # component, the Flatpak and the macOS bundle identifier. It follows Flathub's
 # convention for a project hosted on GitHub: io.github.<owner>.<name>.
-set(LRR_APP_ID "io.github.robbert229.LegoRR")
+set(LRR_APP_ID "io.github.robbert229.lrr_portable")
 set(LRR_APP_NAME "LRR Portable")
 set(LRR_APP_SUMMARY "Portable reconstruction of Lego Rock Raiders")
 set(LRR_APP_SPDX "LGPL-3.0-or-later")
@@ -32,7 +32,7 @@ else()
   set(LRR_SEMANTIC_VERSION "${PROJECT_VERSION}")
 endif()
 
-# Windows puts LegoRR.exe and the licence at the root of its ZIP; elsewhere
+# Windows puts lrr-portable.exe and the licence at the root of its ZIP; elsewhere
 # they go under bin/ and share/doc. These are plain variables, not the cache
 # ones of GNUInstallDirs, which another directory may already have set.
 if(WIN32)
@@ -58,14 +58,14 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 if(APPLE AND NOT IOS)
   # Here rather than in macos/, so that it runs after the install() of
-  # LegoRR.app above.
+  # lrr-portable.app above.
   # Pull in any shared library the bundle links (none with the fetched, static
   # SDL3), then sign, so that the signature covers the final contents.
   install(CODE "
     include(BundleUtilities)
-    fixup_bundle(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/LegoRR.app\" \"\" \"\")
+    fixup_bundle(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/lrr-portable.app\" \"\" \"\")
     execute_process(COMMAND /usr/bin/codesign --force --deep --sign -
-      \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/LegoRR.app\"
+      \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/lrr-portable.app\"
       COMMAND_ERROR_IS_FATAL ANY)
     ")
 endif()
@@ -97,7 +97,7 @@ set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${LRR_APP_SUMMARY}")
 set(CPACK_PACKAGE_HOMEPAGE_URL "${LRR_APP_URL}")
 # No CPACK_RESOURCE_FILE_LICENSE: DragNDrop would embed it as a licence
 # agreement that a disk image cannot be mounted without accepting. The licence
-# text is installed beside LegoRR in the Linux and Windows packages.
+# text is installed beside lrr-portable in the Linux and Windows packages.
 set(CPACK_PACKAGE_DIRECTORY "dist")
 set(CPACK_PACKAGE_FILE_NAME "lrr-portable-${PROJECT_VERSION}-${LRR_PACKAGE_NAME}")
 if(WIN32)

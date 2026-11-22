@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 # Adapted from isle-portable's packaging/macos/CMakeLists.txt.
 #
-# Turns LegoRR into LegoRR.app: Info.plist, the icon, and (when installing) an
+# Turns lrr-portable into lrr-portable.app: Info.plist, the icon, and (when installing) an
 # ad-hoc signature, which Apple silicon needs before it will run the binary.
 # The bundle is neither Developer ID signed nor notarized; Gatekeeper asks
 # the first time (docs/building.md).
@@ -27,7 +27,7 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/Info.plist.in"
   "${CMAKE_CURRENT_BINARY_DIR}/Info.plist" @ONLY)
 
 set(_lrr_icon_file "${CMAKE_CURRENT_SOURCE_DIR}/${_lrr_icon}.icns")
-# Source file properties are per directory, and LegoRR is defined in the
+# Source file properties are per directory, and lrr-portable is defined in the
 # top-level one.
 set_source_files_properties("${_lrr_icon_file}"
   TARGET_DIRECTORY program

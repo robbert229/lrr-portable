@@ -44,7 +44,7 @@ if(EMSCRIPTEN)
 endif()
 
 # MinGW links its C and C++ runtimes and winpthread statically, as
-# isle-portable does, so LegoRR.exe runs outside the msys2 shell.
+# isle-portable does, so lrr-portable.exe runs outside the msys2 shell.
 if(MINGW)
   add_link_options(-static -static-libgcc -static-libstdc++)
 endif()
@@ -328,7 +328,7 @@ endif()
 target_link_libraries(units PUBLIC seam_stubs)
 
 add_executable(program ${LRR_ENTRY_SOURCE})
-set_target_properties(program PROPERTIES OUTPUT_NAME "LegoRR")
+set_target_properties(program PROPERTIES OUTPUT_NAME "lrr-portable")
 target_link_libraries(program PRIVATE units)
 
 # Lint: compiler warnings this repository's own code is kept free of, as
@@ -347,14 +347,14 @@ endforeach()
 if(WIN32)
   set_target_properties(program PROPERTIES WIN32_EXECUTABLE TRUE)
   # A shared SDL3 (an installed package; the fetched one is static) goes
-  # beside LegoRR.exe, as isle-portable copies its runtime DLLs. The tests
+  # beside lrr-portable.exe, as isle-portable copies its runtime DLLs. The tests
   # build into the same directory and find it there too.
   add_custom_command(TARGET program POST_BUILD
     COMMAND "$<$<BOOL:$<TARGET_RUNTIME_DLLS:program>>:${CMAKE_COMMAND};-E;copy_if_different;$<TARGET_RUNTIME_DLLS:program>;$<TARGET_FILE_DIR:program>>"
     COMMAND_EXPAND_LISTS)
 endif()
 if(EMSCRIPTEN)
-  # LegoRR.html, beside LegoRR.js and LegoRR.wasm, from the port's page.
+  # lrr-portable.html, beside lrr-portable.js and lrr-portable.wasm, from the port's page.
   set(LRR_EMSCRIPTEN_SHELL "${LRR_SRC_ROOT_ABS}/platform/native/emscripten/shell.html")
   set_target_properties(program PROPERTIES SUFFIX ".html"
     LINK_DEPENDS "${LRR_EMSCRIPTEN_SHELL}")

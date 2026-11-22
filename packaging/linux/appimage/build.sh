@@ -8,7 +8,7 @@
 #
 # build-dir defaults to build, output-dir to <build-dir>/dist. It installs the
 # tree into <build-dir>/AppDir with `cmake --install`, lets linuxdeploy copy
-# in the libraries LegoRR needs and AppRun in place of its default, and packs
+# in the libraries lrr-portable needs and AppRun in place of its default, and packs
 # the result with appimagetool. Both tools are pinned releases, checked against
 # the SHA-256 below, and run with APPIMAGE_EXTRACT_AND_RUN so that neither
 # needs FUSE. x86_64 only.
@@ -52,7 +52,7 @@ DESTDIR="$APPDIR" cmake --install "$BUILD" --prefix /usr
 # current toolchains and corrupts them.
 NO_STRIP=1 "$TOOLS/linuxdeploy.AppImage" \
     --appdir "$APPDIR" \
-    --executable "$APPDIR/usr/bin/LegoRR" \
+    --executable "$APPDIR/usr/bin/lrr-portable" \
     --desktop-file "$APPDIR/usr/share/applications/$APP_ID.desktop" \
     --icon-file "$APPDIR/usr/share/icons/hicolor/scalable/apps/$APP_ID.svg" \
     --icon-filename "$APP_ID" \

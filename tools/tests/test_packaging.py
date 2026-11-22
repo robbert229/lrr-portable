@@ -45,8 +45,7 @@ class AppIdentityTests(unittest.TestCase):
     def test_flatpak_uses_the_app_id_and_the_executable(self):
         manifest = (PACKAGING / "linux/flatpak" / f"{self.app_id}.yml").read_text()
         self.assertRegex(manifest, rf"(?m)^id: {re.escape(self.app_id)}$")
-        # The game opens <executable name>0.wad, so only LegoRR finds its data.
-        self.assertRegex(manifest, r"(?m)^command: LegoRR$")
+        self.assertRegex(manifest, r"(?m)^command: lrr-portable$")
 
     def test_desktop_entry(self):
         text = configure((PACKAGING / "linux/lrr-portable.desktop.in").read_text())
@@ -55,8 +54,8 @@ class AppIdentityTests(unittest.TestCase):
         )
         self.assertEqual(entries["Icon"], self.app_id)
         self.assertEqual(entries["StartupWMClass"], self.app_id)
-        self.assertEqual(entries["Exec"], "LegoRR")
-        self.assertEqual(entries["TryExec"], "LegoRR")
+        self.assertEqual(entries["Exec"], "lrr-portable")
+        self.assertEqual(entries["TryExec"], "lrr-portable")
         self.assertTrue(entries["Categories"].endswith(";"))
 
     def test_metainfo(self):
@@ -66,7 +65,7 @@ class AppIdentityTests(unittest.TestCase):
         self.assertEqual(
             component.find("launchable").text, f"{self.app_id}.desktop"
         )
-        self.assertEqual(component.findtext("provides/binary"), "LegoRR")
+        self.assertEqual(component.findtext("provides/binary"), "lrr-portable")
         self.assertEqual(component.findtext("project_license"), "LGPL-3.0-or-later")
         # No package holds game data.
         self.assertIn("contains no game data", " ".join(component.find("description").itertext()))
@@ -79,9 +78,9 @@ class AppIdentityTests(unittest.TestCase):
         verify = (PACKAGING / "macos/verify.sh").read_text()
         self.assertIn(f'"{self.app_id}"', verify)
 
-    def test_appimage_run_script_starts_legorr(self):
+    def test_appimage_run_script_starts_the_executable(self):
         run = (PACKAGING / "linux/appimage/AppRun").read_text()
-        self.assertIn('exec "${HERE}/usr/bin/LegoRR" "$@"', run)
+        self.assertIn('exec "${HERE}/usr/bin/lrr-portable" "$@"', run)
 
     def test_appimage_tools_are_pinned(self):
         build = (PACKAGING / "linux/appimage/build.sh").read_text()
