@@ -23,3 +23,6 @@ lrr_unit_test(gods98_config SOURCES ${ENGINE_DIR}/test_config.cpp LABELS config)
 
 # Check projected triangle geometry, intersections and matrix composition.
 lrr_unit_test(maths SOURCES ${ENGINE_DIR}/test_maths.cpp LABELS maths)
+
+# Measure variable-width glyphs, tabs and line breaks without a font texture.
+lrr_unit_test(font SOURCES ${ENGINE_DIR}/test_font.cpp LABELS font)
