@@ -157,18 +157,19 @@ static void test_matches_original(void)
     CHECK(outside == 0, "original: never a block outside the grid");
 }
 
-/* The fixture: a 4x3 level (Lego_Level, Map3D) with one block of padding
- * on each side of its grid, which spiderweb_get_angle's neighbour reads
- * (block[-1], block[1]) reach from block 0. */
+/* The fixture: a 4x3 level (Lego_Level, Map3D). The level's blocks are a
+ * heap allocation of exactly the grid, so a read outside it is an error
+ * under AddressSanitizer. */
 enum { W = 4, H = 3 };
-static Lego_Block s_storage[W * H + 2];
+static Lego_Block* s_storage;
 static TerrainMapBlock s_map_blocks[W * H];
 static Lego_Level s_level;
 static TerrainMap s_map;
 
 static void fixture_reset(void)
 {
-    memset(s_storage, 0, sizeof(s_storage));
+    free(s_storage);
+    s_storage = (Lego_Block*)calloc(W * H, sizeof(Lego_Block));
     memset(&s_level, 0, sizeof(s_level));
     memset(&s_map, 0, sizeof(s_map));
     memset(s_map_blocks, 0, sizeof(s_map_blocks));
@@ -181,7 +182,7 @@ static void fixture_reset(void)
     s_level.width = W;
     s_level.height = H;
     s_level.map = &s_map;
-    s_level.blocks = &s_storage[1];
+    s_level.blocks = s_storage;
     g_active_level_retail = &s_level;
 }
 
@@ -218,7 +219,6 @@ static void test_level_blocks(void)
           "level: (width, 0) is block (0, 1)");
     s_level.blocks[W + 1].flags1 = 0x800;
     CHECK(terrain_cell_flag_800_bounded_current(1, 1) == 0x800, "level: the 0x800 read");
-    CHECK(s_storage[0].flags1 == 0 && s_storage[W * H + 1].flags1 == 0, "level: the padding is untouched");
 }
 
 /* The electric fence grid, a level-sized array of its own (0040d240). */
@@ -241,14 +241,84 @@ static void test_fence_grid(void)
 static void test_spiderweb(void)
 {
     float theta = 0.0f;
+    /* A level's grid between canary blocks, for the reads that leave it:
+     * every canary block is a wall (0x10), so a read of one gives a web
+     * that the in-grid blocks alone would not. */
+    enum { SPAN = 1 };
+    Lego_Block* canary = (Lego_Block*)calloc(W * H + 2 * SPAN, sizeof(Lego_Block));
+    int i;
 
     fixture_reset();
     spiderweb_initialise(&s_level);
+
+    /* East and west walls of a web inside the grid. */
+    s_level.blocks[1].flags1 = 0x8;
+    s_level.blocks[0].flags1 = 0x10;
+    s_level.blocks[2].flags1 = 0x10;
+    theta = 0.0f;
+    CHECK(spiderweb_get_angle(1, 0, &theta) == 1 && theta > 1.5f,
+          "spiderweb: walls east and west make a web facing north");
+    s_level.blocks[2].flags1 = 0;
+    CHECK(spiderweb_get_angle(1, 0, &theta) == 0, "spiderweb: one wall is not enough");
+
+    /* x = 0 reads the previous row's last block as its west neighbour, and
+     * x = width - 1 the next row's first as its east one, as the
+     * original's block[-1] and block[1]. */
+    memset(s_storage, 0, W * H * sizeof(Lego_Block));
+    s_level.blocks[W].flags1 = 0x8;
+    s_level.blocks[W + 1].flags1 = 0x10;
+    s_level.blocks[W - 1].flags1 = 0x10;
+    theta = 0.0f;
+    CHECK(spiderweb_get_angle(0, 1, &theta) == 1 && theta > 1.5f,
+          "spiderweb: (0, 1)'s west wall is the previous row's last block");
+    memset(s_storage, 0, W * H * sizeof(Lego_Block));
+    s_level.blocks[W + W - 1].flags1 = 0x8;
+    s_level.blocks[W + W - 2].flags1 = 0x10;
+    s_level.blocks[W + W].flags1 = 0x10;
+    theta = 0.0f;
+    CHECK(spiderweb_get_angle(W - 1, 1, &theta) == 1 && theta > 1.5f,
+          "spiderweb: (width - 1, 1)'s east wall is the next row's first block");
+
+    /* A web at (0, 0) or the last block has no neighbour in the grid on
+     * one side; it reads block 0 there (a defined result where the
+     * original read outside the grid), never the memory around it. */
+    s_level.blocks = canary + SPAN;
+    for (i = 0; i < SPAN; i++) {
+        canary[i].flags1 = 0x10;
+        canary[SPAN + W * H + i].flags1 = 0x10;
+    }
     s_level.blocks[0].flags1 = 0x8;
     s_level.blocks[1].flags1 = 0x10;
-    s_level.blocks[-1].flags1 = 0x10;
+    theta = 0.0f;
+    CHECK(spiderweb_get_angle(0, 0, &theta) == 0 && theta == 0.0f,
+          "spiderweb: (0, 0) does not read the memory before the grid as a wall");
+    s_level.blocks[0].flags1 = 0x8 | 0x10;
+    CHECK(spiderweb_get_angle(0, 0, &theta) == 1 && theta > 1.5f,
+          "spiderweb: (0, 0)'s missing west neighbour is block 0");
+    s_level.blocks[0].flags1 = 0;
+    s_level.blocks[W * H - 1].flags1 = 0x8;
+    s_level.blocks[W * H - 2].flags1 = 0x10;
+    theta = 0.0f;
+    CHECK(spiderweb_get_angle(W - 1, H - 1, &theta) == 0 && theta == 0.0f,
+          "spiderweb: the last block does not read the memory after the grid as a wall");
+    s_level.blocks[0].flags1 = 0x10;
+    CHECK(spiderweb_get_angle(W - 1, H - 1, &theta) == 1 && theta > 1.5f,
+          "spiderweb: the last block's missing east neighbour is block 0");
+
+    /* A NaN position takes block 0's walls: block 0 (the web), its east
+     * neighbour, and for its west one block 0 again. */
+    memset(canary + SPAN, 0, W * H * sizeof(Lego_Block));
+    s_level.blocks[0].flags1 = 0x8;
+    s_level.blocks[1].flags1 = 0x10;
+    theta = 0.0f;
+    CHECK(spiderweb_get_angle(INT32_MIN, INT32_MIN, &theta) == 0 && theta == 0.0f,
+          "spiderweb: a NaN position does not read the memory before the grid as a wall");
+    s_level.blocks[0].flags1 = 0x8 | 0x10;
     CHECK(spiderweb_get_angle(INT32_MIN, INT32_MIN, &theta) == 1 && theta > 1.5f,
           "spiderweb: a NaN position takes block 0's walls");
+
+    s_level.blocks = s_storage;
+    free(canary);
     spiderweb_shutdown();
 }
 

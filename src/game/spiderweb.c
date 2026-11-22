@@ -109,7 +109,14 @@ int spiderweb_get_angle(int bx, int by, float* theta)
     Lego_Block* block = &SPIDERWEB_LEVEL_BLOCK(bx, by);
 
     if (block->flags1 & 0x8) {
-        if ((block[1].flags1 & 0x10) && (block[-1].flags1 & 0x10)) {
+        /* The east and west neighbours go through the grid index, as the
+         * north and south ones: the original's block[1] and block[-1] read
+         * outside the array at its ends. Inside it they are the same
+         * blocks, including the wrap into the next row. The offsets are
+         * unsigned: a NaN position's bx is INT_MIN, and bx - 1 would
+         * overflow. */
+        if ((SPIDERWEB_LEVEL_BLOCK(bx + 1u, by).flags1 & 0x10) &&
+            (SPIDERWEB_LEVEL_BLOCK(bx - 1u, by).flags1 & 0x10)) {
             if (theta != NULL)
                 *theta = 1.5707964f;
             return 1;
