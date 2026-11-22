@@ -41,3 +41,7 @@ lrr_unit_test(ptl SOURCES ${GAME_DIR}/test_ptl.cpp
 
 # Radar bounds and the screen/world transforms on a synthetic map.
 lrr_unit_test(radarmap SOURCES ${GAME_DIR}/test_radarmap.cpp LABELS radarmap)
+
+# Weighted mission scoring, beyond the existing reward record test.
+lrr_unit_test(reward_score SOURCES ${GAME_DIR}/test_reward_score.cpp
+  WRAP level_current_owner_get LABELS reward)
