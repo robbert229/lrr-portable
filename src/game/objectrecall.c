@@ -14,6 +14,7 @@
  * by aliases in their imports headers (finding 648). The unit has no link
  * names: nothing calls it by a port name. */
 #include <assert.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -23,13 +24,6 @@
 #include "objectrecall.h"
 #include "legoobject_unit.h"
 #include "entity_stats.h"
-
-/* ObjectRecall_Globs' entry: one minifigure, 0x14 bytes. */
-typedef struct ObjectRecall {
-    unsigned int abilityFlags;  /* +0x00 LegoObject +0x3f0 */
-    unsigned int level;         /* +0x04 LegoObject +0x330 */
-    char customName[12];        /* +0x08 */
-} ObjectRecall;
 
 /* ObjectRecall.c's .bss (004ffe50-004ffe68), 0x18 bytes. */
 typedef struct ObjectRecall_Globs {
@@ -43,6 +37,22 @@ typedef struct ObjectRecall_Globs {
 
 // GLOBAL: LEGORR 0x004ffe50
 ObjectRecall_Globs objectRecallGlobs = { 0 };
+
+/* The .osf file's little-endian words. */
+static void object_recall_image_put_word(unsigned char* image, unsigned int offset,
+                                         uint32_t value)
+{
+    image[offset] = (unsigned char)value;
+    image[offset + 1] = (unsigned char)(value >> 8);
+    image[offset + 2] = (unsigned char)(value >> 16);
+    image[offset + 3] = (unsigned char)(value >> 24);
+}
+
+static uint32_t object_recall_image_word(const unsigned char* image, unsigned int offset)
+{
+    return (uint32_t)image[offset] | ((uint32_t)image[offset + 1] << 8) |
+           ((uint32_t)image[offset + 2] << 16) | ((uint32_t)image[offset + 3] << 24);
+}
 
 /* ObjectRecall_StoreMiniFigure: append a minifigure with ability flags, a
  * level or a custom name to the live table, growing it by ten entries. */
@@ -146,11 +156,28 @@ int object_recall_save(const char* fname)
     unsigned int header[2];
 
     if ((file = file_open(fname, "wb")) != NULL) {
+        unsigned char headerImage[8];
+        unsigned char* image = NULL;
+        unsigned int i;
+
         header[0] = 0x534f5252; /* 'RRSO' */
         header[1] = objectRecallGlobs.objRecallCount;
-        file_write(header, 4, 2, file);
-        file_write(objectRecallGlobs.objRecall, sizeof(ObjectRecall),
-                   objectRecallGlobs.objRecallCount, file);
+        object_recall_image_put_word(headerImage, 0, header[0]);
+        object_recall_image_put_word(headerImage, 4, header[1]);
+        file_write(headerImage, 4, 2, file);
+        if (objectRecallGlobs.objRecallCount)
+            image = (unsigned char*)malloc(objectRecallGlobs.objRecallCount *
+                                           OBJECT_RECALL_IMAGE_SIZE);
+        /* Out of memory, the file keeps the count but no entries, and its
+         * length check makes a later load read nothing from it. */
+        if (image != NULL) {
+            for (i = 0; i < objectRecallGlobs.objRecallCount; i++)
+                object_recall_serialize(&objectRecallGlobs.objRecall[i],
+                                        image + i * OBJECT_RECALL_IMAGE_SIZE);
+            file_write(image, OBJECT_RECALL_IMAGE_SIZE,
+                       objectRecallGlobs.objRecallCount, file);
+            free(image);
+        }
         file_close(file);
         object_recall_snapshot();
         objectRecallGlobs.objRecallSaveLoaded = 0;
@@ -167,30 +194,63 @@ int object_recall_load_rrosfile(const char* fname)
 {
     File* file;
     unsigned int header[2];
+    unsigned char headerImage[8];
+    unsigned char* image;
+    unsigned int i;
     int length;
     int result = 0;
 
     object_recall_reset();
     if ((file = file_open(fname, "rb")) != NULL) {
         length = file_length(file) - 8;
-        header[0] = header[1] = 0;
-        file_read(header, 4, 2, file);
+        memset(headerImage, 0, sizeof(headerImage));
+        file_read(headerImage, 4, 2, file);
+        header[0] = object_recall_image_word(headerImage, 0);
+        header[1] = object_recall_image_word(headerImage, 4);
         /* As isle-portable asserts its save version (LegoGameState::Load):
          * a debug build stops at a sidecar from another program; a release
          * build falls through to the original's check, which loads nothing. */
         assert(header[0] == 0x534f5252);
-        if (header[0] == 0x534f5252 && length == (int)(header[1] * sizeof(ObjectRecall))) {
+        if (header[0] == 0x534f5252 &&
+            length == (int)(header[1] * OBJECT_RECALL_IMAGE_SIZE)) {
             objectRecallGlobs.objRecallCount = header[1];
             objectRecallGlobs.objRecallSize = header[1];
             objectRecallGlobs.objRecall = (ObjectRecall*)malloc(
                 header[1] * sizeof(ObjectRecall));
-            file_read(objectRecallGlobs.objRecall, sizeof(ObjectRecall),
-                      objectRecallGlobs.objRecallCount, file);
-            object_recall_snapshot();
-            objectRecallGlobs.objRecallSaveLoaded = 0;
+            image = (unsigned char*)malloc(header[1] * OBJECT_RECALL_IMAGE_SIZE);
+            if (header[1] && (objectRecallGlobs.objRecall == NULL || image == NULL)) {
+                /* Out of memory: load nothing, as from a mismatched file. */
+                object_recall_reset();
+            } else {
+                file_read(image, OBJECT_RECALL_IMAGE_SIZE,
+                          objectRecallGlobs.objRecallCount, file);
+                for (i = 0; i < objectRecallGlobs.objRecallCount; i++)
+                    object_recall_parse(image + i * OBJECT_RECALL_IMAGE_SIZE,
+                                        &objectRecallGlobs.objRecall[i]);
+                object_recall_snapshot();
+                objectRecallGlobs.objRecallSaveLoaded = 0;
+            }
+            free(image);
         }
         file_close(file);
         result = 1;
     }
     return result;
+}
+
+static_assert(0x08 + sizeof(((ObjectRecall*)0)->customName) == OBJECT_RECALL_IMAGE_SIZE,
+              "the ObjectRecall image ends with the custom name");
+
+void object_recall_serialize(const ObjectRecall* objRecall, unsigned char* image)
+{
+    object_recall_image_put_word(image, 0x00, objRecall->abilityFlags);
+    object_recall_image_put_word(image, 0x04, objRecall->level);
+    memcpy(image + 0x08, objRecall->customName, sizeof(objRecall->customName));
+}
+
+void object_recall_parse(const unsigned char* image, ObjectRecall* objRecall)
+{
+    objRecall->abilityFlags = object_recall_image_word(image, 0x00);
+    objRecall->level = object_recall_image_word(image, 0x04);
+    memcpy(objRecall->customName, image + 0x08, sizeof(objRecall->customName));
 }
