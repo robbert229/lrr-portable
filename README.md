@@ -98,11 +98,12 @@ isle-portable does for Lego Island's `CONFIG.EXE`:
   default) picks the platform's default device. On the desktop that is SDL
   GPU when it can create a device (a Vulkan, Metal or Direct3D 12 driver),
   and the software renderer otherwise, for example on SDL's offscreen or
-  dummy video driver. A device named here wins, as long as it can draw the
-  level: one that is not listed, or cannot draw the level (the OpenGL and
-  paletted devices, for now), falls back to the default. If the display
+  dummy video driver. A device named here wins; one that isn't available
+  falls back to the default. The OpenGL and paletted devices don't draw the
+  level yet, so naming one shows no 3D, and the log says so. If the display
   can't be set up on the chosen device, the port logs it and tries the next
-  one.
+  one. The `-best` flag keeps the original's choice, the last hardware
+  device.
 
 The `[tweaks]` section switches the port's deliberate changes to the
 original game:

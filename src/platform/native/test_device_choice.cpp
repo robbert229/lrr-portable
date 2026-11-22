@@ -70,8 +70,8 @@ int main(void)
     CHECK(Is(Choose(desktop, "", kSdlGpu), kSdlGpu), "desktop: SDL GPU when it is available");
     CHECK(Is(Choose(desktop, kSoftware, kSdlGpu), kSoftware), "desktop: an explicit software device wins");
     CHECK(Is(Choose(desktop, kSdlGpu, kSdlGpu), kSdlGpu), "desktop: an explicit SDL GPU device");
-    CHECK(Is(Choose(desktop, kGles3, kSdlGpu), kSdlGpu),
-          "desktop: an explicit device that cannot draw the level falls back to the default");
+    CHECK(Is(Choose(desktop, kGles3, kSdlGpu), kGles3),
+          "desktop: an explicit device wins even when it cannot draw the level");
     CHECK(Is(Choose(desktop, "Miniwin driver (Typo)", kSdlGpu), kSdlGpu),
           "desktop: an explicit device that is not listed falls back to the default");
 
@@ -101,6 +101,14 @@ int main(void)
     failed[5].failed = true;
     CHECK(Is(Choose(failed, "", kSdlGpu), kGles3),
           "every drawing device failed: the first device left, without 3D");
+    /* Init.c's retry: LRR_ChooseDeviceAfterFailure marks the device failed
+     * and chooses again (legorr:3D Device is empty before LRR_LoadConfig). */
+    auto retry = desktop;
+    CHECK(Is(retry[LRR_ChooseDeviceAfterFailure(retry.data(), (unsigned int)retry.size(), 0)].desc, kSoftware) &&
+              retry[0].failed,
+          "retry: SDL GPU failed, then the software renderer");
+    CHECK(LRR_ChooseDeviceAfterFailure(retry.data(), (unsigned int)retry.size(), 99) == -1,
+          "retry: an index past the list");
     for (LRR_DeviceCandidate& device : failed) device.failed = true;
     CHECK(Choose(failed, "", kSdlGpu)[0] == '\0', "every device failed: none");
     CHECK(Choose({}, "", kSdlGpu)[0] == '\0', "no devices: none");
@@ -110,8 +118,9 @@ int main(void)
     CHECK(Is(NX_DEFAULT_3D_DEVICE, kSdlGpu), "Switch: SDL GPU by default");
     const auto nx = List({kSdlGpu, kGles3, kPaletteSw});
     CHECK(Is(Choose(nx, "", NX_DEFAULT_3D_DEVICE), kSdlGpu), "Switch: SDL GPU");
-    CHECK(Is(Choose(nx, kGles3, NX_DEFAULT_3D_DEVICE), kSdlGpu),
-          "Switch: an explicit OpenGL ES 3 device falls back to SDL GPU");
+    CHECK(Is(Choose(nx, kGles3, NX_DEFAULT_3D_DEVICE), kGles3), "Switch: an explicit OpenGL ES 3 device wins");
+    CHECK(Is(Choose(nx, kSoftware, NX_DEFAULT_3D_DEVICE), kSdlGpu),
+          "Switch: an explicit software device, which is not built there, falls back to SDL GPU");
     const auto nxNoGpu = List({kGles3, kPaletteSw});
     CHECK(Is(Choose(nxNoGpu, "", NX_DEFAULT_3D_DEVICE), kGles3),
           "Switch without SDL GPU: no device draws; the first, without 3D");

@@ -72,16 +72,22 @@ struct LRR_DeviceCandidate {
 
 /* The index of the device to use, in place of the dialog's choice, by
  * capability, never by the device's position in miniwin's list:
- * - `configured` (legorr:3D Device), when it is listed and draws the level;
+ * - `configured` (legorr:3D Device), when it is listed: the file wins, with
+ *   a warning when the device cannot draw the level;
  * - else `platformDefault` (LRR_Default3DDevice()), when it is listed and
  *   draws the level;
- * - else the first device that draws the level.
- * A failed device is never chosen. When no device draws the level it is
- * `configured`, else `platformDefault`, else the first device, so the game
- * still starts, without 3D. -1 when no device is left. Each step past
- * `configured` or `platformDefault` is logged. */
+ * - else the first device that draws the level;
+ * - else `platformDefault`, else the first device, so the game still
+ *   starts, without 3D, and logs it.
+ * A failed device is never chosen; -1 when no device is left. The choice,
+ * and each step past `configured` or `platformDefault`, is logged. */
 int LRR_ChooseDevice(const LRR_DeviceCandidate* devices, unsigned int count,
                      const char* configured, const char* platformDefault);
+
+/* Marks devices[failed] failed, as the display could not be set up on it,
+ * logs it, and chooses again with legorr:3D Device and the platform's
+ * default (LRR_ChooseDevice). */
+int LRR_ChooseDeviceAfterFailure(LRR_DeviceCandidate* devices, unsigned int count, unsigned int failed);
 
 /* This platform's default 3D device, used when legorr:3D Device is empty
  * or names a device that is not listed or cannot draw the level. SDL GPU

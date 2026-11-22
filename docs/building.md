@@ -78,13 +78,14 @@ backends draw the level (immediate mode, viewport rectangles and rectangle
 clears; ADR 0008, step 6), and miniwin reports which do
 (`Miniwin_DeviceDrawsImmediateMode`). With an empty `3d device` in
 `LegoRR.ini`, the game picks the platform's default device if it can draw,
-else the first device that can: on the desktop SDL GPU, which needs a
+else the first device that can (a device the file names wins): on the desktop SDL GPU, which needs a
 Vulkan, Metal or Direct3D 12 device, falling back to the software renderer
 (`3d device = Miniwin driver (Miniwin Emulation)` selects it). The
 per-platform defaults are in `src/platform/native/<platform>/config.h`, and
 `device_choice_test` checks them against each platform's device list. The
-OpenGL backends also need an OpenGL window, which the port doesn't create
-yet; #925 adds both. For a headless
+OpenGL backends also need an OpenGL window
+(`Miniwin_SetupWindowCreateProperties`), which the port doesn't create yet;
+that is left to the OpenGL ES 3 work (#925), along with drawing the level. For a headless
 run, use SDL's offscreen driver and have miniwin write each presented frame
 to a file:
 

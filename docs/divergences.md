@@ -70,10 +70,11 @@ reference.
 - **Port:** takes those choices from the ini file. The dialog code stays in
   the unit but is not called. An invalid resolution falls back to the
   dialog's default mode. The dialog's default device was the last hardware
-  device; the port instead picks the platform's default device (SDL GPU on
-  the desktop, falling back to the software renderer) or the first device
-  that draws the level, and falls back to another if the display can't be
-  set up on it.
+  device; unless the file names one, the port instead picks the platform's
+  default device (SDL GPU on the desktop, falling back to the software
+  renderer) or the first device that draws the level, and falls back to
+  another if the display can't be set up on it. `-best` keeps the
+  original's choice.
 - **Why:** miniwin cannot show Win32 dialogs. This follows isle-portable,
   which replaces Lego Island's CONFIG.EXE with `isle.ini`.
 - **Configurable:** `Full Screen`, `Horizontal Resolution`,

@@ -141,9 +141,17 @@ int LRR_ChooseDevice(const LRR_DeviceCandidate* devices, unsigned int count,
     int index;
 
     if (configured != NULL && configured[0] != '\0') {
-        index = FindDevice(devices, count, configured, true);
+        index = FindDevice(devices, count, configured, false);
         if (index >= 0) {
-            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Using 3D device \"%s\" (legorr:3D Device)", devices[index].desc);
+            if (devices[index].drawsLevel) {
+                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Using 3D device \"%s\" (legorr:3D Device)",
+                            devices[index].desc);
+            }
+            else {
+                SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                            "Using 3D device \"%s\" (legorr:3D Device), which cannot draw the level: no 3D",
+                            devices[index].desc);
+            }
             return index;
         }
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "3D device \"%s\" %s; choosing another", configured,
@@ -167,10 +175,7 @@ int LRR_ChooseDevice(const LRR_DeviceCandidate* devices, unsigned int count,
         }
     }
 
-    index = FindDevice(devices, count, configured, false);
-    if (index < 0) {
-        index = FindDevice(devices, count, platformDefault, false);
-    }
+    index = FindDevice(devices, count, platformDefault, false);
     for (unsigned int i = 0; index < 0 && i < count; ++i) {
         if (!devices[i].failed) {
             index = (int)i;
@@ -181,6 +186,16 @@ int LRR_ChooseDevice(const LRR_DeviceCandidate* devices, unsigned int count,
                      "No 3D device can draw the level; using \"%s\", which shows no 3D", devices[index].desc);
     }
     return index;
+}
+
+int LRR_ChooseDeviceAfterFailure(LRR_DeviceCandidate* devices, unsigned int count, unsigned int failed)
+{
+    if (failed >= count) {
+        return -1;
+    }
+    devices[failed].failed = true;
+    SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Cannot set the display up on 3D device \"%s\"", devices[failed].desc);
+    return LRR_ChooseDevice(devices, count, g_display.device, LRR_Default3DDevice());
 }
 
 const char* LRR_Default3DDevice()
