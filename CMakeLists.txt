@@ -275,6 +275,10 @@ target_include_directories(library PRIVATE "${LRR_MINIAUDIO_DIR}")
 target_compile_definitions(library PRIVATE MA_NO_DEVICE_IO MA_NO_ENCODING
   MA_NO_GENERATION MA_NO_RESOURCE_MANAGER MA_NO_NODE_GRAPH MA_NO_ENGINE
   MA_NO_THREADING)
+if(NINTENDO_3DS)
+  # newlib on 3DS has no dlfcn.h, and the decoders load nothing at run time.
+  target_compile_definitions(library PRIVATE MA_NO_RUNTIME_LINKING)
+endif()
 set_source_files_properties("${SRC_ROOT}/library/miniaudio_impl.c" PROPERTIES
   COMPILE_OPTIONS "$<IF:$<C_COMPILER_ID:MSVC>,/w,-w>")
 if(LRR_MOVIES)
@@ -286,7 +290,11 @@ if(LRR_MOVIES)
 else()
   target_compile_definitions(library PRIVATE LRR_MOVIES=0)
 endif()
-target_link_libraries(library PUBLIC miniwin SDL3::SDL3 ${CMAKE_DL_LIBS})
+# devkitARM's 3DS toolchain names libdl, which newlib does not have.
+if(NOT NINTENDO_3DS)
+  target_link_libraries(library PUBLIC ${CMAKE_DL_LIBS})
+endif()
+target_link_libraries(library PUBLIC miniwin SDL3::SDL3)
 if(UNIX)
   target_link_libraries(library PUBLIC m)
 endif()
@@ -363,6 +371,11 @@ if(EMSCRIPTEN)
   # another's function with other parameters links to a trap; wasm-ld only
   # warns ("function signature mismatch"). Make that an error.
   target_link_options(program PRIVATE "LINKER:--fatal-warnings")
+endif()
+if(NINTENDO_3DS)
+  # LegoRR.3dsx, and LegoRR.cia where bannertool and makerom are found
+  # (packaging/3ds).
+  add_subdirectory(packaging/3ds)
 endif()
 
 include(CTest)

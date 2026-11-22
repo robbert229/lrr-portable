@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import struct
 import unittest
+import wave
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -116,10 +117,35 @@ class IconTests(unittest.TestCase):
         )
 
 
+class Nintendo3DSTests(unittest.TestCase):
+    """packaging/3ds's assets are in the forms smdhtool and bannertool take."""
+
+    def png_size(self, name):
+        data = (PACKAGING / "3ds" / name).read_bytes()
+        self.assertEqual(data[:8], b"\x89PNG\r\n\x1a\n", name)
+        return struct.unpack(">II", data[16:24])
+
+    def test_icon_and_banner_sizes(self):
+        self.assertEqual(self.png_size("icon.png"), (48, 48))
+        self.assertEqual(self.png_size("banner.png"), (256, 128))
+
+    def test_banner_sound_is_short_pcm(self):
+        with wave.open(str(PACKAGING / "3ds/banner.wav")) as sound:
+            self.assertEqual(sound.getsampwidth(), 2)
+            self.assertLessEqual(sound.getnframes() / sound.getframerate(), 3.0)
+
+    def test_cia_asks_for_the_new_3ds_memory_mode(self):
+        text = (PACKAGING / "3ds/template.rsf").read_text()
+        self.assertRegex(text, r"(?m)^\s*SystemModeExt\s*:\s*124MB\b")
+        self.assertRegex(text, r'(?m)^\s*Title\s*:\s*"LRR Portable"')
+
+
 class LicenceTests(unittest.TestCase):
     def test_recipes_carry_spdx_headers(self):
+        # The rendered images and sound are generated from sources that
+        # carry the header (the SVGs, regenerate.py).
         for path in PACKAGING.rglob("*"):
-            if path.suffix in {".icns"} or not path.is_file():
+            if path.suffix in {".icns", ".png", ".wav"} or not path.is_file():
                 continue
             self.assertIn("SPDX-License-Identifier", path.read_text()[:400], path)
 

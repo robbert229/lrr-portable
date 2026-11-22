@@ -10,6 +10,7 @@
 #include <initializer_list>
 #include <vector>
 
+#include "platform/native/3ds/config.h"
 #include "platform/native/android/config.h"
 #include "platform/native/config.h"
 #include "platform/native/emscripten/config.h"
@@ -33,6 +34,7 @@ static const char* const kGles2 = "Miniwin driver (OpenGL ES 2.0 HAL)";
 static const char* const kGl1 = "Miniwin driver (OpenGL 1.1 HAL)";
 static const char* const kDirectX9 = "Miniwin driver (DirectX 9 HAL)";
 static const char* const kGxm = "Miniwin driver (GXM HAL)";
+static const char* const kCitro3D = "Miniwin driver (Citro3D)";
 static const char* const kPaletteSw = "Miniwin driver (Miniwin Paletted Software)";
 static const char* const kSoftware = LRR_DEVICE_SOFTWARE;
 
@@ -141,6 +143,19 @@ int main(void)
     CHECK(Is(Choose(web, "", EMSCRIPTEN_DEFAULT_3D_DEVICE), kSoftware), "web: the software renderer");
     CHECK(Is(Choose(List({kSdlGpu, kGles3, kSoftware}), "", EMSCRIPTEN_DEFAULT_3D_DEVICE), kSoftware),
           "web: the software renderer before SDL GPU");
+
+    /* 3DS: Citro3D, the palette and software renderers; no SDL GPU or
+     * OpenGL. Citro3D does not draw the level yet, so the software renderer
+     * does; once Citro3D draws, the default picks it. */
+    CHECK(Is(N3DS_DEFAULT_3D_DEVICE, kCitro3D), "3DS: Citro3D by default");
+    const auto n3ds = List({kCitro3D, kPaletteSw, kSoftware});
+    CHECK(Is(Choose(n3ds, "", N3DS_DEFAULT_3D_DEVICE), kSoftware),
+          "3DS: Citro3D cannot draw the level yet; the software renderer");
+    CHECK(Is(Choose(n3ds, kCitro3D, N3DS_DEFAULT_3D_DEVICE), kCitro3D), "3DS: an explicit Citro3D device wins");
+    auto n3dsDraws = n3ds;
+    n3dsDraws[0].drawsLevel = true;
+    CHECK(Is(Choose(n3dsDraws, "", N3DS_DEFAULT_3D_DEVICE), kCitro3D),
+          "3DS: Citro3D once it draws the level, before the software renderer");
 
     /* Vita: GXM, no software or SDL GPU device; nothing draws yet. */
     const auto vita = List({kPaletteSw, kGxm});

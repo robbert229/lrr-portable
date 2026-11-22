@@ -162,6 +162,43 @@ cmake --build build-web-data --target program
 tools/serve_web.py build-web-data
 ```
 
+## Nintendo 3DS build (devkitARM)
+
+The 3DS build (issue #931) uses devkitPro's devkitARM toolchain, from the
+`devkitpro/devkitarm` container image as isle-portable's CI does. It gives
+`LegoRR.3dsx`, for the Homebrew Launcher, and, when `bannertool` and
+`makerom` are on the `PATH`, `LegoRR.cia` (`packaging/3ds`). The tests are
+native programs, so configure without them:
+
+```sh
+tools/setup-miniwin.sh
+podman run --rm -v "$PWD:$PWD" -w "$PWD" docker.io/devkitpro/devkitarm:latest \
+  sh -c 'cmake -S . -B build-3ds -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
+           -DCMAKE_TOOLCHAIN_FILE=/opt/devkitpro/cmake/3DS.cmake &&
+         cmake --build build-3ds'
+```
+
+A worktree's `.git` file names its repository's git directory, which the
+configure step's patch check reads, so mount that too. The game reads its
+data, `Data` and the WADs, from `sdmc:/3ds/LegoRR`, and keeps `LegoRR.ini`
+and its saves there (`src/platform/native/3ds/config.cpp`). SDL writes its
+log to `sdmc:/3ds/SDL_Log.txt`. Movies are off (`LRR_MOVIES`).
+
+It needs a New 3DS. The menus hold about 60 MB of heap besides libctru's
+32 MB linear heap, more than an Old 3DS gives an application, so the `.cia`
+asks for the New 3DS's 124 MB mode (`template.rsf`). miniwin lists Citro3D,
+the palette software renderer and the software renderer here; the default
+device is Citro3D (`3ds/config.h`), but until Citro3D draws immediate mode
+the game passes over it to the software renderer, which draws the level far
+too slowly on the 3DS's CPU and shows its frames uncropped on the top
+screen. On the SD card, where every lookup is a slow service call, the
+path mapping (`files_native.cpp`) reads each directory once and matches
+case from that listing.
+
+The icon, banner and banner sound are original (`packaging/3ds/regenerate.py`
+renders them). An emulator such as [Azahar](https://azahar-emu.org/) runs
+the `.3dsx` with the game data in its emulated SD card's `3ds/LegoRR`.
+
 ## Tests
 
 ```sh
@@ -253,6 +290,12 @@ inside a developer environment (`ilammy/msvc-dev-cmd`), because Git Bash's
 `link` would shadow MSVC's linker. MinGW links its C and C++ runtimes
 statically, and a build against a shared SDL3 copies `SDL3.dll` beside
 `LegoRR.exe` (and the tests).
+
+The same workflow's `nintendo-3ds` job, also not required, builds the 3DS
+target in the `devkitpro/devkitarm` image (pinned by digest), with
+`bannertool` 1.2.0 and `makerom` 0.18 downloaded and checked against a
+SHA-256, and uploads `LegoRR.3dsx` and `LegoRR.cia` as the `LegoRR-3ds`
+artifact.
 
 The same workflow's `web-emscripten` job, also not required, sets up emsdk
 6.0.10 (`emscripten-core/setup-emsdk`), builds the web target as in

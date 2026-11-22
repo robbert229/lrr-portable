@@ -222,7 +222,9 @@ int LRR_ChooseDeviceAfterFailure(LRR_DeviceCandidate* devices, unsigned int coun
 
 const char* LRR_Default3DDevice()
 {
-#if defined(__SWITCH__)
+#if defined(__3DS__)
+    return N3DS_DEFAULT_3D_DEVICE;
+#elif defined(__SWITCH__)
     return NX_DEFAULT_3D_DEVICE;
 #elif defined(IOS)
     return IOS_DEFAULT_3D_DEVICE;

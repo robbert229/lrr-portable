@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
+<!-- The Nintendo 3DS HOME Menu banner: original artwork drawn for this
+     repository, the pickaxe and energy crystal of packaging/icons, with the
+     project's name. It shares nothing with the game's own art.
+     regenerate.py renders it into banner.png (256x128). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="128" viewBox="0 0 256 128">
+  <title>LRR Portable</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a3f4d"/>
+      <stop offset="1" stop-color="#171a22"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e6ebf2"/>
+      <stop offset="1" stop-color="#8d98aa"/>
+    </linearGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#c98a45"/>
+      <stop offset="1" stop-color="#8d5a26"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="128" rx="14" fill="url(#bg)"/>
+  <!-- The icon's pickaxe and crystal, at a fifth of its 512-pixel size -->
+  <g transform="translate(6 12) scale(0.2)">
+    <g transform="rotate(38 256 256)">
+      <rect x="240" y="92" width="32" height="352" rx="14" fill="url(#wood)"/>
+      <path d="M72 168 Q256 40 440 168 Q256 108 72 168 Z" fill="url(#steel)"/>
+      <rect x="228" y="112" width="56" height="44" rx="10" fill="#6f7a8c"/>
+    </g>
+    <g transform="translate(256 322)">
+      <path d="M0 -118 L74 -62 L74 38 L0 112 L-74 38 L-74 -62 Z" fill="#17c9a8"/>
+      <path d="M0 -118 L74 -62 L0 -14 L-74 -62 Z" fill="#7bf2d8"/>
+      <path d="M0 -14 L74 -62 L74 38 L0 112 Z" fill="#0c8f78"/>
+      <path d="M0 -14 L-74 -62 L-74 38 L0 112 Z" fill="#13b497"/>
+      <path d="M-34 -70 L-8 -90 L8 -74 L-18 -52 Z" fill="#ffffff" fill-opacity="0.55"/>
+    </g>
+  </g>
+  <g font-family="DejaVu Sans, Verdana, sans-serif" fill="#e6ebf2">
+    <text x="118" y="58" font-size="22" font-weight="bold">LRR</text>
+    <text x="118" y="82" font-size="19" font-weight="bold" fill="#7bf2d8">Portable</text>
+    <text x="118" y="102" font-size="9.5" fill="#a9b2c2">for Nintendo 3DS</text>
+  </g>
+</svg>

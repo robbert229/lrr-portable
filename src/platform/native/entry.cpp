@@ -56,10 +56,12 @@ int main(int argc, char** argv)
         if (!arguments.empty()) arguments += ' ';
         arguments += QuoteArgument(argv[i]);
     }
-#ifdef __EMSCRIPTEN__
-    /* The web build's argv[0] is "./this.program"; WinMain names the WADs
-     * after the program, so it gets a relative LegoRR, as a native run
-     * from its game directory does. */
+#if defined(__EMSCRIPTEN__) || defined(__3DS__)
+    /* The web build's argv[0] is "./this.program", and the 3DS's is the
+     * .3dsx's path (sdmc:/3ds/LegoRR.3dsx, under any name the user gave
+     * it) or nothing at all for a .cia; WinMain names the WADs after the
+     * program, so it gets a relative LegoRR, as a native run from its game
+     * directory does. */
     std::string program = "./LegoRR";
 #else
     std::string program = argc > 0 ? argv[0] : "LegoRR.exe";

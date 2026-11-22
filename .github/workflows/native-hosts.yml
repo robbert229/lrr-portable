@@ -1,11 +1,13 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 #
 # The native port on macOS (arm64 and Intel), FreeBSD, and Windows (MSVC x86,
-# x64 and arm64, and msys2 MinGW64), and the web build (Emscripten). These
+# x64 and arm64, and msys2 MinGW64), the web build (Emscripten) and the
+# Nintendo 3DS build (devkitARM). These
 # jobs are not required checks: native-build is the only one. Each native
 # job configures, builds and runs ctest as native-build does, with SDL3
 # fetched by CMake at the pinned commit (CMakeLists.txt, LRR_SDL3_GIT_TAG);
-# the web job builds LegoRR.html, .js and .wasm and uploads them. The Python
+# the web job builds LegoRR.html, .js and .wasm and uploads them, and the 3DS
+# job LegoRR.3dsx and LegoRR.cia. The Python
 # tool tests and the unit lint run in native-build only. The macOS and
 # Windows jobs also build the CPack package (packaging/) and upload it as an
 # artifact; the Linux packages are in native-packages.
@@ -243,4 +245,56 @@ jobs:
             build-web/LegoRR.html
             build-web/LegoRR.js
             build-web/LegoRR.wasm
+          if-no-files-found: error
+
+  nintendo-3ds:
+    name: nintendo-3ds
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    # devkitPro's devkitARM image, as isle-portable builds its 3DS port, at
+    # the digest the build was checked with (devkitpro/devkitarm:latest on
+    # 2026-11-21).
+    container: devkitpro/devkitarm@sha256:15b79ce75822c289538d8153da5fa7aafe5e6adc32ad8a575a197beca0f0761b
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Install bannertool and makerom
+        # The .cia's tools, the releases isle-portable's CI downloads,
+        # checked against their SHA-256.
+        run: |
+          cd /tmp
+          curl -fsSLO https://github.com/diasurgical/bannertool/releases/download/1.2.0/bannertool.zip
+          curl -fsSLO https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.18/makerom-v0.18-ubuntu_x86_64.zip
+          sha256sum -c - <<'SUMS'
+          69768596f836acb3e3aeaa66e47c6ba560dde813c6dfcd33c8afc25fe29b7524  bannertool.zip
+          c6f8aafba8f1cdb403929719c95173cada707cd9ceacfa2bec5118f8f96c6f8a  makerom-v0.18-ubuntu_x86_64.zip
+          SUMS
+          unzip -j bannertool.zip linux-x86_64/bannertool -d /opt/devkitpro/tools/bin
+          unzip makerom-v0.18-ubuntu_x86_64.zip makerom -d /opt/devkitpro/tools/bin
+          chmod a+x /opt/devkitpro/tools/bin/bannertool /opt/devkitpro/tools/bin/makerom
+
+      - name: Bootstrap sparse miniwin
+        run: tools/setup-miniwin.sh
+
+      - name: Configure and build
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: "4"
+        # The tests are native programs; the 3DS job builds the game and its
+        # packages only.
+        run: |
+          cmake -S . -B build-3ds -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
+            -DCMAKE_TOOLCHAIN_FILE=/opt/devkitpro/cmake/3DS.cmake
+          cmake --build build-3ds
+          ls -l build-3ds/LegoRR.3dsx build-3ds/LegoRR.cia
+
+      - name: Upload LegoRR.3dsx and LegoRR.cia
+        uses: actions/upload-artifact@v4
+        with:
+          name: LegoRR-3ds
+          path: |
+            build-3ds/LegoRR.3dsx
+            build-3ds/LegoRR.cia
           if-no-files-found: error
