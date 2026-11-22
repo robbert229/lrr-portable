@@ -53,6 +53,42 @@ if(LRR_BASH)
     COMMENT "Checking patches/miniwin is applied")
 endif()
 find_package(SDL3 CONFIG REQUIRED)
+
+if(IOS)
+  add_compile_definitions(IOS)
+endif()
+
+# iniparser, for the port's configuration file ([library:config],
+# src/platform/native/config.h), as isle-portable reads isle.ini: an
+# installed package when there is one, otherwise the same pinned release
+# isle-portable fetches.
+add_library(lrr_iniparser INTERFACE)
+find_package(iniparser CONFIG QUIET)
+if(TARGET iniparser-static)
+  target_link_libraries(lrr_iniparser INTERFACE iniparser-static)
+elseif(TARGET iniparser-shared)
+  target_link_libraries(lrr_iniparser INTERFACE iniparser-shared)
+else()
+  include(FetchContent)
+  FetchContent_Declare(
+    iniparser
+    GIT_REPOSITORY "https://gitlab.com/iniparser/iniparser.git"
+    GIT_TAG "v4.2.6"
+    GIT_SHALLOW TRUE
+    UPDATE_DISCONNECTED TRUE
+    EXCLUDE_FROM_ALL
+  )
+  # A function scope keeps these settings to iniparser's own build.
+  function(lrr_fetch_iniparser)
+    set(BUILD_DOCS OFF)
+    set(BUILD_EXAMPLES OFF)
+    set(BUILD_TESTING OFF)
+    set(BUILD_SHARED_LIBS OFF)
+    FetchContent_MakeAvailable(iniparser)
+  endfunction()
+  lrr_fetch_iniparser()
+  target_link_libraries(lrr_iniparser INTERFACE iniparser-static)
+endif()
 set(MINIWIN_SOURCES
   windows/windows.cpp windows/windowmessages.cpp ddraw/ddpalette.cpp ddraw/ddraw.cpp ddraw/ddsurface.cpp
   ddraw/framebuffer.cpp d3d/d3dmaterial.cpp
@@ -140,9 +176,34 @@ target_link_libraries(units PUBLIC library)
 set(LRR_ENTRY_SOURCE "${PLATFORM_DIR}/native/entry.cpp")
 set(LRR_SEAM_SOURCES ${LRR_LINK_SOURCES_platform})
 list(REMOVE_ITEM LRR_SEAM_SOURCES "${LRR_ENTRY_SOURCE}")
+# The hosts whose files live elsewhere: their configuration defaults and,
+# on the web, the OPFS save directory and the page's save events
+# (src/platform/native/config.h). Adapted from isle-portable's ISLE/<host>/.
+if(NINTENDO_3DS)
+  list(APPEND LRR_SEAM_SOURCES "${PLATFORM_DIR}/native/3ds/config.cpp")
+endif()
+if(NINTENDO_SWITCH)
+  list(APPEND LRR_SEAM_SOURCES "${PLATFORM_DIR}/native/switch/config.cpp")
+endif()
+if(IOS)
+  list(APPEND LRR_SEAM_SOURCES "${PLATFORM_DIR}/native/ios/config.cpp")
+endif()
+if(ANDROID)
+  list(APPEND LRR_SEAM_SOURCES "${PLATFORM_DIR}/native/android/config.cpp")
+endif()
+if(EMSCRIPTEN)
+  list(APPEND LRR_SEAM_SOURCES
+    "${PLATFORM_DIR}/native/emscripten/config.cpp"
+    "${PLATFORM_DIR}/native/emscripten/events.cpp"
+    "${PLATFORM_DIR}/native/emscripten/filesystem.cpp")
+endif()
 add_library(seam_stubs STATIC ${LRR_SEAM_SOURCES})
 target_include_directories(seam_stubs PUBLIC ${SRC_ROOT})
-target_link_libraries(seam_stubs PUBLIC miniwin)
+target_link_libraries(seam_stubs PUBLIC miniwin lrr_iniparser)
+if(EMSCRIPTEN)
+  # The OPFS backend is a WasmFS one (emscripten/filesystem.cpp).
+  target_link_options(seam_stubs PUBLIC "-sWASMFS=1" "-sFORCE_FILESYSTEM=1")
+endif()
 target_link_libraries(units PUBLIC seam_stubs)
 
 add_executable(program ${LRR_ENTRY_SOURCE})
@@ -155,7 +216,7 @@ endif()
 include(CTest)
 if(BUILD_TESTING)
   # The units' own tests: each calls one unit directly.
-  foreach(name IN ITEMS bezier steering animation_object reward)
+  foreach(name IN ITEMS bezier steering animation_object reward savegame)
     add_executable(${name}_test ${GAME_DIR}/test_${name}.cpp)
     target_link_libraries(${name}_test PRIVATE units)
     add_test(NAME ${name} COMMAND ${name}_test)
@@ -192,15 +253,17 @@ if(BUILD_TESTING)
       "LINKER:--wrap=ddiscene_object_position_get")
     add_test(NAME flock_position COMMAND flock_position_test)
     set_tests_properties(flock_position PROPERTIES LABELS legoobject)
-    # FrontEnd.c's save slots on a fixture data directory: Files.c's
-    # start-up finds the fixture's Data directory through the test's
-    # __wrap_files_native_findfirst (the seam's stub finds nothing).
-    add_executable(savegame_test ${GAME_DIR}/test_savegame.cpp)
-    target_link_libraries(savegame_test PRIVATE units)
-    target_link_options(savegame_test PRIVATE "LINKER:--wrap=files_native_findfirst")
-    add_test(NAME savegame COMMAND savegame_test)
-    set_tests_properties(savegame PROPERTIES LABELS savegame)
   endif()
+  # Files.c's SDL3 streams and path mapping, and the configuration file
+  # ([library:filesystem], [library:config]).
+  add_executable(files_test ${ENGINE_DIR}/test_files.cpp)
+  target_link_libraries(files_test PRIVATE units)
+  add_test(NAME files COMMAND files_test)
+  set_tests_properties(files PROPERTIES LABELS files)
+  add_executable(config_test ${PLATFORM_DIR}/native/test_config.cpp)
+  target_link_libraries(config_test PRIVATE units)
+  add_test(NAME config COMMAND config_test)
+  set_tests_properties(config PROPERTIES LABELS config)
   add_executable(draw_test ${ENGINE_DIR}/test_draw.cpp)
   target_link_libraries(draw_test PRIVATE units)
   add_test(NAME draw COMMAND draw_test)

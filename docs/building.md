@@ -11,7 +11,10 @@ containing `LegoRR0.wad`, `LegoRR1.wad`, and the loose `Data/` files. The
 Install CMake 3.20 or later, a C++17 compiler, SDL3 development headers, and Git.
 `make setup` bootstraps the sparse `3rdparty/isle-portable` miniwin submodule,
 applies the project's patches from `patches/miniwin` to it, and configures
-CMake; `make build` also runs setup.
+CMake; `make build` also runs setup. The configuration file reader,
+[iniparser](https://gitlab.com/iniparser/iniparser), comes from an installed
+CMake package when there is one; otherwise configure fetches release v4.2.6,
+the version isle-portable uses.
 
 ```sh
 make build
@@ -24,8 +27,12 @@ opens `LegoRR0.wad` and `LegoRR1.wad` there, and takes the shipped exe's flags
 `-best -window` by default; `-best` picks a display mode without the
 mode-selection dialog, which miniwin cannot show. miniwin supplies the
 Windows-compatible interfaces over SDL3 on every host, Windows included; the
-build does not require Wine. The imports outside miniwin's scope (sound, CD
-audio, movies, the registry and directory listings) are logging stubs in
+build does not require Wine. The file layer's substitution, including
+directory listings and the save directory, is in
+`src/platform/native/files_native.cpp`; the port's configuration file
+(`LegoRR.ini`, see the README) is read by `src/platform/native/config.cpp`
+before `WinMain`, and `--ini <path>` names another one. The imports still
+outside miniwin's scope (the registry among them) are logging stubs in
 `src/platform/native/seam_stubs.cpp` until their library substitutions land.
 `BUILD_DIR` selects another build directory.
 

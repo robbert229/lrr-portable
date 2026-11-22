@@ -2942,6 +2942,7 @@ void front_callback_slider_sound_volume(int volume)
  * counter at every part-1 function is the one part 1 was matched with
  * (finding 538, rule B). The original declared them all in FrontEnd.h. */
 #include "gods98/files.h"
+#include "gods98/files_native.h"
 #include "gods98/movie_unit.h"
 
 /* Front_Save_GetSaveDataAtIndex, Front_Save_GetCurrentSaveData and
@@ -4644,6 +4645,7 @@ int front_save_write_save_file(unsigned int saveIndex, Front_SaveData* saveData)
                 // STRING: LEGORR 0x004a2788
                 sprintf(buffer, "%s\\%i.osf", "Saves", saveIndex);
                 front_object_recall_save_adapter(buffer);
+                files_native_save_slot_written((int)saveIndex); // [library:filesystem]
                 return 1;
             }
         } else {
@@ -4668,6 +4670,7 @@ int front_save_write_save_file(unsigned int saveIndex, Front_SaveData* saveData)
                     file_write(&newReward, sizeof(Front_SaveReward), 1, file);
                 }
                 file_close(file);
+                files_native_save_state_changed(); // [library:filesystem]
                 return 1;
             }
         }

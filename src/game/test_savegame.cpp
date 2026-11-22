@@ -4,19 +4,24 @@
  * them, and how a record's completed bit unlocks the level menu.
  *
  * The test calls the unit's save functions (frontend_unit.c, 00417a90-
- * 00417fc0) on a fixture data directory. Files.c's start-up looks for the
- * Data directory with _findfirst, which the seam's stub never finds; the
- * test links with --wrap=files_native_findfirst so the lookup reaches
- * __wrap_files_native_findfirst below. Without it, file_initialise calls
- * exit(0), which the atexit guard reports as a failure. */
+ * 00417fc0) on a fixture data directory, and checks the port's save
+ * directory (files_native_save_path, as isle-portable's savepath) and the
+ * .osf reader's assert. If Files.c's start-up cannot find the fixture's
+ * Data directory it calls exit(0), which the atexit guard reports as a
+ * failure. */
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
+#include <string>
+
 #include "game/frontend_unit.h"
+#include "game/objectrecall.h"
 #include "game/reward.h"
 #include "gods98/files.h"
 #include "gods98/files_native.h"
@@ -38,16 +43,6 @@ void front_levels_update_available(Front_LevelLink* startLink, Front_SaveReward*
                                    Front_LevelSet* levelSet, Front_SelectData* select,
                                    int setLocked);          /* 004173e0 */
 int float_to_long_x87(unsigned int index, Front_SaveData* saveData); /* 00417430 */
-
-long __wrap_files_native_findfirst(const char* filespec,
-                                   struct files_native_finddata* fileinfo)
-{
-    (void)filespec;
-    memset(fileinfo, 0, sizeof(*fileinfo));
-    fileinfo->attrib = _A_SUBDIR;
-    strcpy(fileinfo->name, "Data");
-    return 1;
-}
 }
 
 static const char* FIX = "savegame_fixture";
@@ -614,6 +609,147 @@ static void test_read_save_files(void)
           "scan: flag 0x400 rereads the slot empty");
 }
 
+static int is_directory(const char* path)
+{
+    struct stat st;
+    return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
+}
+
+static long file_size_at(const std::string& path)
+{
+    struct stat st;
+    return stat(path.c_str(), &st) == 0 ? (long)st.st_size : -1;
+}
+
+/* file_make_dir builds "Data\\Saves"; the substitution maps it, so the
+ * directory is Saves inside Data, not one named with a backslash. */
+static void test_make_dir(void)
+{
+    char cmd[64];
+    snprintf(cmd, sizeof(cmd), "rm -rf Data/Saves");
+    if (system(cmd) != 0) return;
+    files_native_set_save_path(NULL);
+    file_make_dir("Saves");
+    CHECK(is_directory("Data/Saves"), "mkdir: Data\\Saves is Data/Saves");
+    CHECK(access("Data\\Saves", F_OK) != 0, "mkdir: no directory named with a backslash");
+}
+
+/* The save directory (files_native_save_path, isle-portable's savepath):
+ * every name under the original's "Saves" opens there instead; other data
+ * names stay in the data directory. */
+static void test_save_directory(void)
+{
+    char cwd[1024];
+    std::string root, saves;
+    Front_SaveData* slot = &frontGlobs.saveData[1];
+    File* file;
+
+    if (getcwd(cwd, sizeof(cwd)) == NULL) {
+        CHECK(0, "savedir: getcwd");
+        return;
+    }
+    root = std::string(cwd) + "/profile";
+    saves = root + "/saves";
+    files_native_set_save_path((saves + "/").c_str()); /* a trailing '/' is trimmed */
+    CHECK(files_native_save_path() != NULL && saves == files_native_save_path(),
+          "savedir: the configured path, without its trailing separator");
+
+    remove_slot(0);
+    {
+        Front_SaveData fresh;
+        memset(&fresh, 0, sizeof(fresh));
+        CHECK(save_read_slot_target(0, &fresh, 0) == 0, "savedir: a missing slot misses");
+    }
+    CHECK(is_directory(saves.c_str()), "savedir: the fresh slot makes the directory, parents too");
+    CHECK(file_size_at(saves + "/0.sav") == (long)(HEADER_FRESH + MISSIONS * RECORD),
+          "savedir: the fresh slot is written there");
+    CHECK(!file_exists_on_disk(0, "sav"), "savedir: nothing is written in Data/Saves");
+    CHECK(file_exists("Saves\\0.sav"), "savedir: File_Exists looks there");
+
+    memset(slot, 0, sizeof(*slot));
+    slot->missionsCount = MISSIONS;
+    slot->missionsTable = (Front_SaveReward*)calloc(MISSIONS, sizeof(Front_SaveReward));
+    slot->missionsTable[2].flags = 1;
+    save_slot_set_target(1);
+    front_save_write_current_save_file();
+    save_slot_set_target(-1);
+    CHECK(file_size_at(saves + "/1.sav") == (long)(HEADER_READ + MISSIONS * RECORD),
+          "savedir: the current slot is written there");
+    CHECK(file_size_at(saves + "/1.osf") >= 8, "savedir: its .osf too");
+    {
+        Front_SaveData back;
+        memset(&back, 0, sizeof(back));
+        CHECK(save_read_slot_target(1, &back, 0) == 1 && back.missionsTable != NULL &&
+                  back.missionsTable[2].flags == 1,
+              "savedir: the slot reads back from there");
+        free(back.missionsTable);
+    }
+    free(slot->missionsTable);
+    memset(slot, 0, sizeof(*slot));
+
+    /* Menu::SaveImage::Path's thumbnails ("Saves\\%d.dat") go there too. */
+    if ((file = file_open("Saves\\2.dat", "wb")) != NULL) {
+        file_write("BM", 1, 2, file);
+        file_close(file);
+    }
+    CHECK(file_size_at(saves + "/2.dat") == 2, "savedir: a thumbnail opens there");
+    file = file_open("SAVES\\2.dat", "rb");
+    CHECK(file != NULL, "savedir: \"Saves\" matches without case");
+    if (file != NULL) file_close(file);
+
+    /* Other names stay in the data directory. */
+    if ((file = file_open("Savesx.txt", "wb")) != NULL) file_close(file);
+    CHECK(access("Data/Savesx.txt", F_OK) == 0, "savedir: a name that only starts with Saves stays");
+
+    files_native_set_save_path("");
+    CHECK(files_native_save_path() == NULL, "savedir: an empty path restores Data\\Saves");
+}
+
+/* ObjectRecall_LoadRROSFile (00459470) asserts the sidecar's 'RRSO' magic,
+ * as isle-portable asserts its save version; a release build loads nothing
+ * from it instead. Each load runs in a child so the abort is observable. */
+static int load_osf_in_child(const unsigned char* bytes, size_t size)
+{
+    FILE* fp = fopen("Data/Saves/assert.osf", "wb");
+    pid_t pid;
+    int status = 0;
+
+    if (fp == NULL) {
+        CHECK(0, "fixture: cannot write the .osf (no Data/Saves?)");
+        return -1;
+    }
+    fwrite(bytes, 1, size, fp);
+    fclose(fp);
+    fflush(stdout);
+    if ((pid = fork()) == 0) {
+        object_recall_load_rrosfile("Saves\\assert.osf");
+        _exit(0);
+    }
+    waitpid(pid, &status, 0);
+    return status;
+}
+
+static void test_osf_assert(void)
+{
+    unsigned char good[8] = { 'R', 'R', 'O', 'S', 0, 0, 0, 0 };
+    unsigned char bad[8] = { 'X', 'X', 'X', 'X', 0, 0, 0, 0 };
+    int status;
+
+    files_native_set_save_path(NULL);
+    mkdir("Data/Saves", 0755);
+    status = load_osf_in_child(good, sizeof(good));
+    CHECK(WIFEXITED(status) && WEXITSTATUS(status) == 0, "osf: a valid sidecar loads");
+    status = load_osf_in_child(bad, sizeof(bad));
+#ifndef NDEBUG
+    CHECK(WIFSIGNALED(status) && WTERMSIG(status) == SIGABRT,
+          "osf: a debug build asserts on a wrong magic");
+#else
+    CHECK(WIFEXITED(status) && WEXITSTATUS(status) == 0,
+          "osf: a release build loads nothing from a wrong magic");
+#endif
+    remove("Data/Saves/assert.osf");
+}
+
 int main(void)
 {
     char cmd[128];
@@ -628,10 +764,10 @@ int main(void)
         return 1;
     }
     mkdir("Data", 0755);
-    /* Files.c's file_make_dir builds "Data\\Saves", which the native
-     * _mkdir does not translate; the fixture makes the directory itself. */
-    mkdir("Data/Saves", 0755);
     file_initialise("savegame_test", 0, "");
+    /* The saves stay in Data\\Saves unless a test configures a directory. */
+    files_native_set_save_path(NULL);
+    test_make_dir();
     build_level_graphs();
 
     test_slot_range();
@@ -643,6 +779,8 @@ int main(void)
     test_set_reward_level();
     test_unlocks();
     test_read_save_files();
+    test_save_directory();
+    test_osf_assert();
 
     s_finished = 1;
     if (s_failures != 0) {
