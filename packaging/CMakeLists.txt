@@ -44,6 +44,11 @@ else()
   set(LRR_INSTALL_DOCDIR "${CMAKE_INSTALL_DOCDIR}")
 endif()
 
+# The bundle properties come before install(TARGETS), which reads them.
+if(APPLE AND NOT IOS)
+  add_subdirectory(macos)
+endif()
+
 install(TARGETS program
   RUNTIME DESTINATION "${LRR_INSTALL_BINDIR}"
   BUNDLE DESTINATION ".")
@@ -52,9 +57,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   add_subdirectory(linux)
 endif()
 if(APPLE AND NOT IOS)
-  add_subdirectory(macos)
   # Here rather than in macos/, so that it runs after the install() of
-  # LegoRR.app above; from the subdirectory it ran before the bundle existed.
+  # LegoRR.app above.
   # Pull in any shared library the bundle links (none with the fetched, static
   # SDL3), then sign, so that the signature covers the final contents.
   install(CODE "
