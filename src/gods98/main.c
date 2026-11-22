@@ -46,6 +46,7 @@
 #define LEGORRR_MAIN_GLOBS_OWNER
 #include "gods98/main_globs.h"
 #include "platform/native/config.h" // [divergence:display-fit] LRR_GetDisplayScaling
+#include "platform/native/lifecycle.h" // [divergence:suspend-pause] LRR_ApplicationActive
 
 #define MAIN_MAXRENDERSTATES        200
 
@@ -295,8 +296,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
                         window_message_dispatch_pump();
 
+                        /* [divergence:suspend-pause] A full-screen game never
+                         * loses focus. The port's host can suspend it (the
+                         * 3DS's HOME menu): the platform reports that, and the
+                         * game takes it as a loss of focus, which pauses a
+                         * level (docs/divergences.md). Without a report this
+                         * is TRUE, as in the original. */
                         if (s_engine_feature_word & MAIN_FLAG_FULLSCREEN)
-                            s_window_application_active = TRUE;
+                            s_window_application_active = LRR_ApplicationActive();
 
                         input_state_poll_retail();
                         input_cursor_position_update();
