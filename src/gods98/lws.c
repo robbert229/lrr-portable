@@ -588,6 +588,13 @@ float animation_track_find_keyframe_and_fraction(LwsNode* node, float time,
     }
     *prev = key;
 
+    /* PORT-ONLY: at the last key, hold it, as Lws_FindPrevDissolve does.
+     * The original divides by the frame of the slot after it, which
+     * Lws_Parse leaves unwritten when the last key is on the scene's last
+     * frame and allocates no room for when it fills that slot itself
+     * (issue #943). */
+    if (key + 1 >= node->keyCount) return 0.0f;
+
     return (time - frame) / ((float)node->keyList[key + 1].frame - frame);
 }
 
@@ -726,7 +733,9 @@ void lws_interpolate(LwsInfo* scene, LwsNode* node, unsigned short key,
     LwsVector3 hpb;
     LwsVector3 scale;
     LwsKeyInfo* curr = &node->keyList[key];
-    LwsKeyInfo* next = &node->keyList[key + 1];
+    /* PORT-ONLY: the last key blends with itself, not with the slot after
+     * the keys (issue #943). */
+    LwsKeyInfo* next = (key + 1 < node->keyCount) ? &node->keyList[key + 1] : curr;
 
     pos.x = next->position.x - curr->position.x;
     pos.y = next->position.y - curr->position.y;
