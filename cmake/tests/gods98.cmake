@@ -29,3 +29,6 @@ lrr_unit_test(font SOURCES ${ENGINE_DIR}/test_font.cpp LABELS font)
 
 # Pin sound-bank volume limits and disabled-audio return values.
 lrr_unit_test(sound3d SOURCES ${ENGINE_DIR}/test_sound3d.cpp LABELS sound3d)
+
+# Verify RGB565 packing and the byte layout of a synthetic screenshot BMP.
+lrr_unit_test(directdraw SOURCES ${ENGINE_DIR}/test_directdraw.cpp LABELS directdraw)
