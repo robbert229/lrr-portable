@@ -8,7 +8,9 @@
 #                 is applied already. Refuses to drop uncommitted changes or
 #                 commits that are not in patches/miniwin.
 #   check         Exit 0 when the series is applied and the checkout is
-#                 clean, 1 otherwise.
+#                 clean, 1 otherwise. Also 1 when two patch files share a
+#                 number, which happens when two PRs each add a patch; the
+#                 second to merge re-exports.
 #   export        Write the submodule's commits since the pin back to
 #                 patches/miniwin. Run it after committing a miniwin change
 #                 in the submodule.
@@ -97,7 +99,30 @@ only_series_commits() {
     done
 }
 
+# The numbers that more than one patch file carries, one per line. `export`
+# numbers the series 0001... from the submodule's commits, so a repeated
+# number means the files were not exported from one series. `git am` still
+# applies them, but in an order that depends on the slugs.
+duplicate_numbers() {
+    local f
+    for f in "$PATCHES"/*.patch; do
+        [ -e "$f" ] || continue
+        f="${f##*/}"
+        echo "${f%%-*}"
+    done | sort | uniq -d
+}
+
 cmd_check() {
+    local dup n files
+    dup="$(duplicate_numbers)"
+    if [ -n "$dup" ]; then
+        for n in $dup; do
+            files="$(printf '%s ' "$PATCHES/$n"-*.patch)"
+            echo "miniwin-patches: more than one patch is numbered $n: $files" >&2
+        done
+        echo "miniwin-patches: two PRs each added a patch. Re-export the series so it is numbered once: run tools/setup-miniwin.sh, then tools/miniwin-patches.sh export, and commit the renamed patches" >&2
+        return 1
+    fi
     require_checkout
     if is_applied; then
         return 0

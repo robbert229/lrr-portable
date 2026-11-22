@@ -7,7 +7,7 @@ unit conversion and the search tools) remains on `main` (ADR 0007).
 | Tool | Purpose |
 | --- | --- |
 | `setup-miniwin.sh` | Fetches only `miniwin/` of the `3rdparty/isle-portable` submodule and applies `patches/miniwin`; `make setup` runs it |
-| `miniwin-patches.sh` | Applies, checks, exports and rebases the miniwin patch series in `patches/miniwin` (ADR 0009) |
+| `miniwin-patches.sh` | Applies, checks, exports and rebases the miniwin patch series in `patches/miniwin` (ADR 0009); `check` also fails when two patches share a number, so the second of two PRs that each add a patch re-exports |
 | `miniwin-shaders/` | Regenerates miniwin's SDL GPU shader headers on Linux (`regenerate.sh`; see [Build and run](../docs/building.md#tests)) |
 | `rrwad.py` | Unpacks, packs and verifies `.wad` archives (below) |
 | `unwad.py` | The earlier extract-only `.wad` script |
