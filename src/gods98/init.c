@@ -281,9 +281,9 @@ void init_set_mode_list(HWND hWndDlg)
     hWndOK = GetDlgItem(hWndDlg, IDOK);
     if (first) {
         // STRING: LEGORR 0x004b2d70
-        if (!initGlobs.selFullScreen) sprintf(buffer, "No supported %i bit modes found", window_runtime_display_caps_query());
+        if (!initGlobs.selFullScreen) snprintf(buffer, sizeof(buffer), "No supported %i bit modes found", window_runtime_display_caps_query());
         // STRING: LEGORR 0x004b2d50
-        else sprintf(buffer, "No supported screen modes found");
+        else snprintf(buffer, sizeof(buffer), "No supported screen modes found");
         SendMessageA(hWndList, LB_ADDSTRING, 0, (LPARAM)buffer);
         EnableWindow(hWndOK, FALSE);
     } else EnableWindow(hWndOK, TRUE);

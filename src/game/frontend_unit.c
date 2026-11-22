@@ -355,7 +355,7 @@ void front_util_print_f(Front_Font* font, int x, int y, const char* msg, ...)
     }
     if (s_printCount < FRONT_PRINT_MAX) {
         va_start(args, msg);
-        vsprintf(s_printTextList[s_printCount], msg, args);
+        vsnprintf(s_printTextList[s_printCount], sizeof(s_printTextList[s_printCount]), msg, args);
         s_printXList[s_printCount] = x;
         s_printYList[s_printCount] = y;
         s_printFontList[s_printCount] = font;
@@ -1739,7 +1739,7 @@ void front_menu_item_draw_save_image(Front_Menu* menu, int selIndex,
         image = s_saveSlotImages[selIndex];
         if (image != NULL) {
             // STRING: LEGORR 0x004a237c
-            sprintf(buff, "pos%d", selIndex + 1);
+            snprintf(buff, sizeof(buff), "pos%d", selIndex + 1);
             str = block_get_str_copy(legoGlobs_config,
                                      string_path_join(s_engine_config_root,
                                                       s_menuSaveImage, buff, NULL));
@@ -1836,8 +1836,13 @@ void front_menu_item_draw_select_text_window(Front_Menu** menu,
             if (item->itemType == Front_MenuItem_Select) {
                 select = (Front_SelectData*)item->itemData;
                 for (j = 0; j < select->selItemCount; j++) {
+                    /* The original writes into the banner's existing copy,
+                     * which may be shorter than the slot text; size the copy
+                     * to fit first. */
                     // STRING: LEGORR 0x004a2384
-                    sprintf(select->selItemList[j].banner, "%s %d", frontGlobs_saveSlotFormat, j + 1);
+                    int len = snprintf(NULL, 0, "%s %d", frontGlobs_saveSlotFormat, j + 1) + 1;
+                    select->selItemList[j].banner = (char*)realloc(select->selItemList[j].banner, len);
+                    snprintf(select->selItemList[j].banner, len, "%s %d", frontGlobs_saveSlotFormat, j + 1);
                 }
             }
         }
@@ -2223,7 +2228,7 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
     front_util_print_f(NULL, 0, 0, NULL);
 
     if (menu == frontGlobs_saveMenuSet->menus[0] && s_saveMenuOverwriteShowing) {
-        sprintf(buff, frontGlobs_overwriteText, s_saveSlotToWrite + 1);
+        snprintf(buff, sizeof(buff), frontGlobs_overwriteText, s_saveSlotToWrite + 1);
         s_overwriteAnswer = lego_menu_option_panel_texture_update(frontGlobs_overwriteTitle, buff,
                                                                   frontGlobs_overwriteOK,
                                                                   frontGlobs_overwriteCancel);
@@ -2349,7 +2354,7 @@ void front_menu_load_slot_images(void)
         char buff[128];
 
         // STRING: LEGORR 0x004a2398
-        sprintf(buff, "%s\\%d.dat",
+        snprintf(buff, sizeof(buff), "%s\\%d.dat",
                 block_get_str_copy(legoGlobs_config,
                                    string_path_join(s_engine_config_root, s_menuSaveImage,
                                                     // STRING: LEGORR 0x004a23a4
@@ -2465,7 +2470,7 @@ void front_run_screen_menu(Front_Menu* menu)
             /* RewardLevel.saveHasCapture (+0x04), an int: as a void* read
              * it took in the first half of saveCapture on 64-bit. */
             *(int*)((char*)(level = reward_current_level_get()) + 4) != 0) {
-            sprintf(buff, "%s\\%d.dat",
+            snprintf(buff, sizeof(buff), "%s\\%d.dat",
                     block_get_str_copy(legoGlobs_config,
                                        string_path_join(s_engine_config_root, s_menuSaveImage,
                                                         "Path", NULL)),
@@ -2650,7 +2655,7 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
 
     va_start(args, menuName);
     // STRING: LEGORR 0x004a24d8
-    sprintf(menuPath, "Menu::%s", menuName);
+    snprintf(menuPath, sizeof(menuPath), "Menu::%s", menuName);
     menuCount = FRONT_CONFIG_INT(string_path_join(s_engine_config_root, menuPath,
                                                   // STRING: LEGORR 0x004a24cc
                                                   "MenuCount", NULL));
@@ -2658,7 +2663,7 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
     for (i = 0; i < menuCount; i++) {
         centerOffset = 0;
         // STRING: LEGORR 0x004a24c0
-        sprintf(itemPath, "%s::Menu%i", menuPath, i + 1);
+        snprintf(itemPath, sizeof(itemPath), "%s::Menu%i", menuPath, i + 1);
         menuTitle = block_get_str_copy(legoGlobs_config,
                                        // STRING: LEGORR 0x004a24b8
                                        string_path_join(s_engine_config_root, itemPath, "Title", NULL));
@@ -2706,7 +2711,7 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
                                                     // STRING: LEGORR 0x004a2444
                                                     string_path_join(s_engine_config_root, itemPath, "MenuImageDark", NULL)),
                                    0);
-        sprintf(menuSet->menus[i]->name, "%s", itemPath);
+        snprintf(menuSet->menus[i]->name, sizeof(menuSet->menus[i]->name), "%s", itemPath);
         menuSet->menus[i]->playRandom =
             block_get_bool_path(legoGlobs_config,
                                 // STRING: LEGORR 0x004a2438
@@ -2716,7 +2721,7 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
 
     for (i = 0; i < menuCount; i++) {
         autoCenter = menuSet->menus[i]->autoCenter;
-        sprintf(itemPath, "%s::Menu%i", menuPath, i + 1);
+        snprintf(itemPath, sizeof(itemPath), "%s::Menu%i", menuPath, i + 1);
         loFont = front_cache_load_font(block_get_strptr(legoGlobs_config,
                                                         // STRING: LEGORR 0x004a2430
                                                         string_path_join(s_engine_config_root, itemPath, "LoFont", NULL)));
@@ -2730,14 +2735,14 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
         for (j = 1;; j++) {
             int sfxType;
             // STRING: LEGORR 0x004a2410
-            sprintf(buff, "Overlay%i", j);
+            snprintf(buff, sizeof(buff), "Overlay%i", j);
             itemString = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, itemPath, buff, NULL));
             if (itemString == NULL) {
                 if (s_engine_feature_word & 0x1000000) {
                     break;
                 }
                 // STRING: LEGORR 0x004a2404
-                sprintf(buff, "!Overlay%i", j);
+                snprintf(buff, sizeof(buff), "!Overlay%i", j);
                 itemString = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, itemPath, buff, NULL));
                 if (itemString == NULL) {
                     break;
@@ -2756,7 +2761,7 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
 
         for (j = 0; j < itemCount; j++) {
             // STRING: LEGORR 0x004a23fc
-            sprintf(buff, "Item%i", j + 1);
+            snprintf(buff, sizeof(buff), "Item%i", j + 1);
             if (itemString != NULL) {
                 free(itemString);
             }
@@ -3315,7 +3320,7 @@ void front_load_selected_level(void)
     char buffer[128];
     int i;
 
-    sprintf(buffer, "%s", *(const char**)g_active_level_retail);
+    snprintf(buffer, sizeof(buffer), "%s", *(const char**)g_active_level_retail);
     lego_transition_control(0, 0);
     lego_level_free();
     lego_level_load(string_duplicate(buffer));
@@ -3328,6 +3333,10 @@ void front_load_selected_level(void)
     legoGlobs_flags1 |= 0x2000000;
     front_object_recall_restore_adapter();
 }
+
+/* The size of the buffer front_save_get_save_summary fills, which its only
+ * caller, front_load_levels, provides. */
+#define FRONT_SAVE_SUMMARY_LEN 100
 
 // FUNCTION: LEGORR 0x004152c0
 void front_save_get_save_summary(Front_SaveData* saveData, char* buffer)
@@ -3347,7 +3356,7 @@ void front_save_get_save_summary(Front_SaveData* saveData, char* buffer)
         }
         if (completed != 0) {
             // STRING: LEGORR 0x004a24fc
-            sprintf(buffer, "Game %i%% complete with %i points scored",
+            snprintf(buffer, FRONT_SAVE_SUMMARY_LEN, "Game %i%% complete with %i points scored",
                     (int)((float)completed / saveData->missionsCount * 100.0f),
                     totalScore);
         }
@@ -3617,9 +3626,9 @@ void front_load_levels(Front_MenuSet* menuSet)
     Front_SelectData* saveSelect;
     Front_SaveData* saveData;
     int i;
-    char buffer[100];
+    char buffer[FRONT_SAVE_SUMMARY_LEN];
 
-    g_front_save_tree = front_level_set_load_level_links(&frontGlobs_missionLevels,
+    g_front_save_tree =front_level_set_load_level_links(&frontGlobs_missionLevels,
                                                                    frontGlobs_missionLevels.idNames[0]);
     frontGlobs_startTutorialLink = front_level_set_load_level_links(&frontGlobs_tutorialLevels,
                                                                     frontGlobs_tutorialLevels.idNames[0]);
@@ -3653,7 +3662,7 @@ void front_load_levels(Front_MenuSet* menuSet)
     for (i = 0; i < 5; i++) {
         saveData = &frontGlobs_saveData[i];
         // STRING: LEGORR 0x004a253c
-        sprintf(buffer, "%s %i",
+        snprintf(buffer, sizeof(buffer), "%s %i",
                 block_get_strptr(legoGlobs_config,
                                  string_path_join(s_engine_config_root,
                                                   // STRING: LEGORR 0x004a2544
@@ -3760,7 +3769,7 @@ int front_play_level_stream(int levelIndex)
     char buffer[128];
 
     // STRING: LEGORR 0x004a25c8
-    sprintf(buffer, "Stream_LevelName_Level%d", levelIndex);
+    snprintf(buffer, sizeof(buffer), "Stream_LevelName_Level%d", levelIndex);
     if (sfx_get_type(buffer, &sfxID)) {
         return sfx_random_set_and_play_global_sample(sfxID, NULL);
     }
@@ -3777,7 +3786,7 @@ int front_play_tutorial_stream(int levelIndex)
     char buffer[128];
 
     // STRING: LEGORR 0x004a25e4
-    sprintf(buffer, "Stream_LevelName_TLevel%d", levelIndex);
+    snprintf(buffer, sizeof(buffer), "Stream_LevelName_TLevel%d", levelIndex);
     if (sfx_get_type(buffer, &sfxID)) {
         return sfx_random_set_and_play_global_sample(sfxID, NULL);
     }
@@ -4423,7 +4432,7 @@ void front_callback_select_mission_item(float elapsed, int selectIndex)
     frontGlobs_currLevelNumber = link->setIndex + 1;
     if (s_engine_feature_word & 0x10000) {
         // STRING: LEGORR 0x004a2728
-        sprintf(levelNumber, " (Level %d)", link->setIndex + 1);
+        snprintf(levelNumber, sizeof(levelNumber), " (Level %d)", link->setIndex + 1);
     }
     if (levelName == NULL || *levelName == '\0') {
         levelName = frontGlobs_missionLevels.idNames[link->setIndex];
@@ -4443,7 +4452,7 @@ void front_callback_select_mission_item(float elapsed, int selectIndex)
     if (saveData != NULL && (saveData->missionsTable[link->setIndex].flags & 1) &&
         !(saveData->missionsTable[link->setIndex].flags & 2)) {
         // STRING: LEGORR 0x004a270c
-        sprintf(buffer, " %s (%i)",
+        snprintf(buffer, sizeof(buffer), " %s (%i)",
                 block_get_strptr(legoGlobs_config, string_path_join(s_engine_config_root, "Menu",
                                                                                                   // STRING: LEGORR 0x004a2718
                                                                                                   "Level_Completed", NULL)),
@@ -4451,7 +4460,7 @@ void front_callback_select_mission_item(float elapsed, int selectIndex)
         mission_replace_char(buffer, '_', ' ');
     } else {
         // STRING: LEGORR 0x004a26f4
-        sprintf(buffer, " %s",
+        snprintf(buffer, sizeof(buffer), " %s",
                 block_get_strptr(legoGlobs_config, string_path_join(s_engine_config_root, "Menu",
                                                                                                   // STRING: LEGORR 0x004a26f8
                                                                                                   "Level_Incomplete", NULL)));
@@ -4578,7 +4587,7 @@ int front_save_read_save_file(uint32_t saveIndex, void* outData, int readOnly)
 
     if (saveIndex < 6) {
         // STRING: LEGORR 0x004a2774
-        sprintf(buffer, "%s\\%i.sav",
+        snprintf(buffer, sizeof(buffer), "%s\\%i.sav",
                                       // STRING: LEGORR 0x004a2780
                                       "Saves", saveIndex);
         file = file_open(buffer, "rb");
@@ -4622,7 +4631,7 @@ int front_save_write_save_file(unsigned int saveIndex, Front_SaveData* saveData)
     unsigned int i;
 
     if (saveIndex < 6) {
-        sprintf(buffer, "%s\\%i.sav", "Saves", saveIndex);
+        snprintf(buffer, sizeof(buffer), "%s\\%i.sav", "Saves", saveIndex);
         if (saveData != NULL) {
             missionsCount = 0;
             front_level_link_run_through_links(g_front_save_tree,
@@ -4643,7 +4652,7 @@ int front_save_write_save_file(unsigned int saveIndex, Front_SaveData* saveData)
                 }
                 file_close(file);
                 // STRING: LEGORR 0x004a2788
-                sprintf(buffer, "%s\\%i.osf", "Saves", saveIndex);
+                snprintf(buffer, sizeof(buffer), "%s\\%i.osf", "Saves", saveIndex);
                 front_object_recall_save_adapter(buffer);
                 files_native_save_slot_written((int)saveIndex); // [library:filesystem]
                 return 1;

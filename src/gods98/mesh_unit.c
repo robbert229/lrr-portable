@@ -734,7 +734,7 @@ void mesh_get_surf_info(const char* basePath, APPOBJ* lightWaveObject,
                     lightWaveSurf[loop].textureSeq = (Mesh_Texture**)malloc(sizeof(Mesh_Texture*) * MESH_MAXTEXTURESEQUENCE);
                     for (count = 0; count < MESH_MAXTEXTURESEQUENCE; count++) {
                         mesh_get_next_in_sequence(baseName, textName, &texNum, tnumlen);
-                        sprintf(path, "%s%s", textName, ext);
+                        snprintf(path, sizeof(path), "%s%s", textName, ext);
                         lightWaveSurf[loop].textureSeq[count] = (Mesh_Texture*)mesh_load_texture(basePath, path, NULL, NULL);
                         if (lightWaveSurf[loop].textureSeq[count] == NULL) break;
                     }
@@ -742,7 +742,7 @@ void mesh_get_surf_info(const char* basePath, APPOBJ* lightWaveObject,
                     lightWaveSurf[loop].textureSeq = (Mesh_Texture**)realloc(lightWaveSurf[loop].textureSeq, sizeof(Mesh_Texture*) * count);
                 }
             } else {
-                sprintf(path, "%s%s", fname, ext);
+                snprintf(path, sizeof(path), "%s%s", fname, ext);
                 lightWaveSurf[loop].texture = (Mesh_Texture*)mesh_load_texture(basePath, path, NULL, NULL);
             }
 
@@ -809,7 +809,7 @@ void mesh_get_next_in_sequence(const char* baseName, char* nextTextName,
     unsigned long loop;
 
     strcpy(nextTextName, baseName);
-    sprintf(tempName, "%d", (int)*texNum);
+    snprintf(tempName, sizeof(tempName), "%d", (int)*texNum);
     loop = tnumlen - strlen(tempName);
     while (loop >= 1) {
         // STRING: LEGORR 0x004ab108
@@ -1462,7 +1462,7 @@ Mesh_Texture* mesh_load_texture(const char* baseDir, const char* name,
     int trans;
     char path[260];
 
-    if (baseDir) sprintf(path, "%s%s", baseDir, name);
+    if (baseDir) snprintf(path, sizeof(path), "%s%s", baseDir, name);
     else strcpy(path, name);
 
     if (ref = (Mesh_TextureReference*)mesh_search_texture_list(meshGlobs.textureList, meshGlobs.textureCount, path)) {
@@ -1472,7 +1472,7 @@ Mesh_Texture* mesh_load_texture(const char* baseDir, const char* name,
     } else if (surface = (LPDIRECTDRAWSURFACE4)container_load_texture_surface(path, 1, width, height, &trans)) {
         mesh_add_texture_reference(meshGlobs.textureList, &meshGlobs.textureCount, path, surface, trans);
     } else if (meshGlobs.sharedTextureDir) {
-        sprintf(path, "%s%s", meshGlobs.sharedTextureDir, name);
+        snprintf(path, sizeof(path), "%s%s", meshGlobs.sharedTextureDir, name);
         if (ref = (Mesh_TextureReference*)mesh_search_texture_list(meshGlobs.textureListShared, meshGlobs.textureCountShared, path)) {
             surface = ref->surface;
             if (surface) surface->AddRef();

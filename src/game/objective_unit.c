@@ -103,7 +103,7 @@ void objective_load_objective_text(struct BlockRec* config,
     colons = 0;
     levelFound = 0;
 
-    sprintf(objectiveGlobs.filename, "%s", filename);
+    snprintf(objectiveGlobs.filename, sizeof(objectiveGlobs.filename), "%s", filename);
 
     if (objectiveGlobs.textWindows[0])
         text_buffer_destroy_target(objectiveGlobs.textWindows[0]);
@@ -154,7 +154,7 @@ void objective_load_objective_text(struct BlockRec* config,
         while (file_gets(line, sizeof(line), objectiveGlobs.file)) {
             if (levelFound) {
                 strcpy(levelString, levelSection);
-                len = sprintf(sectionName,
+                len = snprintf(sectionName, sizeof(sectionName),
                               // STRING: LEGORR 0x004a8104
                               "[%s]", levelString);
 
@@ -328,7 +328,7 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
             "DontShowObjectiveFailedAdvisor", NULL)) != 1)
         objectiveGlobs.flags |= OBJECTIVE_FLAG_SHOWFAILEDADVISOR;
 
-    sprintf(buff,
+    snprintf(buff, sizeof(buff),
             // STRING: LEGORR 0x004a81e0
             "ObjectiveImage%ix%i", screenWidth, screenHeight);
     if ((str = block_get_strptr(config, string_path_join(gameName, levelName,
@@ -352,7 +352,7 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
         free(s);
     }
 
-    sprintf(buff,
+    snprintf(buff, sizeof(buff),
             // STRING: LEGORR 0x004a81c4
             "ObjectiveAcheivedImage%ix%i", screenWidth, screenHeight);
     if ((str = block_get_strptr(config, string_path_join(gameName, levelName,
@@ -393,7 +393,7 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
         }
     }
 
-    sprintf(buff,
+    snprintf(buff, sizeof(buff),
             // STRING: LEGORR 0x004a8190
             "ObjectiveFailedImage%ix%i", screenWidth, screenHeight);
     if ((str = block_get_strptr(config, string_path_join(gameName, levelName,
@@ -596,7 +596,7 @@ status_read:
     }
 
     if (statusName && (legoGlobs_flags1 & 0x10)) {
-        sprintf(buff,
+        snprintf(buff, sizeof(buff),
                 // STRING: LEGORR 0x004a8250
                 "Stream_Objective%s%s%s", statusName,
                 // STRING: LEGORR 0x004a8268

@@ -293,7 +293,7 @@ int weapons_initialise(struct BlockRec* config, const char* gameName)
                         else {
                             for (j = 0; j < 18; j++) {
                                 // STRING: LEGORR 0x004aaa44
-                                sprintf(buff, "WallDestroyTime_%s",
+                                snprintf(buff, sizeof(buff), "WallDestroyTime_%s",
                                         legoGlobs_langSurface_name[j] + 17);
                                 if (stricmp(prop->key, buff) == 0) {
                                     weaponGlobs.weaponStatsList[i].wallDestroyTimes[j] = (float)atof(prop->value);

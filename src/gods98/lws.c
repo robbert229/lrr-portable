@@ -176,7 +176,7 @@ LwsInfo* lws_parse(const char* fname, int looping)
     char path[260];
     struct GameFileHandle* file;
 
-    sprintf(path, "%s.%s", fname,
+    snprintf(path, sizeof(path), "%s.%s", fname,
             // STRING: LEGORR 0x004ab6c4
             "lws");
     if ((file = game_file_open_dispatch(path, "r")) != NULL) {
@@ -827,7 +827,7 @@ void* lws_mesh_load(const char* baseDir, const char* fname, LPDIRECT3DRMFRAME3 f
     char path[260];
     void* mesh;
 
-    if (baseDir) sprintf(path, "%s%s", baseDir, fname);
+    if (baseDir) snprintf(path, sizeof(path), "%s%s", baseDir, fname);
     else strcpy(path, fname);
 
     if ((mesh = pair_table_find(lwsGlobs.meshPathList, lwsGlobs.meshPathCount, path)) != NULL) {
@@ -840,7 +840,7 @@ void* lws_mesh_load(const char* baseDir, const char* fname, LPDIRECT3DRMFRAME3 f
     }
 
     if (lwsGlobs.sharedDir) {
-        sprintf(path, "%s%s", lwsGlobs.sharedDir, fname);
+        snprintf(path, sizeof(path), "%s%s", lwsGlobs.sharedDir, fname);
         if ((mesh = pair_table_find(lwsGlobs.meshPathListShared, lwsGlobs.meshPathCountShared, fname)) != NULL) {
             mesh_clone(mesh, frame);
             return mesh;
@@ -901,7 +901,7 @@ void lws_frames_create(LwsInfo* scene, LwsNode* node, LPDIRECT3DRMFRAME3 parent,
     (*frameCount)++;
 
     // STRING: LEGORR 0x004aab6c
-    sprintf((char*)name, "%s_%0.2i", node->name, node->reference);
+    snprintf((char*)name, sizeof(name), "%s_%0.2i", node->name, node->reference);
     for (s = name; '\0' != *s; s++) {
         if (!isprint(*s)) *s = '_';
     }

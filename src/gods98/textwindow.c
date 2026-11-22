@@ -130,7 +130,9 @@ void text_window_vprintf(TextWindow* window, unsigned int page,
     char buffer[TEXTWINDOW_MAXSTRINGLEN];
     unsigned int len, loop, count = 0;
 
-    len = vsprintf(buffer, msg, args);
+    len = vsnprintf(buffer, sizeof(buffer), msg, args);
+    /* A truncated line holds only what fits. */
+    if (len >= sizeof(buffer)) len = sizeof(buffer) - 1;
     for (loop = 0; loop < len; loop++) {
         if (count == page) break;
         if (buffer[loop] == '\a') count++;
@@ -154,7 +156,7 @@ void text_window_printf_overlay(TextWindow* window, int oneFrame,
     char buffer[TEXTWINDOW_MAXSTRINGLEN];
 
     va_start(args, msg);
-    vsprintf(buffer, msg, args);
+    vsnprintf(buffer, sizeof(buffer), msg, args);
     va_end(args);
 
     strcpy(window->secondaryBuf, buffer);

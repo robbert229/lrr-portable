@@ -111,7 +111,7 @@ void upgrade_load(Upgrade_Model* upgrades, BlockFile* config,
 
     for (loop = 0; loop < UPGRADE_MAXLEVELS; loop++) {
         // STRING: LEGORR 0x004aa9e8
-        sprintf(levelName, "Level%i%i%i%i", (loop >> 3) & 1, (loop >> 2) & 1,
+        snprintf(levelName, sizeof(levelName), "Level%i%i%i%i", (loop >> 3) & 1, (loop >> 2) & 1,
                 (loop >> 1) & 1, loop & 1);
         // STRING: LEGORR 0x004aa9dc
         arrayItem = block_subgroup(config, string_path_join(gameName, "Upgrades", levelName, NULL));

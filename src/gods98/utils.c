@@ -79,7 +79,7 @@ char* formatted_text_escape_decode_and_emit(const char* format, ...)
      * formatted_text_buffer_build (finding 505), so this call's target name
      * differs in the comparison. */
     va_start(args, format);
-    vsprintf(line, format, args);
+    vsnprintf(line, sizeof(line), format, args);
     va_end(args);
 
     for (t = decoded, s = line; *s != '\0'; t++, s++) {

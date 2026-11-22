@@ -312,7 +312,7 @@ Image* Image_LoadBMPScaled(const char* fileName, unsigned int width,
         }
 
         // STRING: LEGORR 0x004aae7c
-        sprintf(name, "Data\\%s", fileName);
+        snprintf(name, sizeof(name), "Data\\%s", fileName);
 
         memset(&ddsd, 0, sizeof(ddsd));
         ddsd.dwSize = sizeof(ddsd);

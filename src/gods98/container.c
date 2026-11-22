@@ -483,13 +483,13 @@ Container* Container_Load(Container* parent, const char* filename,
 
         strcpy(baseName, name);
         argc = sound_variant_split(name, argv, "\\");
-        sprintf(path, "%s\\%s.%s", baseName, argv[argc - 1],
+        snprintf(path, sizeof(path), "%s\\%s.%s", baseName, argv[argc - 1],
                 containerGlobs.extensionName[Container_FromActivity]);
         if (config = block_open(path)) {
             BlockRec* arrayItem;
             float scale;
 
-            sprintf(path,
+            snprintf(path, sizeof(path),
                     "%s%s%s",
                     containerGlobs.gameName,
                     // STRING: LEGORR 0x004aab18
@@ -509,7 +509,7 @@ Container* Container_Load(Container* parent, const char* filename,
                         actname++;
                     }
 
-                    sprintf(tempString,
+                    snprintf(tempString, sizeof(tempString),
                             // STRING: LEGORR 0x004aab04
                             "%s%s%s%s%s",
                             containerGlobs.gameName, "::", arrayItem->value,
@@ -522,9 +522,9 @@ Container* Container_Load(Container* parent, const char* filename,
                         int lws, loop;
                         char* sample;
 
-                        sprintf(path, "%s\\%s", baseName, fileName);
+                        snprintf(path, sizeof(path), "%s\\%s", baseName, fileName);
 
-                        sprintf(tempString, "%s%s%s%s%s", containerGlobs.gameName,
+                        snprintf(tempString, sizeof(tempString), "%s%s%s%s%s", containerGlobs.gameName,
                                 "::", arrayItem->value, "::",
                                 // STRING: LEGORR 0x004aaaf8
                                 "TRANSCOEF");
@@ -532,7 +532,7 @@ Container* Container_Load(Container* parent, const char* filename,
                                                   ? block_get_strptr(config, tempString)
                                                   : "");
 
-                        sprintf(tempString, "%s%s%s%s%s", containerGlobs.gameName,
+                        snprintf(tempString, sizeof(tempString), "%s%s%s%s%s", containerGlobs.gameName,
                                 "::", arrayItem->value, "::",
                                 // STRING: LEGORR 0x004aaaf0
                                 "TRIGGER");
@@ -540,19 +540,19 @@ Container* Container_Load(Container* parent, const char* filename,
                                            ? block_get_strptr(config, tempString)
                                            : "");
 
-                        sprintf(tempString, "%s%s%s%s%s", containerGlobs.gameName,
+                        snprintf(tempString, sizeof(tempString), "%s%s%s%s%s", containerGlobs.gameName,
                                 "::", arrayItem->value, "::",
                                 // STRING: LEGORR 0x004aaae8
                                 "LWSFILE");
                         lws = (block_get_bool_path(config, tempString) == 1);
 
-                        sprintf(tempString, "%s%s%s%s%s", containerGlobs.gameName,
+                        snprintf(tempString, sizeof(tempString), "%s%s%s%s%s", containerGlobs.gameName,
                                 "::", arrayItem->value, "::",
                                 // STRING: LEGORR 0x004aaae0
                                 "LOOPING");
                         loop = (block_get_bool_path(config, tempString) != 0);
 
-                        sprintf(tempString, "%s%s%s%s%s", containerGlobs.gameName,
+                        snprintf(tempString, sizeof(tempString), "%s%s%s%s%s", containerGlobs.gameName,
                                 "::", arrayItem->value, "::",
                                 // STRING: LEGORR 0x004aaad8
                                 "SAMPLE");
@@ -568,7 +568,7 @@ Container* Container_Load(Container* parent, const char* filename,
                 } while (arrayItem = block_next_equal_key(arrayItem));
             }
 
-            sprintf(path, "%s%s%s", containerGlobs.gameName, "::",
+            snprintf(path, sizeof(path), "%s%s%s", containerGlobs.gameName, "::",
                     // STRING: LEGORR 0x004aaad0
                     "SCALE");
             scale = (float)atof(block_get_strptr(config, path)
@@ -586,14 +586,14 @@ Container* Container_Load(Container* parent, const char* filename,
         cont = Container_Create(parent);
         cont->type = type;
         // STRING: LEGORR 0x004aaac8
-        sprintf(path, "%s.%s", name, containerGlobs.extensionName[Container_Frame]);
+        snprintf(path, sizeof(path), "%s.%s", name, containerGlobs.extensionName[Container_Frame]);
         Container_FrameLoad(path, cont->activityFrame);
         return cont;
     } else if (type == Container_Mesh) {
         void* fileData;
         unsigned long fileSize;
 
-        sprintf(path, "%s.%s", name, containerGlobs.extensionName[Container_Mesh]);
+        snprintf(path, sizeof(path), "%s.%s", name, containerGlobs.extensionName[Container_Mesh]);
         if (fileData = file_load_binary(path, (unsigned int*)&fileSize)) {
             LPDIRECT3DRMMESH mesh;
 
@@ -612,7 +612,7 @@ Container* Container_Load(Container* parent, const char* filename,
 
         cont = Container_Create(parent);
         cont->type = Container_Anim;
-        sprintf(path, "%s.%s", name, containerGlobs.extensionName[Container_Anim]);
+        snprintf(path, sizeof(path), "%s.%s", name, containerGlobs.extensionName[Container_Anim]);
         if (animClone = Container_LoadAnimSet(path, cont->activityFrame, &frameCount,
                                               type == Container_LWS, looping)) {
             Container_Frame_SetAppData(cont->activityFrame, cont, animClone, name,
@@ -985,23 +985,23 @@ char* Container_FormatPartName(Container* cont, const char* partname,
 
     if (anim_clone_is_lws(Container_Frame_GetAnimClone(frame))) {
         if (instance) {
-            sprintf(containerPartName, "%s_%0.2i", partname, (int)*instance);
+            snprintf(containerPartName, sizeof(containerPartName), "%s_%0.2i", partname, (int)*instance);
         } else {
             // STRING: LEGORR 0x004aab64
-            sprintf(containerPartName, "%s_??", partname);
+            snprintf(containerPartName, sizeof(containerPartName), "%s_??", partname);
         }
     } else {
-        sprintf(name, "%s", Container_Frame_GetAnimSetFileName(frame));
+        snprintf(name, sizeof(name), "%s", Container_Frame_GetAnimSetFileName(frame));
         strlwr(name);
         for (s = t = name; *s != '\0'; s++) {
             if (*s == '\\') t = s + 1;
         }
         if (instance) {
             // STRING: LEGORR 0x004aab44
-            sprintf(containerPartName, "xf_????????_%s_%s_%0.2d_DDc_00", partname, t, (int)*instance);
+            snprintf(containerPartName, sizeof(containerPartName), "xf_????????_%s_%s_%0.2d_DDc_00", partname, t, (int)*instance);
         } else {
             // STRING: LEGORR 0x004aab28
-            sprintf(containerPartName, "xf_????????_%s_%s_??_DDc_00", partname, t);
+            snprintf(containerPartName, sizeof(containerPartName), "xf_????????_%s_%s_??_DDc_00", partname, t);
         }
     }
 
@@ -2244,7 +2244,7 @@ int Container_AddActivity2(Container* cont, const char* filename,
     char xFile[512];
     struct AnimClone* animClone;
 
-    sprintf(xFile, "%s.%s", filename,
+    snprintf(xFile, sizeof(xFile), "%s.%s", filename,
             containerGlobs.extensionName[Container_Anim]);
     if (lpD3DRM()->CreateFrame(cont->hiddenFrame,
                                &frame) == D3DRM_OK) {
@@ -2308,7 +2308,7 @@ LPDIRECT3DRMFRAME3 Container_Frame_Find(Container* cont, const char* findName,
             if (len) {
                 name = (char*)malloc(len + 1);
                 frame->GetName(&len, name);
-                sprintf(buffer, "%s_%s", CONTAINER_ACTIVITYFRAMEPREFIX,
+                snprintf(buffer, sizeof(buffer), "%s_%s", CONTAINER_ACTIVITYFRAMEPREFIX,
                         findName);
                 if (stricmp(name, buffer) == 0) foundFrame = frame;
                 free(name);
@@ -2481,9 +2481,9 @@ void Container_Frame_FormatName(LPDIRECT3DRMFRAME3 frame, const char* msg, ...)
     /* The original walks the same va_list twice, which Win32's pointer
      * va_list allows; x86-64 needs a copy. */
     va_copy(again, args);
-    len = vsprintf(buffer, msg, args);
+    len = vsnprintf(buffer, sizeof(buffer), msg, args);
     name = (char*)malloc(len + 1);
-    vsprintf(name, msg, again);
+    vsnprintf(name, len + 1, msg, again);
     va_end(again);
     va_end(args);
 
@@ -2740,7 +2740,7 @@ static HRESULT Container_TextureLoadCallback(char* name, void* data,
                     strcpy(path, name);
                 }
             } else {
-                sprintf(path, "%s\\%s", containerGlobs.sharedDir, name);
+                snprintf(path, sizeof(path), "%s\\%s", containerGlobs.sharedDir, name);
             }
 
             *texture = NULL;

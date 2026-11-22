@@ -192,7 +192,7 @@ void objinfo_load_hunger_images(struct BlockRec* config, const char* gameName)
 
     for (loop = 0; loop < OBJINFO_HUNGERIMAGES; loop++) {
         // STRING: LEGORR 0x004a8350
-        sprintf(name, "HungerImage%i", loop);
+        snprintf(name, sizeof(name), "HungerImage%i", loop);
         objInfoGlobs.HungerImages[loop] = image_load_bmp_scaled(block_get_strptr(config, string_path_join(gameName, "ObjInfo",
                 // STRING: LEGORR 0x004a8340
                 "HungerImages", name, NULL)), 0, 0);

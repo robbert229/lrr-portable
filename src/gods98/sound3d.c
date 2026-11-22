@@ -333,7 +333,7 @@ int sound_bank_entry_load(const char* name, int streamed, int looping,
 
     if (s_bank_sound_on && sound_bank_free_slot_find(&handle)) {
         s_sound3d.soundTable[handle].flags = 0;
-        sprintf(fileName,
+        snprintf(fileName, sizeof(fileName),
                 // STRING: LEGORR 0x004aae5c
                 "%s.wav",
                 name);

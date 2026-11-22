@@ -8,7 +8,7 @@
  * original's for a given seed.
  *
  * Include this header after the C library headers: it redefines rand,
- * srand and vsprintf. */
+ * srand and vsnprintf. */
 #ifndef LEGORRR_CRT_VC5NAMES_H
 #define LEGORRR_CRT_VC5NAMES_H
 
@@ -146,15 +146,15 @@ inline void crt_splitpath(const char* path, char* drive, char* dir,
 }
 #define _splitpath crt_splitpath
 
-/* _vsprintf: the host's vsprintf with VC5 LIBC's handling of two formats
+/* _vsnprintf: the host's vsnprintf with VC5 LIBC's handling of two formats
  * where hosts differ; other conversions VC5 lacks still reach the host. VC5 has no "b" conversion: it drops the "%"
  * and any flags, width, precision and size before the "b", prints the "b"
  * as text and takes no argument. glibc prints the argument in binary and
  * the UCRT aborts. A "%" whose specification runs into the end of the
  * format prints nothing in VC5; glibc fails the whole call. Info text
- * reaches TextWindow's vsprintf with a "%b" for each image token (#951).
+ * reaches TextWindow's vsnprintf with a "%b" for each image token (#951).
  * A "*" width before a "b" takes an int in VC5 but nothing here. */
-inline int crt_vsprintf(char* buffer, const char* format, va_list args)
+inline int crt_vsnprintf(char* buffer, size_t size, const char* format, va_list args)
 {
     std::string fixed;
     const char* copied = format;
@@ -189,10 +189,10 @@ inline int crt_vsprintf(char* buffer, const char* format, va_list args)
             p = q + 1;
         }
     }
-    if (!changed) return vsprintf(buffer, format, args);
+    if (!changed) return vsnprintf(buffer, size, format, args);
     fixed.append(copied);
-    return vsprintf(buffer, fixed.c_str(), args);
+    return vsnprintf(buffer, size, fixed.c_str(), args);
 }
-#define vsprintf crt_vsprintf
+#define vsnprintf crt_vsnprintf
 
 #endif /* LEGORRR_CRT_VC5NAMES_H */

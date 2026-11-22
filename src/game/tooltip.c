@@ -228,7 +228,7 @@ void tooltip_set_content(int toolTipType, const char* msg, ...)
     va_list args;
 
     va_start(args, msg);
-    vsprintf(buff, msg, args);
+    vsnprintf(buff, sizeof(buff), msg, args);
     va_end(args);
 
     if (buff[0] == '@') {

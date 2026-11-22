@@ -183,7 +183,9 @@ unsigned int font_v_print_f2(Font* font, int x, int y, int render,
     }
     *s = '\0';
 
-    count = vsprintf(line, msgCopy, args);
+    count = vsnprintf(line, sizeof(line), msgCopy, args);
+    /* A truncated line holds only what fits. */
+    if (count >= sizeof(line)) count = sizeof(line) - 1;
     for (loop = 0; loop < count; loop++) {
         if (line[loop] == '\n') {
             if (lineWidth > maxWidth) maxWidth = lineWidth;
