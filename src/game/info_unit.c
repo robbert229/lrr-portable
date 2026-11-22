@@ -183,22 +183,28 @@ void info_set_type_play_always(int type, int on)
 /* Copies the text, turning '_' into a space and "\n" into a newline. A
  * $name$ token, a pointer or an information type, becomes "%b" and its
  * image goes to the trailer after the terminator: the count, then five
- * slots. */
+ * slots. The original stores one byte of each Image pointer, leaves an
+ * unwritten byte for a token that names no image, overruns its eight slots
+ * past the eighth token and its name buffer past 31 characters, and reads
+ * past the text's end for an unclosed token. The port stores each whole
+ * pointer, unaligned, writes nothing for a token without an image, drops the
+ * tokens past the fifth (so every "%b" has its image), truncates the name
+ * and stops at the text's end (PORT-ONLY). */
 // FUNCTION: LEGORR 0x00419530
 void info_compile_text(char* text, char** outText)
 {
     int pointerType;
     unsigned int count;
     int type;
-    char images[8];
+    Image* images[INFO_TEXT_MAXIMAGES];
     char name[32];
     char* d;
     char* p;
-    int image;
+    Image* image;
     unsigned int i;
 
     count = 0;
-    d = *outText = (char*)malloc(strlen(text) + 12);
+    d = *outText = (char*)malloc(strlen(text) + 2 + INFO_TEXT_MAXIMAGES * sizeof(Image*));
 
     while (*text != '\0') {
         if (*text == '_') {
@@ -206,24 +212,27 @@ void info_compile_text(char* text, char** outText)
         } else if (*text == '$') {
             text++;
             i = 0;
-            image = 0;
+            image = NULL;
             p = text;
-            while (*p != '$') {
-                name[i++] = *p++;
+            while (*p != '$' && *p != '\0') {
+                if (i < sizeof(name) - 1) name[i++] = *p;
+                p++;
                 text++;
             }
             name[i] = '\0';
             if (pointer_cursor_config_parse_target(name, &pointerType)) {
-                image = (int)(uintptr_t)indexed_global_value_at_get(pointerType);
+                image = indexed_global_value_at_get(pointerType);
             } else if (info_get_type(name, &type)) {
-                image = (int)(uintptr_t)info_get_image(type);
+                image = info_get_image(type);
             }
-            if (image) {
+            if (image && count < INFO_TEXT_MAXIMAGES) {
                 *d++ = '%';
-                images[count] = (char)image;
-                *d = 'b';
+                images[count] = image;
+                *d++ = 'b';
                 count++;
             }
+            if (*text != '\0') text++;
+            continue;
         } else if (*text == '\\' && text[1] == 'n') {
             *d = '\n';
             text++;
@@ -235,11 +244,11 @@ void info_compile_text(char* text, char** outText)
     }
 
     *d++ = '\0';
-    *d = (char)count;
-    for (i = 0; i < 5; i++) {
-        d++;
-        if (i < count) *d = images[i];
-        else *d = '\0';
+    *d++ = (char)count;
+    for (i = 0; i < INFO_TEXT_MAXIMAGES; i++) {
+        if (i >= count) images[i] = NULL;
+        memcpy(d, &images[i], sizeof(Image*));
+        d += sizeof(Image*);
     }
 }
 
@@ -625,6 +634,7 @@ void info_draw_panel(float elapsed)
 {
     unsigned int len;
     unsigned char* text;
+    Image* images[INFO_TEXT_MAXIMAGES];
 
     if ((infoGlobs.flags & INFO_FLAG_DOCKED) && infoGlobs.infoMessageCount > 0) {
         if (!(panelGlobs.panelTable[INFO_PANEL].flags & PANEL_FLAG_OUT)) panel_state_flags_toggle(INFO_PANEL);
@@ -635,8 +645,11 @@ void info_draw_panel(float elapsed)
             }
             len = strlen((char*)text);
             if (text[len + 1] > 0) {
-                panel_text_window_print_f(panelGlobs.scrollTextWindow, (char*)text, text[len + 2],
-                                          text[len + 3], text[len + 4], text[len + 5], text[len + 6]);
+                /* The trailer's whole image pointers, read unaligned. */
+                memcpy(images, text + len + 2, sizeof(images));
+                panel_text_window_print_f(panelGlobs.scrollTextWindow, (char*)text, (uintptr_t)images[0],
+                                          (uintptr_t)images[1], (uintptr_t)images[2], (uintptr_t)images[3],
+                                          (uintptr_t)images[4]);
             } else {
                 panel_text_window_print_f(panelGlobs.scrollTextWindow, (char*)text);
             }

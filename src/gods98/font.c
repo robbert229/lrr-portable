@@ -18,7 +18,9 @@
 #include "font_link_names.h"
 
 #include <ctype.h>
+#include <inttypes.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -34,6 +36,16 @@ extern "C" {
 #define FONT_TABWIDTH 8
 #define FONT_MAXSTRINGLEN 1024
 #define FONT_MAXLISTS 32
+
+/* "%b"'s image token: "@[0x", one hex digit per nibble of a pointer, "]". */
+#if UINTPTR_MAX > 0xffffffffu
+#define FONT_IMAGEDIGITS 16
+#define FONT_IMAGEFORMAT "@[0x%016" PRIxPTR "]"
+#else
+#define FONT_IMAGEDIGITS 8
+#define FONT_IMAGEFORMAT "@[0x%08" PRIxPTR "]"
+#endif
+#define FONT_IMAGETOKENLEN (FONT_IMAGEDIGITS + 5)
 
 Font* font_load(const char* fname);
 void font_v_get_string_info(Font* font, unsigned int* width,
@@ -140,7 +152,9 @@ unsigned int font_v_print_f2(Font* font, int x, int y, int render,
                              va_list args)
 {
     unsigned int lineWidth, lineHeight, loop, maxWidth, lines, count;
-    unsigned int value, hex, shift;
+    unsigned int hex;
+    uintptr_t address;
+    char c;
     Image* image;
     Point2F pos;
     char line[FONT_MAXSTRINGLEN];
@@ -154,16 +168,12 @@ unsigned int font_v_print_f2(Font* font, int x, int y, int render,
     s = msgCopy;
     while (*msg != '\0') {
         if (*msg == '%' && msg[1] == 'b') {
-            *s++ = '@';
-            *s++ = '[';
-            *s++ = '0';
-            *s++ = 'x';
-            *s++ = *msg;
-            *s++ = '0';
-            *s++ = '.';
-            *s++ = '8';
-            *s++ = 'x';
-            *s = ']';
+            /* PORT-ONLY: the original writes "@[0x%0.8x]", whose eight digits
+             * do not hold a 64-bit Image pointer. The port writes one hex
+             * digit per pointer nibble; the caller passes the Image* as a
+             * uintptr_t. */
+            strcpy(s, FONT_IMAGEFORMAT);
+            s += strlen(FONT_IMAGEFORMAT) - 1;
             msg++;
         } else {
             *s = *msg;
@@ -183,25 +193,29 @@ unsigned int font_v_print_f2(Font* font, int x, int y, int render,
             lines++;
         } else if (line[loop] == '\t') {
             lineWidth += font->tabWidth - (lineWidth % font->tabWidth);
-        } else if (loop < count - 12 && line[loop] == '@' && line[loop + 1] == '[' &&
-                   line[loop + 2] == '0' && line[loop + 3] == 'x' && line[loop + 12] == ']') {
-            value = 0;
-            for (hex = 0, shift = 28; hex < 8; hex++) {
-                value |= ((unsigned char)line[loop + 4 + hex] -
-                          (isdigit((unsigned char)line[loop + 4 + hex]) ? '0' : 'a' - 10)) << shift;
-                shift -= 4;
+        } else if (loop + FONT_IMAGETOKENLEN <= count && line[loop] == '@' && line[loop + 1] == '[' &&
+                   line[loop + 2] == '0' && line[loop + 3] == 'x' &&
+                   line[loop + FONT_IMAGETOKENLEN - 1] == ']') {
+            /* PORT-ONLY: only hex digits make an image address; other text
+             * in this form is drawn as glyphs. */
+            address = 0;
+            for (hex = 0; hex < FONT_IMAGEDIGITS; hex++) {
+                c = line[loop + 4 + hex];
+                if (!isxdigit((unsigned char)c)) break;
+                address = (address << 4) | (uintptr_t)(isdigit((unsigned char)c) ? c - '0' : (c | 0x20) - 'a' + 10);
             }
-            /* A 32-bit image address in the text: no unit writes one, and
-             * a 64-bit pointer does not fit the eight digits (known 32-bit
-             * spot, ADR 0007 decision 4). */
-            if (image = (Image*)(uintptr_t)value) {
+            if (hex < FONT_IMAGEDIGITS) {
+                lineWidth += font_output_char(font, lineWidth + x, y, line[loop], render);
+                continue;
+            }
+            if ((image = (Image*)address)) {
                 pos.x = (float)(lineWidth + x);
                 pos.y = (float)y;
                 lineWidth += image->width;
                 if (image->height > lineHeight) lineHeight = image->height;
                 image_display_scaled(image, NULL, &pos, NULL);
             }
-            loop += 12;
+            loop += FONT_IMAGETOKENLEN - 1;
         } else {
             lineWidth += font_output_char(font, lineWidth + x, y, line[loop], render);
         }
