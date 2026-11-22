@@ -77,14 +77,12 @@ static void slot_path(char* out, size_t size, int slot, const char* ext)
     snprintf(out, size, "Data/Saves/%d.%s", slot, ext);
 }
 
-static unsigned char* read_file(int slot, const char* ext, size_t* size)
+static unsigned char* read_disk_file(const char* path, size_t* size)
 {
-    char path[64];
     FILE* fp;
     long n;
     unsigned char* buf;
 
-    slot_path(path, sizeof(path), slot, ext);
     *size = 0;
     if ((fp = fopen(path, "rb")) == NULL) return NULL;
     fseek(fp, 0, SEEK_END);
@@ -98,6 +96,14 @@ static unsigned char* read_file(int slot, const char* ext, size_t* size)
     fclose(fp);
     if (buf != NULL) *size = (size_t)n;
     return buf;
+}
+
+static unsigned char* read_file(int slot, const char* ext, size_t* size)
+{
+    char path[64];
+
+    slot_path(path, sizeof(path), slot, ext);
+    return read_disk_file(path, size);
 }
 
 static int file_exists_on_disk(int slot, const char* ext)
@@ -750,6 +756,113 @@ static void test_osf_assert(void)
     remove("Data/Saves/assert.osf");
 }
 
+/* ---- the .osf file's records (ObjectRecall.c) ---------------------------- */
+
+static void write_disk_file(const char* path, const unsigned char* bytes, size_t size)
+{
+    FILE* fp = fopen(path, "wb");
+    if (fp == NULL) {
+        CHECK(0, "fixture: cannot write an .osf (no Data/Saves?)");
+        return;
+    }
+    fwrite(bytes, 1, size, fp);
+    fclose(fp);
+}
+
+/* A hand-built .osf, as the original writes it: the magic 0x534f5252
+ * ('RRSO', the bytes "RROS" on disk), a count of two,
+ * then two 0x14-byte entries (abilityFlags, level, customName[12]),
+ * little-endian. */
+static const unsigned char OSF_TWO[8 + 2 * 0x14] = {
+    'R', 'R', 'O', 'S', 0x02, 0x00, 0x00, 0x00,
+    /* entry 0: flags 0x00000123, level 3, "Axle" */
+    0x23, 0x01, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
+    'A', 'x', 'l', 'e', 0, 0, 0, 0, 0, 0, 0, 0,
+    /* entry 1: flags 0x80402010, level 0x01020304, an 11-character name */
+    0x10, 0x20, 0x40, 0x80, 0x04, 0x03, 0x02, 0x01,
+    'S', 'p', 'a', 'r', 'k', 'y', 'B', 'o', 'l', 't', 's', 0,
+};
+
+/* object_recall_serialize writes an entry at its Win32 offsets, and
+ * object_recall_parse reads it back. */
+static void test_osf_record_image(void)
+{
+    ObjectRecall entry, back;
+    unsigned char image[OBJECT_RECALL_IMAGE_SIZE];
+
+    CHECK(OBJECT_RECALL_IMAGE_SIZE == 0x14, "osf image: an entry is 0x14 bytes");
+    object_recall_parse(OSF_TWO + 8 + 0x14, &entry);
+    CHECK(entry.abilityFlags == 0x80402010u, "osf image: abilityFlags at +0x00");
+    CHECK(entry.level == 0x01020304u, "osf image: level at +0x04");
+    CHECK(memcmp(entry.customName, "SparkyBolts", 12) == 0, "osf image: customName at +0x08");
+    memset(image, 0xcc, sizeof(image));
+    object_recall_serialize(&entry, image);
+    CHECK(memcmp(image, OSF_TWO + 8 + 0x14, sizeof(image)) == 0,
+          "osf image: serialize writes the parsed entry's bytes back");
+    memset(&back, 0xcc, sizeof(back));
+    object_recall_parse(image, &back);
+    CHECK(back.abilityFlags == entry.abilityFlags && back.level == entry.level &&
+              memcmp(back.customName, entry.customName, sizeof(back.customName)) == 0,
+          "osf image: parse reads the serialized entry back");
+}
+
+static uint32_t image_count(const unsigned char* osf)
+{
+    return (uint32_t)osf[4] | ((uint32_t)osf[5] << 8) | ((uint32_t)osf[6] << 16) |
+           ((uint32_t)osf[7] << 24);
+}
+
+/* ObjectRecall_LoadRROSFile (00459470) then ObjectRecall_Save (004593e0)
+ * write the same bytes they read. */
+static void test_osf_round_trip(void)
+{
+    unsigned char* bytes;
+    size_t size;
+
+    files_native_set_save_path(NULL);
+    mkdir("Data/Saves", 0755);
+    write_disk_file("Data/Saves/in.osf", OSF_TWO, sizeof(OSF_TWO));
+    CHECK(object_recall_load_rrosfile("Saves\\in.osf") == 1, "osf round trip: the load succeeds");
+    CHECK(object_recall_save("Saves\\out.osf") == 1, "osf round trip: the save succeeds");
+    bytes = read_disk_file("Data/Saves/out.osf", &size);
+    CHECK(bytes != NULL && size == sizeof(OSF_TWO) &&
+              memcmp(bytes, OSF_TWO, sizeof(OSF_TWO)) == 0,
+          "osf round trip: the saved file is byte-identical to the loaded one");
+    free(bytes);
+
+    /* A count that does not match the file's length loads nothing, and the
+     * next save writes an empty table. */
+    write_disk_file("Data/Saves/in.osf", OSF_TWO, sizeof(OSF_TWO) - 0x14);
+    CHECK(object_recall_load_rrosfile("Saves\\in.osf") == 1,
+          "osf mismatch: the load still opens the file");
+    CHECK(object_recall_save("Saves\\out.osf") == 1, "osf mismatch: the save succeeds");
+    bytes = read_disk_file("Data/Saves/out.osf", &size);
+    {
+        static const unsigned char empty[8] = { 'R', 'R', 'O', 'S', 0, 0, 0, 0 };
+        CHECK(bytes != NULL && size == sizeof(empty) && memcmp(bytes, empty, sizeof(empty)) == 0,
+              "osf mismatch: a mismatched file loads no entries");
+    }
+    free(bytes);
+
+    /* A count whose 32-bit image size wraps to the file's length
+     * (0x0ccccccd * 0x14 == 4 mod 2^32) loads nothing either. */
+    {
+        static const unsigned char wrap[12] = { 'R', 'R', 'O', 'S', 0xcd, 0xcc, 0xcc, 0x0c,
+                                                1, 2, 3, 4 };
+        write_disk_file("Data/Saves/in.osf", wrap, sizeof(wrap));
+    }
+    CHECK(object_recall_load_rrosfile("Saves\\in.osf") == 1,
+          "osf wrap: the load still opens the file");
+    CHECK(object_recall_save("Saves\\out.osf") == 1, "osf wrap: the save succeeds");
+    bytes = read_disk_file("Data/Saves/out.osf", &size);
+    CHECK(bytes != NULL && size == 8 && image_count(bytes) == 0,
+          "osf wrap: a count whose size wraps loads no entries");
+    free(bytes);
+    object_recall_reset();
+    remove("Data/Saves/in.osf");
+    remove("Data/Saves/out.osf");
+}
+
 int main(void)
 {
     char cmd[128];
@@ -781,6 +894,8 @@ int main(void)
     test_read_save_files();
     test_save_directory();
     test_osf_assert();
+    test_osf_record_image();
+    test_osf_round_trip();
 
     s_finished = 1;
     if (s_failures != 0) {
