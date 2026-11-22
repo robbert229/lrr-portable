@@ -580,11 +580,13 @@ needs:
 - **Windows:** a ZIP with `LegoRR.exe`, `LICENSE` and, for a shared SDL3,
   `SDL3.dll`.
 
-The icon is original artwork drawn for this repository
-(`packaging/icons/lrr-portable.svg`, LGPL-3.0-or-later); it shares nothing
-with the game's own art, and the repository ships no game data in any package.
-`packaging/icons/regenerate.py` renders the SVG into the macOS bundle's
-`AppIcon.icns`, which is committed.
+The icon is original pixel artwork drawn for this repository
+(`packaging/icons/lrr-portable.svg`, LGPL-3.0-or-later): a drill boring into
+rock and ore. Its composition is styled after the original game's drill icon,
+but it holds none of the game's image data, and the repository ships no game
+data in any package. `packaging/icons/regenerate.py` renders the SVG into the
+macOS bundle's `AppIcon.icns` and the Android launcher icons, and
+`packaging/3ds/regenerate.py` renders the 3DS icon; all are committed.
 
 The application id is `io.github.robbert229.LegoRR`, set once as `LRR_APP_ID`
 in `packaging/CMakeLists.txt` and used by the desktop entry, the AppStream
