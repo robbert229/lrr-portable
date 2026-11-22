@@ -336,6 +336,30 @@ On the SD card, where every lookup is a slow service call, the
 path mapping (`files_native.cpp`) reads each directory once and matches
 case from that listing.
 
+Sleep mode, the HOME menu and the system's exit request reach the game
+through libctru's APT hooks (`src/platform/native/3ds/apthooks.cpp`, adapted
+from isle-portable's). SDL's event pump runs them, because it calls
+`aptMainLoop` every time the game pumps its window messages. They become the
+application lifecycle (`src/platform/native/lifecycle.h`), which the game
+takes as the paths it already has:
+
+- Suspend and resume are losing and regaining focus. A full-screen game
+  never loses focus in the original, so the main loop reads the lifecycle
+  there (`[divergence:suspend-pause]`). The first frame after a resume is
+  inactive, and the level pauses on an inactive frame when
+  `LoseFocusAndPause` is on, which also stops its sounds
+  (docs/divergences.md).
+- Exit is the close request that the window's close button gives, which
+  `WinMain`'s message loop handles, so saves and settings are written as on
+  the desktop.
+
+The main loop already clamps a frame's step to 3 (0.12 s at the original's
+25 frames a second), so the time spent suspended is one clamped step, not a
+jump. Azahar without a HOME menu does not deliver the events, so they have
+been checked only on the desktop (`lifecycle` in ctest). Android's and iOS's
+`SDL_EVENT_WILL_ENTER_BACKGROUND` and `SDL_EVENT_DID_ENTER_FOREGROUND` could
+report the same events.
+
 The icon and banner show the app icon's 40x40 pixel art at whole-number
 scales, so it stays sharp, and the banner sound is original
 (`packaging/3ds/regenerate.py` renders all three). An emulator such as [Azahar](https://azahar-emu.org/) runs

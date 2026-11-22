@@ -283,6 +283,24 @@ reference.
 - **Where:** 132071ef (#865), 5759c088 (#877);
   `src/game/frontend_unit.c`, `src/game/lego_unit.c`.
 
+### Suspending the 3DS pauses the level
+
+- **Original:** a full-screen game never loses focus, and the original ran
+  on PCs, which have no HOME menu or sleep mode.
+- **Port:** on the 3DS, sleep mode and the HOME menu count as losing focus,
+  and returning counts as one frame of it first. The level pauses when the
+  configuration's `LoseFocusAndPause` is on, as it does for the original
+  in a window, and its sounds stop. The player returns to a paused level.
+  The system's exit request closes the game as the window's close button
+  does, so saves and settings are written.
+- **Why:** a level kept running its timers across a suspend, and the
+  player came back to a changed mission.
+- **Configurable:** the pause follows the original's `LoseFocusAndPause`
+  key in `Lego.cfg`; there is no `[tweaks]` key, because without a suspend
+  the port behaves as the original.
+- **Where:** `src/platform/native/lifecycle.cpp`, `src/gods98/main.c`
+  (`[divergence:suspend-pause]`).
+
 ### Front-end timing on elapsed time
 
 - **Original:** the full-screen flip waited for vblank, so per-frame
