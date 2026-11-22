@@ -32,8 +32,9 @@ the game is likely to crash before you end up completing a mission. We are neari
 
 ## Build and run
 
-Requires a legally owned game copy, CMake, a C++ compiler, and SDL3 development
-headers. Game assets are not included. Place the game assets into the 
+Requires a legally owned game copy, CMake, a C++ compiler, and Git. SDL3 comes
+from an installed package when there is one, and is fetched otherwise. Game
+assets are not included. Place the game assets into the 
 `reference` folder.
 
 ```sh
