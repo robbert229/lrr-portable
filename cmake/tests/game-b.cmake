@@ -9,3 +9,8 @@ lrr_unit_test(message_unit SOURCES ${GAME_DIR}/test_message_unit.cpp
 
 # NERPs registers, script argument decoding and timer updates.
 lrr_unit_test(tutorial_script SOURCES ${GAME_DIR}/test_tutorial_script.cpp LABELS tutorial_script)
+
+# Resource quotas, object conditions and timer outcomes.
+lrr_unit_test(objective_unit SOURCES ${GAME_DIR}/test_objective_unit.cpp
+  WRAP legoobject_run_through_lists_skip_upgrade_parts legoobject_position_to_terrain_cell
+  LABELS objective_unit)
