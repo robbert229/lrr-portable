@@ -97,6 +97,12 @@ int main(void)
     CHECK(!display->fullScreen && display->width == 640 && display->height == 480 &&
               display->device[0] == '\0',
           "default: a 640x480 window on the default device");
+    CHECK(text.find("[" LRR_CONFIG_TWEAKS_SECTION "]") != std::string::npos,
+          "default: the [tweaks] section is written");
+    CHECK(text.find("training save") > text.find("[" LRR_CONFIG_TWEAKS_SECTION "]") &&
+              text.find("prompt") != std::string::npos,
+          "default: training save = prompt is written under [tweaks]");
+    CHECK(LRR_GetTrainingSave() == LRR_TRAINING_SAVE_PROMPT, "default: training save prompts");
 
     /* A later run reads the file the user edited. */
     write_text(defaultIni, "[" LRR_CONFIG_SECTION "]\nsavepath = " + root + "/elsewhere/\n");
@@ -154,6 +160,26 @@ int main(void)
     CHECK(!display->fullScreen && display->width == 640 && display->height == 480 &&
               display->device[0] == '\0',
           "display defaults: a 640x480 window on the default device");
+
+    CHECK(LRR_GetTrainingSave() == LRR_TRAINING_SAVE_PROMPT,
+          "training save: a file without the key prompts");
+
+    /* tweaks:Training Save: "off" keeps the original; anything else prompts. */
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nTraining Save = off\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetTrainingSave() == LRR_TRAINING_SAVE_OFF,
+          "training save: off");
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nTraining Save = OFF\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetTrainingSave() == LRR_TRAINING_SAVE_OFF,
+          "training save: off in any case");
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nTraining Save = prompt\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetTrainingSave() == LRR_TRAINING_SAVE_PROMPT,
+          "training save: prompt");
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nTraining Save = bogus\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetTrainingSave() == LRR_TRAINING_SAVE_PROMPT,
+          "training save: an unknown value prompts");
+    write_text(custom, "[" LRR_CONFIG_SECTION "]\nTraining Save = off\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetTrainingSave() == LRR_TRAINING_SAVE_PROMPT,
+          "training save: the key is read from [tweaks], not [legorr]");
 
     /* An explicit file that does not load fails, as isle-portable's does. */
     CHECK(!LRR_LoadConfig((root + "/missing.ini").c_str()), "explicit: a missing file fails");

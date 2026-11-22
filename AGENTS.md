@@ -12,6 +12,11 @@ Open PRs for this work against `develop`.
   `// [library:video]`, `// [library:config]`, `// [library:filesystem]` or
   `// [library:input]`.
   A substitution replaces only the call it marks.
+- **Divergences are listed.** A deliberate change to what the player sees
+  or keeps, compared with the reference binary, is recorded in
+  [docs/divergences.md](docs/divergences.md) with its justification.
+  Prefer a key in `LegoRR.ini`'s `[tweaks]` section that restores the
+  original, and mark the site `// [divergence:<name>]`.
 - **Units keep the original's shape:** their files, function order, names,
   signatures and globals. Within that shape, change code freely for
   correctness, portability and safety.
