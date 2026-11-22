@@ -60,3 +60,6 @@ lrr_unit_test(textwindow SOURCES ${ENGINE_DIR}/test_textwindow.cpp
 
 # Resolve the original key-name table back to DirectInput codes.
 lrr_unit_test(keys SOURCES ${ENGINE_DIR}/test_keys.cpp LABELS keys)
+
+# Read a memory-backed PCM RIFF header and sample data across chunk boundaries.
+lrr_unit_test(soundsys SOURCES ${ENGINE_DIR}/test_soundsys.cpp LABELS soundsys)
