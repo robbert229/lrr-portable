@@ -378,7 +378,15 @@ void camera_update(LegoCamera* cam, Camera_Level* level, float elapsedAbs,
                 ddiscene_object_position_get(cam->contCam, 0,
                                              (float*)&camPos2);
                 vec_sub((float*)&movement, (float*)&camPos2, (float*)&camPos);
-                if ((distance = vec_len((float*)&movement)) > maxMove && distance < 120.0f) {
+                /* PORT-ONLY: skip the move when maxMove is 0 (the game is
+                 * paused, so elapsedInter is 0, and float rounding leaves
+                 * distance a hair above 0): factor = distance / maxMove is
+                 * then infinite, and the root and everything below it go NaN.
+                 * Skipping leaves the camera on its target, set just above.
+                 * miniwin's SetPosition rebuilds the matrix from the old
+                 * one, so a NaN root stayed NaN for the rest of the level. */
+                if ((distance = vec_len((float*)&movement)) > maxMove && distance < 120.0f &&
+                    maxMove != 0.0f) {
                     factor = distance / maxMove;
                     ddiscene_object_facing_pair_get(cont, 0, (float*)&objDirection,
                                                     0);
@@ -388,19 +396,23 @@ void camera_update(LegoCamera* cam, Camera_Level* level, float elapsedAbs,
                     rootDist = vec_len((float*)&movement);
                     zdiff = (float)fabs(cam->trackRadarZoom - startZoom);
                     totalDist = rootDist + zdiff;
-                    vec_normalize((float*)&movement);
-                    vec_scale((float*)&movement, (float*)&movement,
-                              rootDist / totalDist * maxMove);
-                    vec_add((float*)&rootPos, (float*)&rootPos, (float*)&movement);
-                    ddiscene_object_position_set(cam->contRoot, 0, rootPos.x,
-                                                 rootPos.y, rootPos.z);
-                    if (startZoom > cam->trackRadarZoom) {
-                        cam->zoom = startZoom - zdiff / totalDist * maxMove;
-                    } else if (startZoom != cam->trackRadarZoom) {
-                        cam->zoom = startZoom + zdiff / totalDist * maxMove;
+                    /* PORT-ONLY: with totalDist 0 the camera is already on
+                     * its target, and rootDist / totalDist is 0 / 0. */
+                    if (totalDist > 0.0f) {
+                        vec_normalize((float*)&movement);
+                        vec_scale((float*)&movement, (float*)&movement,
+                                  rootDist / totalDist * maxMove);
+                        vec_add((float*)&rootPos, (float*)&rootPos, (float*)&movement);
+                        ddiscene_object_position_set(cam->contRoot, 0, rootPos.x,
+                                                     rootPos.y, rootPos.z);
+                        if (startZoom > cam->trackRadarZoom) {
+                            cam->zoom = startZoom - zdiff / totalDist * maxMove;
+                        } else if (startZoom != cam->trackRadarZoom) {
+                            cam->zoom = startZoom + zdiff / totalDist * maxMove;
+                        }
+                        ddiscene_object_position_set(cam->contCam, cam->contTilt,
+                                                     0.0f, 0.0f, -cam->zoom);
                     }
-                    ddiscene_object_position_set(cam->contCam, cam->contTilt,
-                                                 0.0f, 0.0f, -cam->zoom);
                 }
                 camera_add_rotation(cam, cam->trackRadarRotationSpeed *
                                              elapsedAbs);
