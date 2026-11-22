@@ -29,3 +29,10 @@ lrr_unit_test(collision SOURCES ${GAME_DIR}/test_collision.cpp LABELS collision)
 
 # Construction-zone membership, resource counting, and readiness.
 lrr_unit_test(construction SOURCES ${GAME_DIR}/test_construction.cpp LABELS construction)
+
+# Building refunds are configurable and each building refunds at most once.
+lrr_unit_test(entity_cell_effects SOURCES ${GAME_DIR}/test_entity_cell_effects.cpp
+  WRAP legoobject_position_to_terrain_cell entity_indexed_record_word_at_b0_get
+    entity_indexed_record_word_at_b4_get stats_table_word_at_b8
+    legoobject_build_placement_command_setup legoobject_build_placement_alternate_command_setup
+  LABELS entity_cell_effects)
