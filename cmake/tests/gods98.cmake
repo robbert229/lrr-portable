@@ -50,3 +50,6 @@ lrr_unit_test(files_dispatch SOURCES ${ENGINE_DIR}/test_files_dispatch.cpp LABEL
 
 # Check texture sequence names across zero padding and a decimal carry.
 lrr_unit_test(mesh_unit SOURCES ${ENGINE_DIR}/test_mesh_unit.cpp LABELS mesh_unit)
+
+# Decode disjoint palette packets and verify the RGB565 lookup entries.
+lrr_unit_test(flic_unit SOURCES ${ENGINE_DIR}/test_flic_unit.cpp LABELS flic_unit)
