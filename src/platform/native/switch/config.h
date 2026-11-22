@@ -6,6 +6,13 @@
 
 #include <dictionary.h>
 
+#include "platform/native/config.h"
+
+/* The default 3D device (LRR_Default3DDevice): SDL GPU. Miniwin builds no
+ * software renderer here, so SDL GPU is the only device that draws the
+ * level. */
+#define NX_DEFAULT_3D_DEVICE LRR_DEVICE_SDLGPU
+
 void NX_SetupDefaultConfigOverrides(dictionary* p_dictionary);
 
 #endif /* LEGORRR_PLATFORM_NATIVE_NX_CONFIG_H */

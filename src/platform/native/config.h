@@ -44,8 +44,8 @@
 
 /* The display settings, in place of the dialog's choices. device is a 3D
  * device's description as DirectDraw.c lists it, e.g. "Miniwin driver
- * (Miniwin Emulation)"; empty selects the device the dialog would, the last
- * hardware device. The resolution must be one of Init.c's valid modes
+ * (Miniwin Emulation)"; empty selects the platform's default device
+ * (LRR_ChooseDevice). The resolution must be one of Init.c's valid modes
  * (640x480, and 800x600 or 1024x768 with -debug); otherwise the first
  * valid mode is used. */
 struct LRR_DisplayConfig {
@@ -54,6 +54,47 @@ struct LRR_DisplayConfig {
     int height;
     char device[256];
 };
+
+/* The 3D devices, by their descriptions as DirectDraw.c lists them. */
+#define LRR_DEVICE_SDLGPU "Miniwin driver (SDL3 GPU HAL)"
+#define LRR_DEVICE_SOFTWARE "Miniwin driver (Miniwin Emulation)"
+
+/* A 3D device the [library:config] substitution in Init.c can choose:
+ * its description as DirectDraw.c lists it, whether it draws the level
+ * (miniwin's Miniwin_DeviceDrawsImmediateMode: the level is drawn in
+ * immediate mode, and a device without it shows no 3D), and whether setting
+ * the display up on it failed. */
+struct LRR_DeviceCandidate {
+    const char* desc;
+    bool drawsLevel;
+    bool failed;
+};
+
+/* The index of the device to use, in place of the dialog's choice, by
+ * capability, never by the device's position in miniwin's list:
+ * - `configured` (legorr:3D Device), when it is listed: the file wins, with
+ *   a warning when the device cannot draw the level;
+ * - else `platformDefault` (LRR_Default3DDevice()), when it is listed and
+ *   draws the level;
+ * - else the first device that draws the level;
+ * - else `platformDefault`, else the first device, so the game still
+ *   starts, without 3D, and logs it.
+ * A failed device is never chosen; -1 when no device is left. The choice,
+ * and each step past `configured` or `platformDefault`, is logged. */
+int LRR_ChooseDevice(const LRR_DeviceCandidate* devices, unsigned int count,
+                     const char* configured, const char* platformDefault);
+
+/* Marks devices[failed] failed, as the display could not be set up on it,
+ * logs it, and chooses again with legorr:3D Device and the platform's
+ * default (LRR_ChooseDevice). */
+int LRR_ChooseDeviceAfterFailure(LRR_DeviceCandidate* devices, unsigned int count, unsigned int failed);
+
+/* This platform's default 3D device, used when legorr:3D Device is empty
+ * or names a device that is not listed or cannot draw the level. SDL GPU
+ * where the platform has no override in its config.h (the desktop: Vulkan,
+ * Metal or Direct3D 12), falling back to the first device that draws, the
+ * software renderer, where SDL GPU cannot create a device. */
+const char* LRR_Default3DDevice();
 
 /* tweaks:Training Save (docs/divergences.md, "Save after a training
  * mission"). The original shows no rewards screen, and so no Save button,
@@ -75,7 +116,7 @@ enum LRR_TrainingSave {
 bool LRR_LoadConfig(const char* iniPath);
 
 /* The display settings LRR_LoadConfig read, or the defaults before it
- * runs: a 640x480 window on the dialog's default device. */
+ * runs: a 640x480 window on the platform's default device. */
 const LRR_DisplayConfig* LRR_GetDisplayConfig();
 
 /* The tweaks:Training Save setting LRR_LoadConfig read, or the default,

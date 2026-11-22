@@ -97,10 +97,17 @@ isle-portable does for Lego Island's `CONFIG.EXE`:
   800x600 and 1024x768 work with `-debug`; any other size falls back to
   640x480.
 - `3d device`: a device as the original's dialog listed it, such as
-  `Miniwin driver (Miniwin Emulation)` (the software renderer),
   `Miniwin driver (SDL3 GPU HAL)` (the GPU, through SDL GPU) or
-  `Miniwin driver (Miniwin Paletted Software)`. Empty picks the default
-  device, the software renderer.
+  `Miniwin driver (Miniwin Emulation)` (the software renderer). Empty (the
+  default) picks the platform's default device. On the desktop that is SDL
+  GPU when it can create a device (a Vulkan, Metal or Direct3D 12 driver),
+  and the software renderer otherwise, for example on SDL's offscreen or
+  dummy video driver. A device named here wins; one that isn't available
+  falls back to the default. The OpenGL and paletted devices don't draw the
+  level yet, so naming one shows no 3D, and the log says so. If the display
+  can't be set up on the chosen device, the port logs it and tries the next
+  one. The `-best` flag keeps the original's choice, the last hardware
+  device.
 
 The `[tweaks]` section switches the port's deliberate changes to the
 original game:
