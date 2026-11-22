@@ -359,6 +359,10 @@ jobs:
         working-directory: packaging/android
         run: ./gradlew --no-daemon assembleDebug
 
+      # The licence and notices inside, nothing off the allow-list.
+      - name: Check the debug APK
+        run: python3 tools/check_package.py packaging/android/app/build/outputs/apk/debug/app-debug.apk
+
       # Debug-signed (Android's debug key), for testing: see
       # docs/building.md, "Android", for the game data and signing.
       - name: Upload the debug APK

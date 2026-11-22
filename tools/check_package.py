@@ -4,7 +4,7 @@
 
     tools/check_package.py [--require NAME]... PACKAGE...
 
-A PACKAGE is a .zip, a .tar.gz, an .AppImage (extracted with its own
+A PACKAGE is a .zip, an .apk, a .tar.gz, an .AppImage (extracted with its own
 --appimage-extract, so only on a host that can run it), a .dmg (listed with
 7z), a .flatpak bundle (imported with flatpak and listed with ostree), or a
 directory such as a mounted disk image.
@@ -61,6 +61,17 @@ ALLOWED = [
     r"files/manifest\.json",
     rf"files/share/app-info/xmls/{APP_ID}\.xml\.gz",
     rf"files/share/app-info/icons/flatpak/[^/]+/{APP_ID}\.png",
+    # Android (an APK): the manifest, code, resources, the native libraries
+    # per ABI, the signature, and the notices under assets/.
+    r"AndroidManifest\.xml",
+    r"classes[0-9]*\.dex",
+    r"resources\.arsc",
+    r"res/(drawable|mipmap)[^/]*/[^/]+\.(png|webp|xml)",
+    r"lib/(arm64-v8a|armeabi-v7a|x86|x86_64)/lib(LegoRR|SDL3|c\+\+_shared)\.so",
+    r"META-INF/(MANIFEST\.MF|[^/]+\.(SF|RSA|EC|DSA)|com/android/build/gradle/app-metadata\.properties)",
+    r"assets/(LICENSE|THIRD-PARTY-NOTICES\.txt)",
+    # Nintendo 3DS: the homebrew .3dsx and the installable .cia.
+    r"LegoRR\.(3dsx|cia)",
     # macOS: the bundle, the disk image's Applications link and HFS+ entries.
     r"LegoRR\.app/Contents/(Info\.plist|PkgInfo|MacOS/LegoRR)",
     r"LegoRR\.app/Contents/Resources/AppIcon\.icns",
@@ -183,7 +194,7 @@ def list_package(path):
     name = path.name.lower()
     if path.is_dir():
         return list_directory(path)
-    if name.endswith(".zip"):
+    if name.endswith((".zip", ".apk")):
         return list_zip(path)
     if name.endswith((".tar.gz", ".tgz")):
         return list_tar(path)

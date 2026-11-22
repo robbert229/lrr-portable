@@ -130,6 +130,31 @@ class PackageTests(unittest.TestCase):
                 archive.addfile(info, io.BytesIO(b"x"))
         self.assertEqual(self.check(".tar.gz", data.getvalue()), [])
 
+    def test_an_apk_passes(self):
+        data = io.BytesIO()
+        with zipfile.ZipFile(data, "w") as archive:
+            for name in ["AndroidManifest.xml", "classes.dex", "classes2.dex",
+                         "resources.arsc", "res/mipmap-hdpi-v4/ic_launcher.png",
+                         "lib/arm64-v8a/libLegoRR.so", "lib/arm64-v8a/libSDL3.so",
+                         "lib/x86_64/libc++_shared.so", "META-INF/CERT.RSA",
+                         "META-INF/CERT.SF", "META-INF/MANIFEST.MF",
+                         "assets/LICENSE", "assets/THIRD-PARTY-NOTICES.txt"]:
+                archive.writestr(name, b"x")
+        self.assertEqual(self.check(".apk", data.getvalue()), [])
+
+    def test_an_apk_with_game_data_fails(self):
+        data = io.BytesIO()
+        with zipfile.ZipFile(data, "w") as archive:
+            for name in ["AndroidManifest.xml", "assets/LICENSE",
+                         "assets/THIRD-PARTY-NOTICES.txt", "assets/LegoRR0.wad"]:
+                archive.writestr(name, b"x")
+        self.assertEqual(self.check(".apk", data.getvalue()),
+                         ["assets/LegoRR0.wad: game data (a WAD archive)"])
+
+    def test_a_3ds_zip_passes(self):
+        names = ["LegoRR.3dsx", "LegoRR.cia", "LICENSE.txt", "THIRD-PARTY-NOTICES.txt"]
+        self.assertEqual(self.check(".zip", zip_package(names)), [])
+
     def test_missing_notices_fail(self):
         found = self.check(".zip", zip_package(["LegoRR.exe", "LICENSE.txt"]))
         self.assertEqual(found, ["missing the third-party notices"])

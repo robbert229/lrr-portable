@@ -150,6 +150,17 @@ Windows (MinGW-w64 builds): the program links the GCC runtime libraries
 (MIT licence, https://www.mingw-w64.org) statically, and SDL3.dll ships
 beside it.
 
+Android (the APK): SDL3's Java classes and libSDL3.so (zlib, above) and
+LLVM's libc++ (libc++_shared.so; Apache License 2.0 with LLVM Exceptions,
+https://llvm.org/LICENSE.txt) ship inside it.
+
+Nintendo 3DS (.3dsx and .cia): the program links devkitPro's libctru and
+citro3d (both under the zlib licence, as SDL's text above, with their
+authors' copyright: https://github.com/devkitPro/libctru and
+https://github.com/devkitPro/citro3d), and devkitARM's newlib C library and
+GCC runtime libraries (newlib's permissive licences, and the GCC Runtime
+Library Exception).
+
 Linux AppImage: the image starts through the AppImage type 2 runtime
 (MIT licence, https://github.com/AppImage/type2-runtime).
 

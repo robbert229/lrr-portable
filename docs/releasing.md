@@ -33,6 +33,15 @@ The game reports its version in two places:
   `LegoRR.exe --version | more`, to see the output.
 - Every run logs `lrr-portable <version>` at start-up.
 
+`--version` works on the desktop builds (Windows, macOS, Linux, FreeBSD).
+The Android app (`libLegoRR.so`, started by SDL's activity) and the 3DS
+`.3dsx`/`.cia` (started by the Homebrew Launcher or the HOME menu) get no
+command line from the player, so there the version is in the start-up log
+(`adb logcat` on Android), the APK's `versionName` and the `.cia`'s title
+version, which `packaging/android` and `packaging/3ds` take from
+`project(VERSION)`. On the web, `--version` doesn't apply either; the log
+line goes to the browser console.
+
 `tools/version.cmake` writes the reported version at every build:
 
 | Build | Reports |
@@ -58,6 +67,8 @@ workflows that build every pull request, and attaches these:
 | `lrr-portable-<v>-Darwin-arm64.dmg`, `-Darwin-x86_64.dmg` | `native-hosts`, macOS jobs |
 | `lrr-portable-<v>-Linux-x86_64.AppImage`, `.tar.gz` | `native-packages`, `linux-x86_64` |
 | `lrr-portable-<v>-Linux-x86_64.flatpak`, `-aarch64.flatpak` | `native-packages`, Flatpak jobs |
+| `lrr-portable-<v>-Android-debug-test.apk` (test build) | `native-hosts`, `android` |
+| `lrr-portable-<v>-3DS-homebrew-test.zip` (test build) | `native-hosts`, `nintendo-3ds`, zipped by the release workflow |
 | `SHA256SUMS` | the release workflow |
 
 A pull request that changes `release.yml`, the release tools, the two
@@ -74,6 +85,27 @@ it runs without the Visual C++ Redistributable installed. Each DMG holds
 `LegoRR.app`, with the licence and notices in `Contents/Resources` and
 beside the app. The Linux packages hold them in `share/doc/lrr-portable`.
 
+The two **test builds** are labelled as such in their names and in the
+notes:
+
+- **Android:** the debug APK, signed with the CI run's throwaway debug
+  key. A later build can't install over it without an uninstall, which
+  deletes the app's files and saves. `app/build.gradle` copies `LICENSE` and
+  `THIRD-PARTY-NOTICES.txt` into its `assets/`, and the `android` job checks
+  the APK with `tools/check_package.py`. A signed release APK needs a
+  release keystore and its passwords as secrets, which is the owner's
+  decision (docs/building.md, "Android"). Until then the debug APK is the
+  only Android build there is.
+- **Nintendo 3DS:** `LegoRR.3dsx` and `LegoRR.cia` in a ZIP with
+  `LICENSE.txt` and `THIRD-PARTY-NOTICES.txt`, since neither format has room
+  for loose files. Both are homebrew, unsigned by Nintendo; the `.cia` needs
+  custom firmware to install. Neither carries a RomFS, which the release
+  workflow checks, so they hold only code, the icon and the banner, all
+  original.
+
+To leave either out of a release, drop its `take` or `zip` line in
+`release.yml` and its row from the changelog.
+
 These are not shipped:
 
 - **MinGW64 Windows ZIP.** CI still builds it, but it duplicates the MSVC
@@ -88,8 +120,11 @@ These are not shipped:
      sends them. GitHub Pages can't set these headers; Cloudflare Pages or
      Netlify can, through a `_headers` file. A service worker that adds
      them, such as coi-serviceworker, is the GitHub Pages workaround.
-  3. **A way to load the player's own game files.** Nothing does this yet
-     (#907, #908), and the site must never host the game data.
+  3. **The player's own game files.** The build streams them from a host
+     (#908, `tools/web_manifest.py`), but a public site must never host
+     the game data. So a hosted version needs a way to load files from
+     the player's machine, which nothing does yet; until then, the web
+     build is for people who host it with their own copy.
 
   Until then, the `LegoRR-web` artifact of `native-hosts` is for developers.
 
@@ -116,6 +151,10 @@ fails before you tag.
    - check that `LegoRR --version` prints the version you mean to tag.
      The dry run's version carries `-dev+g<commit>`; only the tagged build
      prints the plain version.
+
+   The test builds, if they ship, get a lighter check: install the APK on
+   an Android device or emulator and reach the main menu, and start the
+   `.3dsx` on a New 3DS (or the Azahar emulator) and reach the main menu.
 4. **Update `docs/divergences.md`.** Every user-facing change merged since
    the last release must have its entry.
 5. **Update `CHANGELOG.md`.**

@@ -130,8 +130,10 @@ jobs:
 
       # The release ships these, and only these: the MSVC ZIPs (the MinGW64
       # one duplicates x64), the DMGs, the Linux TGZ and AppImage, and both
-      # Flatpaks, renamed to carry the version. FreeBSD has no package, and
-      # the web build is not shipped (docs/releasing.md).
+      # Flatpaks, renamed to carry the version; and two test builds, named
+      # as such: Android's debug-signed APK, and the 3DS .3dsx and .cia in a
+      # ZIP with the licence and notices. FreeBSD has no package, and the
+      # web build is not shipped (docs/releasing.md).
       - name: Collect the release assets
         run: |
           set -euo pipefail
@@ -152,6 +154,23 @@ jobs:
             bundle="$(find artifacts -type f -name "lrr-portable-Linux-$arch.flatpak" | head -n 1)"
             take "${bundle#artifacts/}" "lrr-portable-$VERSION-Linux-$arch.flatpak"
           done
+          take "LegoRR-android-debug/app-debug.apk" "lrr-portable-$VERSION-Android-debug-test.apk"
+          # The 3DS builds carry no RomFS (packaging/3ds), so they hold code,
+          # the icon and the banner only; the ZIP adds the licence and notices.
+          python3 - artifacts/LegoRR-3ds/LegoRR.3dsx <<'PY'
+          import struct, sys
+          data = open(sys.argv[1], "rb").read()
+          assert data[:4] == b"3DSX", "not a 3dsx"
+          header = struct.unpack("<H", data[4:6])[0]
+          romfs = struct.unpack("<I", data[40:44])[0] if header >= 44 else 0
+          sys.exit("LegoRR.3dsx carries a RomFS" if romfs else 0)
+          PY
+          dir3ds="$RUNNER_TEMP/lrr-portable-$VERSION-3DS"
+          mkdir -p "$dir3ds"
+          cp artifacts/LegoRR-3ds/LegoRR.3dsx artifacts/LegoRR-3ds/LegoRR.cia "$dir3ds/"
+          cp LICENSE "$dir3ds/LICENSE.txt"
+          cp THIRD-PARTY-NOTICES.txt "$dir3ds/"
+          (cd "$RUNNER_TEMP" && zip -qr "$GITHUB_WORKSPACE/release/lrr-portable-$VERSION-3DS-homebrew-test.zip" "lrr-portable-$VERSION-3DS")
           chmod +x release/*.AppImage
           ls -l release
 
