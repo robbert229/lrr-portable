@@ -14,6 +14,8 @@ unit conversion and the search tools) remains on the `decomp` branch (ADR 0007).
 | `rrlwo.py` | Converts `.lwo` models to glTF 2.0 (below) |
 | `rrae.py` | Extracts the `.ae` entity activity tables from the shipped WADs; ground truth for `test_entity.cpp` |
 | `migrate_portable_save.py` | Copies an old portable `.sav` into the retail header format |
+| `web_manifest.py` | Lists the game files the web build streams (`LegoRR.manifest`) from a game directory, at deploy time ([Streaming the game data](../docs/building.md#streaming-the-game-data)) |
+| `serve_web.py` | Serves the web build on localhost with cross-origin isolation; `--data GAME_DIR` also serves the game data with range requests and the manifest |
 | `dat_inventory.py`, `layout_decompiles.py` | Index and lay out the Ghidra corpus in `docs/decompiles/` |
 | `ghidra/` | Ghidra scripts: function naming and the call graph in `docs/coverage/call-graph/` |
 | `compat/` | The A.2 harness for running the shipped `LegoRR.exe` ([README](compat/README.md)) |

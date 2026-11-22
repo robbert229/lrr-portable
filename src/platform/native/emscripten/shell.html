@@ -3,8 +3,11 @@
 <!-- The web build's page (LegoRR.html): one canvas, which SDL fills with
      each frame the game's worker thread presents. CSS sizes the canvas at
      the game's 4:3, and SDL takes the window's size from it (external
-     sizing) and scales the game's display to it. The game data is mounted
-     at /LegoRR; this page brings none (issues #907, #908). -->
+     sizing) and scales the game's display to it. The game data is streamed
+     from the host the build names (LRR_EMSCRIPTEN_HOST) and mounted at
+     /LegoRR; this page brings none (issues #907, #908). The game dispatches
+     "dataProgress" events on the canvas while it fetches the WADs, and
+     "dataReady" when it has the data, or "dataError" when it cannot. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -40,6 +43,16 @@
       Module.setStatus('The game stopped: ' + what);
     },
   };
+  // The game fetches its WADs, tens of megabytes, before its first frame.
+  Module.canvas.addEventListener('dataProgress', function (event) {
+    Module.setStatus('Fetching ' + event.detail.name + ': ' + event.detail.progress + '%');
+  });
+  Module.canvas.addEventListener('dataReady', function () {
+    Module.setStatus('');
+  });
+  Module.canvas.addEventListener('dataError', function (event) {
+    Module.setStatus('The game data is missing: ' + event.detail.message);
+  });
   if (!self.crossOriginIsolated) {
     Module.setStatus('This page needs cross-origin isolation (the ' +
       'Cross-Origin-Opener-Policy and Cross-Origin-Embedder-Policy headers) ' +

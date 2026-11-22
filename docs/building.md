@@ -137,9 +137,98 @@ tools/serve_web.py build-web        # http://127.0.0.1:8000/LegoRR.html
 
 The game reads its data from `/LegoRR` (`legorr:diskpath`), and its
 configuration and saves live in the browser's Origin Private File System
-(`src/platform/native/emscripten/`). Nothing brings the game data to the page
-yet (issues #907 and #908). For a local run, preload a game directory into
-the build; the result holds the licensed data, so keep it to yourself:
+(`src/platform/native/emscripten/`).
+
+### Streaming the game data
+
+The page brings no game data: the game streams it from a host over a WasmFS
+fetch backend (issue #908), as isle-portable does with
+`ISLE_EMSCRIPTEN_HOST` and `/LEGO`. The data is at `<host>/LegoRR/`, which
+holds a copy of the game directory's WADs and `Data` tree and a manifest,
+`LegoRR.manifest`, that lists the files to register.
+`tools/web_manifest.py` writes the manifest from a game directory when you
+deploy, so the build holds neither a file list nor game data:
+
+```sh
+tools/web_manifest.py /path/to/game -o deploy/LegoRR/LegoRR.manifest
+# then publish the game directory's LegoRR*.wad and Data beside it, at <host>/LegoRR/
+```
+
+The manifest lists the top-level WADs and everything under `Data` except
+`Data/Saves` (the player's saves live in the browser) and the `*.avi` movies
+(the web build has no FFmpeg, and they are most of the game's 520 MB;
+`--include-movies` and `--exclude GLOB` change that). The game fetches the
+manifest first, makes a directory tree and a file on the fetch backend for
+each line, and fetches a file when it first reads or sizes it. The settings
+are CMake cache variables, given to `emcmake cmake`:
+
+- `LRR_EMSCRIPTEN_HOST`: the host's URL prefix, such as
+  `https://example.com`, as `ISLE_EMSCRIPTEN_HOST`. Empty (the default) is
+  the page's own origin, so `<page>/LegoRR/` holds the data.
+- `LRR_EMSCRIPTEN_CHUNK_SIZE`: the bytes per range request (default 524288,
+  isle-portable's 512 KiB; at most 2147483647, which the backend reads as a
+  signed number). The backend fetches a file of at most twice this, or from a
+  host that does not send `Accept-Ranges: bytes`, whole on first use, and a
+  larger file in chunks. With the default that makes the two WADs and a few
+  streamed sounds and FLICs chunked and every other file whole.
+- `LRR_EMSCRIPTEN_PRELOAD_WADS` (on): see below.
+
+The WADs are fetched in chunks, and at start-up they are read through, in
+requests of eight chunks, with progress events for the page. The game does not
+leave them mostly unread: reaching the main menu already reads 122 of
+`LegoRR0.wad`'s 151 chunks (61 MiB of 75), and a level then reads the rest,
+so chunks save little bandwidth. Chunks still beat one whole-file request: the
+page shows "Fetching LegoRR0.wad: 58%" where the game, blocked in its first
+read, would show nothing, a host without range support still works (the
+backend then fetches the file whole), and the data arrives in requests
+that a CDN caches. Measured with the web build through a throttled local
+server (40 ms round trip, 50 Mbit/s; one run each), the time from loading the
+page to the main menu was 42.3 s with 512 KiB chunks and the game's own
+reads, 40.8 s with the start-up read (19 requests for `LegoRR0.wad`, not 104),
+and 38.8 s with every file whole; at a 150 ms round trip, 85.0 s against
+72.9 s with the start-up read. `LRR_EMSCRIPTEN_PRELOAD_WADS=OFF`
+leaves the WADs to the game's own reads, and a chunk size of 2147483647
+fetches every file whole.
+
+The page listens for events the game dispatches on the canvas: `dataProgress`
+(`detail.name`, `detail.progress` in percent) while a WAD is read through,
+`dataReady` once the data is set up, and `dataError` (`detail.message`) when
+it cannot be (no manifest on the host). `shell.html` shows them in its status
+line.
+
+The host must serve `LegoRR/` with:
+
+- `Accept-Ranges: bytes` and range responses (`206`) for the WADs, and a
+  `HEAD` request with `Range: bytes=0-` that answers with `Content-Length`.
+- The URLs the backend asks for, which have a doubled slash
+  (`<host>/LegoRR//Data/...`, as isle-portable's do): the host must treat it
+  as one slash, as most servers and CDNs do.
+- When the host is not the page's origin: CORS (`Access-Control-Allow-Origin`
+  for the page's origin) with `Access-Control-Expose-Headers:
+  Accept-Ranges, Content-Length, Content-Range`, because the backend reads
+  `Accept-Ranges` and, without it, fetches every file whole; and, since the
+  page is cross-origin isolated, `Cross-Origin-Resource-Policy:
+  cross-origin` or CORS on every response.
+
+`tools/serve_web.py` is such a host for a local run. With `--data` it serves
+a game directory at `/LegoRR/`, with the manifest generated on the fly, so
+nothing is written into the game directory:
+
+```sh
+tools/serve_web.py build-web --data /path/to/game          # http://127.0.0.1:8000/LegoRR.html
+```
+
+Add `--port 8001 --cors-origin http://127.0.0.1:8000` to serve the data from
+another origin than the page, with `-DLRR_EMSCRIPTEN_HOST=http://127.0.0.1:8001`
+in the build. The licensed data stays on that machine; keep it out of any
+repository and any CI run, which use synthetic data only.
+
+A page that bundles the data itself still works: when `/LegoRR` already
+exists in the page's filesystem, the game streams nothing (a fetch backend
+can only make files in its own directories, so it cannot add what a bundle
+lacks). For a local run without a server for the data, preload a game
+directory into the build; the result holds the licensed data, so keep it to
+yourself:
 
 ```sh
 emcmake cmake -S . -B build-web-data -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
