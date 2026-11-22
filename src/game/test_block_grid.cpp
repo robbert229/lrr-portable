@@ -288,38 +288,43 @@ static void test_roof_grid(void)
 /* The crash: a power crystal (type 6) whose container is at a NaN world
  * position, in its per-frame update (0043f7d0). Its block resolves to
  * block 0, so on lava there it melts, as in the original; elsewhere it is
- * left alone. */
-static void test_nan_crystal(void)
+ * left alone. Ore (type 7) shares the update, the lava check and the
+ * carry paths, so it is checked the same way. */
+static void test_nan_resource(int type, const char* name)
 {
-    Lego_Object* crystal = (Lego_Object*)calloc(1, sizeof(Lego_Object));
+    Lego_Object* obj = (Lego_Object*)calloc(1, sizeof(Lego_Object));
+    char what[128];
 
     fixture_reset();
     s_position[0] = s_position[1] = s_position[2] = NAN;
-    crystal->type = 6;
-    crystal->health = 100.0f;
-    crystal->energy = 100.0f;
-    crystal->flags3 = 0x80000000u; /* no drain: the stats tables are not loaded */
+    obj->type = type;
+    obj->health = 100.0f;
+    obj->energy = 100.0f;
+    obj->flags3 = 0x80000000u; /* no drain: the stats tables are not loaded */
 
     s_level.blocks[0].f_02 = 1;
-    legoobject_energy_low_target_route_command_tick(crystal, 1.0f);
-    CHECK(crystal->health == 100.0f, "crystal: a NaN position off lava survives the update");
+    legoobject_energy_low_target_route_command_tick(obj, 1.0f);
+    snprintf(what, sizeof(what), "%s: a NaN position off lava survives the update", name);
+    CHECK(obj->health == 100.0f, what);
 
     s_level.blocks[0].f_02 = 6;
-    legoobject_energy_low_target_route_command_tick(crystal, 1.0f);
-    CHECK(crystal->health == -1.0f && (crystal->flags3 & 0x800000) != 0,
-          "crystal: a NaN position with lava at block 0 melts, as the original");
-    CHECK(s_level.f_09c == 1, "crystal: and counts as lost");
+    legoobject_energy_low_target_route_command_tick(obj, 1.0f);
+    snprintf(what, sizeof(what), "%s: a NaN position with lava at block 0 melts, as the original", name);
+    CHECK(obj->health == -1.0f && (obj->flags3 & 0x800000) != 0, what);
+    snprintf(what, sizeof(what), "%s: and counts as lost", name);
+    CHECK(s_level.f_09c == 1, what);
 
     s_position[0] = 60.0f;
     s_position[1] = -50.0f;
     s_position[2] = 0.0f;
-    crystal->health = 100.0f;
-    crystal->flags3 = 0x80000000u;
+    obj->health = 100.0f;
+    obj->flags3 = 0x80000000u;
     s_level.blocks[0].f_02 = 1;
     s_level.blocks[W + 1].f_02 = 6;
-    legoobject_energy_low_target_route_command_tick(crystal, 1.0f);
-    CHECK(crystal->health == -1.0f, "crystal: a real position reads its own block, (1, 1)");
-    free(crystal);
+    legoobject_energy_low_target_route_command_tick(obj, 1.0f);
+    snprintf(what, sizeof(what), "%s: a real position reads its own block, (1, 1)", name);
+    CHECK(obj->health == -1.0f, what);
+    free(obj);
 }
 
 int main(void)
@@ -333,7 +338,8 @@ int main(void)
     test_level_alias();
     test_map_blocks();
     test_roof_grid();
-    test_nan_crystal();
+    test_nan_resource(6, "crystal");
+    test_nan_resource(7, "ore");
 
     if (s_failures != 0) {
         printf("block_grid_test: %d failure(s)\n", s_failures);
