@@ -32,4 +32,14 @@ static inline uint32_t lrr_block_index(uint32_t index, uint32_t width, uint32_t 
     return index < width * height ? index : 0;
 }
 
+#ifdef __cplusplus
+/* Compute the index in unsigned 32-bit arithmetic, as the original's
+ * wrapped. A signed index overflows into undefined behaviour where the
+ * original wrapped (INT_MIN * width already does), so a signed index does
+ * not compile. */
+uint32_t lrr_block_index(int index, uint32_t width, uint32_t height) = delete;
+uint32_t lrr_block_index(long index, uint32_t width, uint32_t height) = delete;
+uint32_t lrr_block_index(long long index, uint32_t width, uint32_t height) = delete;
+#endif
+
 #endif /* LRR_GAME_BLOCK_GRID_H */

@@ -225,17 +225,19 @@ int electric_fence_can_place_at_block(int bx, int by)
         electric_fence_block_is_building(electricFenceGlobs.level, bx, by, 0))
         return 0;
 
+    /* The neighbours wrap in 32 bits, as the original's did: a NaN
+     * position's INT_MIN coordinates would overflow a signed sum. */
     for (i = 0; i < 4; i++) {
-        x = bx + DIRECTIONS[i].x;
-        y = by + DIRECTIONS[i].y;
+        x = (int)((unsigned int)bx + (unsigned int)DIRECTIONS[i].x);
+        y = (int)((unsigned int)by + (unsigned int)DIRECTIONS[i].y);
         if (level_coord_pair_within_bounds_target(
                 (const unsigned int*)electricFenceGlobs.level->map, x, y) &&
             (electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * y + x, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].fence != NULL ||
              electric_fence_block_is_building(electricFenceGlobs.level, x, y, 0)))
             return 1;
 
-        x = bx + DIRECTIONS_FAR[i].x;
-        y = by + DIRECTIONS_FAR[i].y;
+        x = (int)((unsigned int)bx + (unsigned int)DIRECTIONS_FAR[i].x);
+        y = (int)((unsigned int)by + (unsigned int)DIRECTIONS_FAR[i].y);
         if (level_coord_pair_within_bounds_target(
                 (const unsigned int*)electricFenceGlobs.level->map, x, y)) {
             if (electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * y + x, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].fence != NULL)

@@ -14,6 +14,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <type_traits>
+#include <utility>
+
 #include "game/block_grid.h"
 #include "game/lego_level_record.h"
 #include "game/legoobject_record.h"
@@ -84,11 +87,22 @@ static long original_block(uint32_t index, uint32_t count)
     return (long)(offset / WIN32_BLOCK_SIZE);
 }
 
+/* A signed index does not compile: its arithmetic would be undefined where
+ * the original's wrapped. */
+template <class T, class = void>
+struct accepts_index : std::false_type {};
+template <class T>
+struct accepts_index<T, decltype((void)lrr_block_index(std::declval<T>(), 0u, 0u))> : std::true_type {};
+static_assert(accepts_index<uint32_t>::value, "an unsigned index is accepted");
+static_assert(!accepts_index<int>::value, "an int index is rejected");
+static_assert(!accepts_index<long>::value, "a long index is rejected");
+static_assert(!accepts_index<long long>::value, "a long long index is rejected");
+
 static void test_index(void)
 {
     /* Inside the grid: the index itself. */
-    CHECK(lrr_block_index(0, 4, 3) == 0, "index: the first block");
-    CHECK(lrr_block_index(11, 4, 3) == 11, "index: the last block");
+    CHECK(lrr_block_index(0u, 4, 3) == 0, "index: the first block");
+    CHECK(lrr_block_index(11u, 4, 3) == 11, "index: the last block");
     CHECK(lrr_block_index(unit_index(4, 2, 1), 4, 3) == 6, "index: (2, 1) is 6");
     /* x == width runs into the next row, as the original's arithmetic. */
     CHECK(lrr_block_index(unit_index(4, 4, 0), 4, 3) == 4, "index: (4, 0) is the next row's first");
@@ -112,7 +126,7 @@ static void test_index(void)
     CHECK(lrr_block_index(unit_index(4, -1, 0), 4, 3) == 0, "index: before the first block");
     CHECK(lrr_block_index(unit_index(4, 0, 3), 4, 3) == 0, "index: past the last block");
     CHECK(lrr_block_index(UINT32_MAX, 4, 3) == 0, "index: UINT32_MAX");
-    CHECK(lrr_block_index(5, 0, 0) == 0, "index: an empty grid");
+    CHECK(lrr_block_index(5u, 0, 0) == 0, "index: an empty grid");
 }
 
 /* Wherever the original's read stays inside the grid, the helper picks the
