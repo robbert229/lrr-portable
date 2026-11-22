@@ -327,6 +327,20 @@ if(BUILD_TESTING)
       "LINKER:--wrap=ddiscene_object_position_get")
     add_test(NAME flock_position COMMAND flock_position_test)
     set_tests_properties(flock_position PROPERTIES LABELS legoobject)
+    # LegoObject.c's run away frees only the route lists it allocated: the
+    # unit's calls to free reach the test's __wrap_free, which records a
+    # stack address instead of aborting on it.
+    add_executable(run_away_test ${GAME_DIR}/test_run_away.cpp)
+    target_link_libraries(run_away_test PRIVATE units)
+    target_link_options(run_away_test PRIVATE
+      "LINKER:--wrap=free"
+      "LINKER:--wrap=ddiscene_object_position_get"
+      "LINKER:--wrap=entity_stats_word_get"
+      "LINKER:--wrap=entity_capability_flags_get"
+      "LINKER:--wrap=entity_state_flags_get"
+      "LINKER:--wrap=idle_register")
+    add_test(NAME run_away COMMAND run_away_test)
+    set_tests_properties(run_away PROPERTIES LABELS legoobject)
   endif()
   # Files.c's SDL3 streams and path mapping, and the configuration file
   # ([library:filesystem], [library:config]).
