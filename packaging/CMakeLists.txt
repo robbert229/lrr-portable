@@ -53,6 +53,17 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 if(APPLE AND NOT IOS)
   add_subdirectory(macos)
+  # Here rather than in macos/, so that it runs after the install() of
+  # LegoRR.app above; from the subdirectory it ran before the bundle existed.
+  # Pull in any shared library the bundle links (none with the fetched, static
+  # SDL3), then sign, so that the signature covers the final contents.
+  install(CODE "
+    include(BundleUtilities)
+    fixup_bundle(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/LegoRR.app\" \"\" \"\")
+    execute_process(COMMAND /usr/bin/codesign --force --deep --sign -
+      \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/LegoRR.app\"
+      COMMAND_ERROR_IS_FATAL ANY)
+    ")
 endif()
 if(WIN32)
   # A shared SDL3 (an installed package; the fetched one is static) travels

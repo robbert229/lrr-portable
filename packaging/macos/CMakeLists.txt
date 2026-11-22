@@ -36,13 +36,3 @@ set_target_properties(program PROPERTIES
   MACOSX_BUNDLE TRUE
   MACOSX_BUNDLE_ICON_FILE "${_lrr_icon}.icns"
   MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_BINARY_DIR}/Info.plist")
-
-# Pull in any shared library the bundle links (none with the fetched, static
-# SDL3), then sign, so that the signature covers the final contents.
-install(CODE "
-  include(BundleUtilities)
-  fixup_bundle(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/LegoRR.app\" \"\" \"\")
-  execute_process(COMMAND /usr/bin/codesign --force --deep --sign -
-    \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/LegoRR.app\"
-    COMMAND_ERROR_IS_FATAL ANY)
-  ")
