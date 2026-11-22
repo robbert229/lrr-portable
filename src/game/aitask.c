@@ -14,6 +14,7 @@
  * names and serve both (the priority accessors, the engine memory wrappers
  * and the two renderer getters). */
 #include "legoobject_port_aliases.h"
+#include "block_grid.h"
 #include "weapons_port_aliases.h"
 #include <math.h>
 #include <stddef.h>
@@ -1059,7 +1060,7 @@ void aitask_terrain_cell_command_create(const int* blockPos, int noHighlight,
                 (struct TerrainMap*)level->map,
                 blockPos[0], blockPos[1], 1);
             level->blocks
-                [level->width * blockPos[1] + blockPos[0]].flags1 |= 0x800000;
+                [lrr_block_index(level->width * blockPos[1] + blockPos[0], level->width, level->height)].flags1 |= 0x800000;
         }
     }
 }
@@ -1873,7 +1874,7 @@ int aitask_kind_nine_cell_command_issue(const int* blockPos, int noDetach)
     AITask* task;
 
     if (legoGlobs_currLevel->blocks
-            [legoGlobs_currLevel->width * blockPos[1] + blockPos[0]].f_02 != 1 &&
+            [lrr_block_index(legoGlobs_currLevel->width * blockPos[1] + blockPos[0], legoGlobs_currLevel->width, legoGlobs_currLevel->height)].f_02 != 1 &&
         terrain_cell_walkable_flag_current(blockPos[0], blockPos[1]) &&
         !terrain_cell_flag_reserved_current(blockPos)) {
         task = aitask_cmd_alloc(9);
@@ -3700,7 +3701,7 @@ void aitask_entity_command_unlink_by_kind(struct Lego_Object* object, int type,
             } else if (task->type == 0xc) {
                 if (object->type == 1) {
                     count = legoGlobs_currLevel->blocks
-                                [task->blockY * legoGlobs_currLevel->width + task->blockX]
+                                [lrr_block_index(task->blockY * legoGlobs_currLevel->width + task->blockX, legoGlobs_currLevel->width, legoGlobs_currLevel->height)]
                                     .flags1 & 3;
                     for (i = 0; i < count; i++) {
                         terrain_cell_state_update_current(&task->blockX);

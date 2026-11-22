@@ -6,6 +6,7 @@
  * the model. */
 /* Matching build: LegoObject.c callers call legoobject_unit.c (#575). */
 #include "legoobject_port_aliases.h"
+#include "block_grid.h"
 /* Matching build: LegoObject_GetBlockPos and Level_BlockUpdateSurface
  * themselves, in legoobject_unit.c and lego_unit.c, instead of the port
  * tail's adapters (terrain_cell_objects_port.cpp; #805, finding 674). Each
@@ -121,8 +122,8 @@ ElectricFenceNode* electric_fence_create(ElectricFenceObject* object, int bx,
     node->object = object;
     node->blockX = bx;
     node->blockY = by;
-    electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].flags = 0;
-    electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].fence = node;
+    electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * by + bx, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].flags = 0;
+    electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * by + bx, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].fence = node;
     object->flags2 |= 0x2000000;
     electric_fence_block_surfaces_update(bx, by);
     return node;
@@ -154,7 +155,7 @@ void electric_fence_remove(ElectricFenceObject* object)
 
     if (object->flags2 & 0x2000000) {
         legoobject_block_position_get((struct Lego_Object*)object, &bx, &by);
-        node = electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].fence;
+        node = electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * by + bx, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].fence;
         if (node != NULL)
             electric_fence_remove_node(node, bx, by);
     }
@@ -165,8 +166,8 @@ void electric_fence_remove_node(ElectricFenceNode* node, int bx, int by)
 {
     node->nextFree = electricFenceGlobs.freeList;
     electricFenceGlobs.freeList = node;
-    electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].flags = 0;
-    electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].fence = NULL;
+    electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * by + bx, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].flags = 0;
+    electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * by + bx, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].fence = NULL;
     electric_fence_block_surfaces_update(bx, by);
 }
 
@@ -197,7 +198,7 @@ int electric_fence_debug_remove(int bx, int by)
     ElectricFenceNode* node;
     ElectricFenceObject* object;
 
-    node = electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].fence;
+    node = electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * by + bx, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].fence;
     if (node != NULL) {
         object = node->object;
         electric_fence_remove(object);
@@ -216,7 +217,8 @@ int electric_fence_can_place_at_block(int bx, int by)
     int x, y, idx;
     ElectricFenceLevelBlock* block;
 
-    idx = electricFenceGlobs.level->width * by + bx;
+    idx = (int)lrr_block_index(electricFenceGlobs.level->width * by + bx,
+                               electricFenceGlobs.level->width, electricFenceGlobs.level->height);
     block = &electricFenceGlobs.level->blocks[idx];
     if (!(block->flags1 & 0x8) || block->f_02 == 6 || block->f_02 == 7 ||
         electricFenceGlobs.fenceGrid[idx].fence != NULL ||
@@ -228,7 +230,7 @@ int electric_fence_can_place_at_block(int bx, int by)
         y = by + DIRECTIONS[i].y;
         if (level_coord_pair_within_bounds_target(
                 (const unsigned int*)electricFenceGlobs.level->map, x, y) &&
-            (electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * y + x].fence != NULL ||
+            (electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * y + x, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].fence != NULL ||
              electric_fence_block_is_building(electricFenceGlobs.level, x, y, 0)))
             return 1;
 
@@ -236,7 +238,7 @@ int electric_fence_can_place_at_block(int bx, int by)
         y = by + DIRECTIONS_FAR[i].y;
         if (level_coord_pair_within_bounds_target(
                 (const unsigned int*)electricFenceGlobs.level->map, x, y)) {
-            if (electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * y + x].fence != NULL)
+            if (electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * y + x, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].fence != NULL)
                 return 1;
             if (electric_fence_block_is_building(electricFenceGlobs.level, x, y, 0))
                 return 1;
@@ -312,7 +314,7 @@ int electric_fence_spark_from(ElectricFenceObject* object, int bx, int by)
             !(object->flags3 & 0x20000000))
             return 0;
     } else {
-        if (electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].fence == NULL &&
+        if (electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * by + bx, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].fence == NULL &&
             !electric_fence_block_is_building(electricFenceGlobs.level, bx, by, 0))
             return 0;
     }
@@ -371,7 +373,7 @@ int electric_fence_building_clear_callback(ElectricFenceObject* object,
 
     if (object->type == 4) {
         legoobject_block_position_get((struct Lego_Object*)object, &blockPos.x, &blockPos.y);
-        electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * blockPos.y + blockPos.x].flags = 0;
+        electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * blockPos.y + blockPos.x, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].flags = 0;
     }
     return 0;
 }
@@ -384,13 +386,13 @@ void electric_fence_node_update_callback(ElectricFenceNode* node,
     unsigned int i;
     int x, y;
 
-    electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * node->blockY + node->blockX].flags = 0;
+    electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * node->blockY + node->blockX, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].flags = 0;
     for (i = 0; i < 4; i++) {
         x = node->blockX + DIRECTIONS[i].x;
         y = node->blockY + DIRECTIONS[i].y;
         if (level_coord_pair_within_bounds_target(
                 (const unsigned int*)electricFenceGlobs.level->map, x, y))
-            electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * y + x].flags = 0;
+            electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * y + x, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].flags = 0;
     }
     if (elapsed != NULL && node->timer > 0.0f)
         node->timer -= *elapsed;
@@ -408,14 +410,14 @@ void electric_fence_spark(int bx, int by, int force, float elapsed)
     float rate;
     ElectricFenceBlock* target;
 
-    electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].flags |= 0x100;
+    electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * by + bx, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].flags |= 0x100;
     for (i = 0; i < 4; i++) {
         found = 0;
         x = bx + DIRECTIONS[0][i].x;
         y = by + DIRECTIONS[0][i].y;
         if (level_coord_pair_within_bounds_target(
                 (const unsigned int*)electricFenceGlobs.level->map, x, y) &&
-            (electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * y + x].fence != NULL ||
+            (electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * y + x, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].fence != NULL ||
              (electric_fence_block_is_building(electricFenceGlobs.level, x, y, 1) &&
               !electric_fence_block_is_building(electricFenceGlobs.level, bx, by, 0)))) {
             tx = x;
@@ -430,7 +432,7 @@ void electric_fence_spark(int bx, int by, int force, float elapsed)
                     (const unsigned int*)electricFenceGlobs.level->map, x2, y2) &&
                 (!electric_fence_block_is_building(electricFenceGlobs.level, x, y, 0) ||
                  !electric_fence_block_is_building(electricFenceGlobs.level, bx, by, 0)) &&
-                (electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * y2 + x2].fence != NULL ||
+                (electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * y2 + x2, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].fence != NULL ||
                  (electric_fence_block_is_building(electricFenceGlobs.level, x2, y2, 1) &&
                   !electric_fence_block_is_building(electricFenceGlobs.level, bx, by, 0)))) {
                 found = 1;
@@ -441,11 +443,11 @@ void electric_fence_spark(int bx, int by, int force, float elapsed)
         }
         if (found) {
             if (!adjacent)
-                electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * y + x].flags |= 0x100;
-            target = &electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * ty + tx];
+                electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * y + x, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].flags |= 0x100;
+            target = &electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * ty + tx, electricFenceGlobs.level->width, electricFenceGlobs.level->height)];
             if (target->fence == NULL || target->fence->timer <= 0.0f) {
                 if (!(target->flags & (1 << i))) {
-                    electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].flags |=
+                    electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * by + bx, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].flags |=
                         1 << ((i - 2) & 3);
                     rate = elapsed;
                     if (elapsed > 200.0f)
@@ -456,7 +458,7 @@ void electric_fence_spark(int bx, int by, int force, float elapsed)
                         electric_fence_beam_create(bx, by, tx, ty);
                 }
                 if (!electric_fence_block_is_building(electricFenceGlobs.level, tx, ty, 0) &&
-                    !(electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * ty + tx].flags & 0x100))
+                    !(electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * ty + tx, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].flags & 0x100))
                     electric_fence_spark(tx, ty, force, elapsed);
             }
         }
@@ -528,14 +530,14 @@ int electric_fence_object_strike(ElectricFenceObject* object)
     terrain_map_world_to_block(electricFenceGlobs.level->map, pos.x, pos.y, &bx, &by);
     tx = bx;
     ty = by;
-    if ((electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].flags & 0x100) &&
+    if ((electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * by + bx, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].flags & 0x100) &&
         !electric_fence_block_is_building(electricFenceGlobs.level, bx, by, 0)) {
-        node = electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].fence;
+        node = electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * by + bx, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].fence;
         if (node == NULL) {
             for (i = 0; i < 4; i++) {
                 x = bx + DIRECTIONS[i].x;
                 y = by + DIRECTIONS[i].y;
-                node = electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * y + x].fence;
+                node = electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * y + x, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].fence;
                 if (node != NULL && node->timer <= 0.0f) {
                     terrain_map_block_to_world(electricFenceGlobs.level->map, x, y,
                                                &blockPos.x, &blockPos.y);
@@ -558,7 +560,7 @@ int electric_fence_object_strike(ElectricFenceObject* object)
         if (found) {
             electric_fence_object_beam(object, &pos, bx, by);
             electric_fence_spark_from(NULL, tx, ty);
-            electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * ty + tx].fence->timer =
+            electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * ty + tx, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].fence->timer =
                 weapon_type_recharge_time_get_target(
                     // STRING: LEGORR 0x004a1e8c
                     object_type_name_index_find("FenceSpark"));
@@ -606,19 +608,19 @@ int electric_fence_stud_fits(ElectricFenceLevel* level, int bx, int by)
     int x, y, x2, y2;
 
     if (electricFenceGlobs.fenceGrid == NULL ||
-        electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].fence != NULL ||
+        electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * by + bx, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].fence != NULL ||
         electric_fence_block_is_building(level, bx, by, 0))
         return 0;
 
     for (i = 0; i < 4; i++) {
         x = bx + DIRECTIONS[i].x;
         y = by + DIRECTIONS[i].y;
-        if (electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * y + x].fence != NULL ||
+        if (electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * y + x, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].fence != NULL ||
             electric_fence_block_is_building(level, x, y, 0)) {
             j = (i - 2) & 3;
             x2 = bx + DIRECTIONS[j].x;
             y2 = by + DIRECTIONS[j].y;
-            if (electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * y2 + x2].fence != NULL ||
+            if (electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * y2 + x2, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].fence != NULL ||
                 (electric_fence_block_is_building(level, x2, y2, 0) &&
                  !electric_fence_block_is_building(level, x, y, 0)))
                 return 1;
@@ -635,20 +637,19 @@ void electric_fence_stud_set(ElectricFenceLevel* level, int bx, int by,
 
     if (electricFenceGlobs.fenceGrid != NULL) {
         if (on) {
-            if (electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].stud == NULL) {
+            if (electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * by + bx, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].stud == NULL) {
                 terrain_map_block_to_world(level->map, bx, by, &wPos.x, &wPos.y);
-                electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].stud =
+                electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * by + bx, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].stud =
                     (ElectricFenceObject*)entity_create_with_position(
                         (struct GameContext*)legoGlobs_contElectricFenceStud, 0xe, 0, 0, wPos.x,
                         wPos.y, 0.0f);
                 return;
             }
         } else {
-            if (electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].stud != NULL) {
-                entity_teardown((struct Lego_Object*)electricFenceGlobs.fenceGrid[
-                    electricFenceGlobs.level->width * by + bx].stud);
-                electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].stud = NULL;
-                electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].flags = 0;
+            if (electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * by + bx, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].stud != NULL) {
+                entity_teardown((struct Lego_Object*)electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * by + bx, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].stud);
+                electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * by + bx, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].stud = NULL;
+                electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * by + bx, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].flags = 0;
             }
         }
     }
@@ -657,5 +658,5 @@ void electric_fence_stud_set(ElectricFenceLevel* level, int bx, int by,
 // FUNCTION: LEGORR 0x0040e460
 int electric_fence_block_is_fence(int bx, int by)
 {
-    return electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].fence != NULL;
+    return electricFenceGlobs.fenceGrid[lrr_block_index(electricFenceGlobs.level->width * by + bx, electricFenceGlobs.level->width, electricFenceGlobs.level->height)].fence != NULL;
 }

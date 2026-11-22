@@ -20,6 +20,7 @@
  * 004de790, 0xc63c bytes). This unit defines it (legoobject_globs.h,
  * finding 662); the old names of its fields are macros over them. */
 #include "aitask_port_aliases.h"
+#include "block_grid.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1667,7 +1668,7 @@ void legoobject_build_placement_command_setup(int* cell, int id, LegoObjGE_Point
         info_send(0, NULL, NULL, (struct InfoPoint2I*)cell);
         advisor_text_animation_update(0x11, 1, 0);
         level_current_owner_get()->blocks
-            [level_current_owner_get()->width * cell[1] + cell[0]].f_2c++;
+            [lrr_block_index(level_current_owner_get()->width * cell[1] + cell[0], level_current_owner_get()->width, level_current_owner_get()->height)].f_2c++;
     }
 }
 
@@ -1694,7 +1695,7 @@ void legoobject_build_placement_alternate_command_setup(int* cell, int id, LegoO
     advisor_text_animation_update(0x13, 1, 0);
     if (update) {
         level_current_owner_get()->blocks
-            [level_current_owner_get()->width * cell[1] + cell[0]].f_30++;
+            [lrr_block_index(level_current_owner_get()->width * cell[1] + cell[0], level_current_owner_get()->width, level_current_owner_get()->height)].f_30++;
     }
 }
 
@@ -2394,7 +2395,7 @@ void legoobject_lava_crust_activity_register(Lego_Object* obj)
 
     if (obj->type == 1 && !(entity_stats_word_get(LEGOOBJ_SLOT(obj)) & 0x2000000)) {
         legoobject_position_to_terrain_cell(obj, &blockPos.x, &blockPos.y);
-        if (LegoObjG_currLevel->blocks[LegoObjG_currLevel->width * blockPos.y + blockPos.x].f_02 == 9 &&
+        if (LegoObjG_currLevel->blocks[lrr_block_index(LegoObjG_currLevel->width * blockPos.y + blockPos.x, LegoObjG_currLevel->width, LegoObjG_currLevel->height)].f_02 == 9 &&
             LegoObjG_liveCount < 100)
         {
             LegoObjG_liveObjs[LegoObjG_liveCount] = obj;
@@ -3424,7 +3425,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
         LegoObjJ_Point2I blockPos;
         level = (LegoObjJ_Level*)level_current_owner_get();
         legoobject_position_to_terrain_cell(obj, &blockPos.x, &blockPos.y);
-        if (level->blocks[level->width * blockPos.y + blockPos.x].flags2 & 0x80)
+        if (level->blocks[lrr_block_index(level->width * blockPos.y + blockPos.x, level->width, level->height)].flags2 & 0x80)
             lego_emerge_map_trigger_spawn((struct Lego_Level*)level, (struct LegoPoint2I2A*)&blockPos, NULL);
     }
     legoobject_building_deposit_state_monitor(obj);
@@ -3953,8 +3954,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
             LegoObjJ_Point2I blockPos;
             legoobject_position_to_terrain_cell(obj, &blockPos.x, &blockPos.y);
             if (((unsigned int)terrain_cell_speed_class_current((int*)&blockPos) > 2 ||
-                 ((LegoObjJ_Level*)g_active_level_retail)->blocks[
-                     ((LegoObjJ_Level*)g_active_level_retail)->width * blockPos.y + blockPos.x].f_02 == 9) &&
+                 ((LegoObjJ_Level*)g_active_level_retail)->blocks[lrr_block_index(((LegoObjJ_Level*)g_active_level_retail)->width * blockPos.y + blockPos.x, ((LegoObjJ_Level*)g_active_level_retail)->width, ((LegoObjJ_Level*)g_active_level_retail)->height)].f_02 == 9) &&
                 (obj->flags3 & 0x10000000))
                 legoobject_set_activity(obj, 0x12, 0);
             else
@@ -3968,8 +3968,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
             if ((obj->flags1 & 0x800000) && obj->type == 2)
                 legoobject_set_activity(obj, 3, 0);
             else if (((unsigned int)terrain_cell_speed_class_current((int*)&blockPos) > 2 ||
-                      ((LegoObjJ_Level*)g_active_level_retail)->blocks[
-                          ((LegoObjJ_Level*)g_active_level_retail)->width * blockPos.y + blockPos.x].f_02 == 9) &&
+                      ((LegoObjJ_Level*)g_active_level_retail)->blocks[lrr_block_index(((LegoObjJ_Level*)g_active_level_retail)->width * blockPos.y + blockPos.x, ((LegoObjJ_Level*)g_active_level_retail)->width, ((LegoObjJ_Level*)g_active_level_retail)->height)].f_02 == 9) &&
                      (obj->flags3 & 0x10000000))
                 legoobject_set_activity(obj, 2, 0);
             else
@@ -4510,7 +4509,7 @@ void legoobject_energy_low_target_route_command_tick(Lego_Object* obj, float ela
 
     legoobject_position_to_terrain_cell(obj, &blockPos[0], &blockPos[1]);
     if (obj->carryingThisObject == NULL &&
-        LegoObjG_currLevel->blocks[LegoObjG_currLevel->width * blockPos[1] + blockPos[0]].f_02 == 6 &&
+        LegoObjG_currLevel->blocks[lrr_block_index(LegoObjG_currLevel->width * blockPos[1] + blockPos[0], LegoObjG_currLevel->width, LegoObjG_currLevel->height)].f_02 == 6 &&
         (obj->type == 7 || obj->type == 6))
     {
         level_state_field9c_add(1);
@@ -5934,7 +5933,7 @@ float legoobject_world_z_callback_lake(float x, float y, struct TerrainMap* map)
 
     centre = 0.0f;
     if (terrain_map_world_to_block_centre(map, x, y, &blockPos[0], &blockPos[1], &centre)) {
-        if (LegoObjG_currLevel->blocks[LegoObjG_currLevel->width * blockPos[1] + blockPos[0]].f_02 == 9)
+        if (LegoObjG_currLevel->blocks[lrr_block_index(LegoObjG_currLevel->width * blockPos[1] + blockPos[0], LegoObjG_currLevel->width, LegoObjG_currLevel->height)].f_02 == 9)
             centre *= 8.0f;
         else
             centre = 0.0f;
@@ -6612,7 +6611,7 @@ void legoobject_activity_timeout_accumulate_and_raise(Lego_Object* obj, float el
                 obj->field_33c * 0.04f > rate * obj->health) {
                 legoobject_position_to_terrain_cell(obj, &blockPos.x, &blockPos.y);
                 if (!terrain_cell_state_equals_six_current(&blockPos.x) &&
-                    LegoObjG_currLevel->blocks[LegoObjG_currLevel->width * blockPos.y + blockPos.x].f_02 != 9 &&
+                    LegoObjG_currLevel->blocks[lrr_block_index(LegoObjG_currLevel->width * blockPos.y + blockPos.x, LegoObjG_currLevel->width, LegoObjG_currLevel->height)].f_02 != 9 &&
                     obj->routeBlocksCurrent != obj->routeBlocksTotal - 1) {
                     obj->field_33c = 0.0f;
                     obj->flags3 |= 0x4000;
@@ -7668,7 +7667,7 @@ void legoobject_movement_tick_scale_and_delta_get(Lego_Object* obj, float elapse
             coef = 1.0f - coef * (1.0f - entity_stats_float_atd4(LEGOOBJ_SLOT(obj)));
             if (level_cell_occupied_at_current(blockPos)) coef = entity_stats_float_atd8(LEGOOBJ_SLOT(obj)) * coef;
             if (obj->type == 2 &&
-                ((LegoObjJ_Level*)g_active_level_retail)->blocks[((LegoObjJ_Level*)g_active_level_retail)->width * blockPos[1] + blockPos[0]].f_02 == 9)
+                ((LegoObjJ_Level*)g_active_level_retail)->blocks[lrr_block_index(((LegoObjJ_Level*)g_active_level_retail)->width * blockPos[1] + blockPos[0], ((LegoObjJ_Level*)g_active_level_retail)->width, ((LegoObjJ_Level*)g_active_level_retail)->height)].f_02 == 9)
             {
                 coef = (1.0f - centre * 0.8f) * coef;
             }

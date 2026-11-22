@@ -16,6 +16,7 @@
  * unit's functions the port's names, so every caller reaches them;
  * natively the port tail serves those names. */
 #include "radarmap_link_names.h"
+#include "block_grid.h"
 
 #include <math.h>
 #include <stdlib.h>
@@ -631,7 +632,7 @@ int radarmap_get_block_colour(DrawRect* drawRect, int bx, int by)
     } else if (terrain_cell_mask18_clear_current(bx, by) &&
                level_cell_flag_4_current(bx, by)) {
         block = &legoGlobs_currLevel->blocks
-                    [legoGlobs_currLevel->width * by + bx];
+                    [lrr_block_index(legoGlobs_currLevel->width * by + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)];
         if (block->flags1 & 0x20000) {
             RadarMap_SetColour(drawRect, RADARMAP_COLOUR_FLAG20000);
             return 1;
@@ -656,7 +657,7 @@ int radarmap_get_block_colour(DrawRect* drawRect, int bx, int by)
         case 9: RadarMap_SetColour(drawRect, RADARMAP_COLOUR_LAKE); return 1;
         default:
             block = &legoGlobs_currLevel->blocks
-                        [legoGlobs_currLevel->width * by + bx];
+                        [lrr_block_index(legoGlobs_currLevel->width * by + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)];
             if (block->flags1 & 0x100000) {
                 RadarMap_SetColour(drawRect, RADARMAP_COLOUR_FLAG100000);
                 return 1;

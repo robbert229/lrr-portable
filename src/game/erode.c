@@ -17,6 +17,7 @@
  * unit's functions the port's name, so every caller reaches them; natively
  * the port tail serves those names and nothing calls these. */
 #include "erode_link_names.h"
+#include "block_grid.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -95,7 +96,7 @@ int erode_get_free_activity(unsigned int* index)
 float erode_get_block_erode_rate(ErodePoint2I* blockPos)
 {
     Lego_Level* level = legoGlobs_currLevel;
-    return (6 - level->blocks[level->width * blockPos->y + blockPos->x].f_06) *
+    return (6 - level->blocks[lrr_block_index(level->width * blockPos->y + blockPos->x, level->width, level->height)].f_06) *
            erodeGlobs.erodeTime * 25.0f;
 }
 // FUNCTION: LEGORR 0x0040ea10
