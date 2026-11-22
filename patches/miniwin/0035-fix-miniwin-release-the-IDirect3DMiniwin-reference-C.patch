@@ -1,0 +1,28 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sat, 21 Nov 2026 21:49:24 -0800
+Subject: [PATCH] fix(miniwin): release the IDirect3DMiniwin reference
+ CreateDeviceFromSurface takes
+
+Direct3DRMImpl::CreateDeviceFromSurface queried IID_IDirect3DMiniwin on the
+DirectDraw object, which adds a reference, and never released it, whether
+the renderer was created or not. The DirectDraw object then outlived its
+last Release, so a client that sets the display up again after a failed
+attempt (a 3D device that cannot claim the window) leaked one DirectDraw
+object per attempt. The renderer reads the settings it needs while it is
+created, so the reference is released straight after.
+
+diff --git a/miniwin/src/d3drm/d3drm.cpp b/miniwin/src/d3drm/d3drm.cpp
+index 677f299..38ffa25 100644
+--- a/miniwin/src/d3drm/d3drm.cpp
++++ b/miniwin/src/d3drm/d3drm.cpp
+@@ -194,6 +194,9 @@ HRESULT Direct3DRMImpl::CreateDeviceFromSurface(
+ 	SDL_assert(miniwind3d);
+ 
+ 	DDRenderer = CreateDirect3DRMRenderer(miniwind3d, DDSDesc, guid);
++	// The renderer reads the settings it needs while it is created; the reference
++	// QueryInterface took would otherwise keep the DirectDraw object alive for good.
++	miniwind3d->Release();
+ 	if (!DDRenderer) {
+ 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create a renderer for the selected device GUID");
+ 		return E_NOINTERFACE;

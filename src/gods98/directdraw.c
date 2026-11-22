@@ -292,6 +292,18 @@ int directdraw_setup(int fullScreen, const DirectDraw_Driver* driver,
                                 if (fullScreen) ShowCursor(FALSE);
                                 return TRUE;
                             }
+                            /* The attempt may have made one or both clippers
+                             * before it failed. Init.c can set the display up
+                             * again on the next device, which would overwrite
+                             * the pointers and leak them. */
+                            if (directDrawGlobs.lpFrontClipper) {
+                                directDrawGlobs.lpFrontClipper->Release();
+                                directDrawGlobs.lpFrontClipper = NULL;
+                            }
+                            if (directDrawGlobs.lpBackClipper) {
+                                directDrawGlobs.lpBackClipper->Release();
+                                directDrawGlobs.lpBackClipper = NULL;
+                            }
                             directDrawGlobs.bSurf->Release();
                             directDrawGlobs.bSurf = NULL;
                         }
@@ -497,6 +509,8 @@ int directdraw_create_clipper(int fullScreen, unsigned int width, unsigned int h
         size = GetRegionData(handle, 0, NULL);
         region = (RGNDATA*)malloc(size);
         GetRegionData(handle, size, region);
+        /* The clip list holds its own copy of the rectangle. */
+        DeleteObject(handle);
         if (directDrawGlobs.lpBackClipper->SetClipList(region, 0) == DD_OK) {
             free(region);
             if (directDrawGlobs.bSurf->SetClipper(directDrawGlobs.lpBackClipper) == DD_OK) {

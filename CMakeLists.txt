@@ -519,6 +519,12 @@ if(BUILD_TESTING)
   add_test(NAME font_format_bound COMMAND font_format_bound_test)
   set_tests_properties(font_format_bound PROPERTIES LABELS font
     ENVIRONMENT "UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+  # A failed directdraw_setup (Init.c's fallback to the next 3D device)
+  # leaves no surface, clipper or Direct3DRM object behind (issue #966).
+  add_executable(directdraw_retry_test ${ENGINE_DIR}/test_directdraw_retry.cpp)
+  target_link_libraries(directdraw_retry_test PRIVATE units)
+  add_test(NAME directdraw_retry COMMAND directdraw_retry_test)
+  set_tests_properties(directdraw_retry PROPERTIES LABELS draw)
   add_executable(draw_test ${ENGINE_DIR}/test_draw.cpp)
   target_link_libraries(draw_test PRIVATE units)
   add_test(NAME draw COMMAND draw_test)
