@@ -331,17 +331,16 @@ void mesh_add_list(void)
 
     count = 0x00000001 << meshGlobs.listCount;
 
-    if (list = meshGlobs.listSet[meshGlobs.listCount] =
-            (Mesh*)malloc(sizeof(Mesh) * count)) {
+    list = (Mesh*)malloc(sizeof(Mesh) * count);
+    meshGlobs.listSet[meshGlobs.listCount] = list;
+    if (list == NULL) return;
 
-        meshGlobs.listCount++;
-
-        for (loop = 1; loop < count; loop++) {
-            list[loop - 1].nextFree = &list[loop];
-        }
-        list[count - 1].nextFree = meshGlobs.freeList;
-        meshGlobs.freeList = list;
+    meshGlobs.listCount++;
+    for (loop = 1; loop < count; loop++) {
+        list[loop - 1].nextFree = &list[loop];
     }
+    list[count - 1].nextFree = meshGlobs.freeList;
+    meshGlobs.freeList = list;
 }
 
 // FUNCTION: LEGORR 0x00480870
@@ -1035,10 +1034,10 @@ long mesh_add_group(Mesh* mesh, unsigned long vertexCount,
     } else if (mesh->groupCount++ == mesh->listSize) {
         Mesh_Group* newList;
         unsigned long newSize = (mesh->listSize * MESH_LISTINCREASE) / 100;
-        if (newList = (Mesh_Group*)realloc(mesh->groupList, sizeof(Mesh_Group) * newSize)) {
-            mesh->groupList = newList;
-            mesh->listSize = newSize;
-        } else return -1;
+        newList = (Mesh_Group*)realloc(mesh->groupList, sizeof(Mesh_Group) * newSize);
+        if (newList == NULL) return -1;
+        mesh->groupList = newList;
+        mesh->listSize = newSize;
     }
 
     group = &mesh->groupList[mesh->groupCount - 1];
@@ -1423,7 +1422,7 @@ void mesh_post_render_all(Mesh_Viewport* vp)
         mesh_set_current_gods_viewport(vp);
         mesh_store_texture_and_mat();
 
-        do {
+        for (; info != NULL; info = info->next) {
             if (!(info->mesh->flags & MESH_FLAG_HIDDEN)) {
                 mesh_set_mesh_render_desc(info->mesh, vp, &info->matWorld, 1);
 
@@ -1444,7 +1443,7 @@ void mesh_post_render_all(Mesh_Viewport* vp)
                     }
                 }
             }
-        } while (info = info->next);
+        }
 
         mesh_clear_post_render_list();
         main_restore_states();
@@ -1465,20 +1464,29 @@ Mesh_Texture* mesh_load_texture(const char* baseDir, const char* name,
     if (baseDir) snprintf(path, sizeof(path), "%s%s", baseDir, name);
     else strcpy(path, name);
 
-    if (ref = (Mesh_TextureReference*)mesh_search_texture_list(meshGlobs.textureList, meshGlobs.textureCount, path)) {
+    /* Look in the cache, then on disk, then in the shared texture directory. */
+    ref = (Mesh_TextureReference*)mesh_search_texture_list(meshGlobs.textureList, meshGlobs.textureCount, path);
+    if (ref != NULL) {
         surface = ref->surface;
         if (surface) surface->AddRef();
         trans = ref->trans;
-    } else if (surface = (LPDIRECTDRAWSURFACE4)container_load_texture_surface(path, 1, width, height, &trans)) {
-        mesh_add_texture_reference(meshGlobs.textureList, &meshGlobs.textureCount, path, surface, trans);
-    } else if (meshGlobs.sharedTextureDir) {
-        snprintf(path, sizeof(path), "%s%s", meshGlobs.sharedTextureDir, name);
-        if (ref = (Mesh_TextureReference*)mesh_search_texture_list(meshGlobs.textureListShared, meshGlobs.textureCountShared, path)) {
-            surface = ref->surface;
-            if (surface) surface->AddRef();
-            trans = ref->trans;
-        } else if (surface = (LPDIRECTDRAWSURFACE4)container_load_texture_surface(path, 1, width, height, &trans)) {
-            mesh_add_texture_reference(meshGlobs.textureListShared, &meshGlobs.textureCountShared, path, surface, trans);
+    } else {
+        surface = (LPDIRECTDRAWSURFACE4)container_load_texture_surface(path, 1, width, height, &trans);
+        if (surface != NULL) {
+            mesh_add_texture_reference(meshGlobs.textureList, &meshGlobs.textureCount, path, surface, trans);
+        } else if (meshGlobs.sharedTextureDir) {
+            snprintf(path, sizeof(path), "%s%s", meshGlobs.sharedTextureDir, name);
+            ref = (Mesh_TextureReference*)mesh_search_texture_list(meshGlobs.textureListShared, meshGlobs.textureCountShared, path);
+            if (ref != NULL) {
+                surface = ref->surface;
+                if (surface) surface->AddRef();
+                trans = ref->trans;
+            } else {
+                surface = (LPDIRECTDRAWSURFACE4)container_load_texture_surface(path, 1, width, height, &trans);
+                if (surface != NULL) {
+                    mesh_add_texture_reference(meshGlobs.textureListShared, &meshGlobs.textureCountShared, path, surface, trans);
+                }
+            }
         }
     }
 

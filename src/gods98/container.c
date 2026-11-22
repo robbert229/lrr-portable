@@ -254,11 +254,10 @@ void Container_Shutdown(void)
         if (containerGlobs.listSet[list]) {
             count = 0x00000001 << list;
             for (loop = 0; loop < count; loop++) {
-                if (testCont = &containerGlobs.listSet[list][loop]) {
-                    if (testCont->nextFree == testCont) {
-                        removed++;
-                        Container_Remove2(testCont, 1);
-                    }
+                testCont = &containerGlobs.listSet[list][loop];
+                if (testCont->nextFree == testCont) {
+                    removed++;
+                    Container_Remove2(testCont, 1);
                 }
             }
             free(containerGlobs.listSet[list]);
@@ -423,7 +422,8 @@ void Container_Remove2(Container* dead, int kill)
             }
         }
     } else if (dead->type == Container_Anim) {
-        if (animClone = Container_Frame_GetAnimClone(dead->activityFrame)) {
+        animClone = Container_Frame_GetAnimClone(dead->activityFrame);
+        if (animClone != NULL) {
             anim_clone_remove(animClone);
         }
     }
@@ -485,7 +485,8 @@ Container* Container_Load(Container* parent, const char* filename,
         argc = sound_variant_split(name, argv, "\\");
         snprintf(path, sizeof(path), "%s\\%s.%s", baseName, argv[argc - 1],
                 containerGlobs.extensionName[Container_FromActivity]);
-        if (config = block_open(path)) {
+        config = block_open(path);
+        if (config != NULL) {
             BlockRec* arrayItem;
             float scale;
 
@@ -496,16 +497,17 @@ Container* Container_Load(Container* parent, const char* filename,
                     "::",
                     // STRING: LEGORR 0x004aab1c
                     "Activities");
-            if (arrayItem = block_subgroup(config, path)) {
+            arrayItem = block_subgroup(config, path);
+            if (arrayItem != NULL) {
                 cont = Container_Create(parent);
                 cont->type = Container_FromActivity;
-                do {
+                for (; arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
                     char tempString[512];
                     const char* fileName;
                     char* actname = arrayItem->key;
 
                     if (*actname == '!') {
-                        if (s_engine_feature_word & 0x00400000) goto next;
+                        if (s_engine_feature_word & 0x00400000) continue;
                         actname++;
                     }
 
@@ -516,7 +518,8 @@ Container* Container_Load(Container* parent, const char* filename,
                             "::",
                             // STRING: LEGORR 0x004aab10
                             "FILE");
-                    if (fileName = block_get_strptr(config, tempString)) {
+                    fileName = block_get_strptr(config, tempString);
+                    if (fileName != NULL) {
                         float transCo;
                         unsigned long trigger;
                         int lws, loop;
@@ -563,9 +566,7 @@ Container* Container_Load(Container* parent, const char* filename,
                             if (cont->typeData == NULL) Container_SetActivity(cont, actname);
                         }
                     }
-                next:
-                    ;
-                } while (arrayItem = block_next_equal_key(arrayItem));
+                }
             }
 
             snprintf(path, sizeof(path), "%s%s%s", containerGlobs.gameName, "::",
@@ -594,13 +595,15 @@ Container* Container_Load(Container* parent, const char* filename,
         unsigned long fileSize;
 
         snprintf(path, sizeof(path), "%s.%s", name, containerGlobs.extensionName[Container_Mesh]);
-        if (fileData = file_load_binary(path, (unsigned int*)&fileSize)) {
+        fileData = file_load_binary(path, (unsigned int*)&fileSize);
+        if (fileData != NULL) {
             LPDIRECT3DRMMESH mesh;
 
             cont = Container_Create(parent);
             cont->type = type;
-            if (mesh = Container_MeshLoad(fileData, fileSize, path, cont->activityFrame,
-                                          noTexture)) {
+            mesh = Container_MeshLoad(fileData, fileSize, path, cont->activityFrame,
+                                      noTexture);
+            if (mesh != NULL) {
                 Container_SetTypeData(cont, NULL, NULL, mesh, NULL);
             }
             free(fileData);
@@ -613,8 +616,9 @@ Container* Container_Load(Container* parent, const char* filename,
         cont = Container_Create(parent);
         cont->type = Container_Anim;
         snprintf(path, sizeof(path), "%s.%s", name, containerGlobs.extensionName[Container_Anim]);
-        if (animClone = Container_LoadAnimSet(path, cont->activityFrame, &frameCount,
-                                              type == Container_LWS, looping)) {
+        animClone = Container_LoadAnimSet(path, cont->activityFrame, &frameCount,
+                                          type == Container_LWS, looping);
+        if (animClone != NULL) {
             Container_Frame_SetAppData(cont->activityFrame, cont, animClone, name,
                                        &frameCount, NULL, NULL, NULL, NULL, NULL, NULL);
             return cont;
@@ -625,8 +629,8 @@ Container* Container_Load(Container* parent, const char* filename,
 
         cont = Container_Create(parent);
         cont->type = type;
-        if (transMesh = lwo_model_entry_load(name, cont->activityFrame,
-                                             noTexture)) {
+        transMesh = lwo_model_entry_load(name, cont->activityFrame, noTexture);
+        if (transMesh != NULL) {
             Container_SetTypeData(cont, NULL, NULL, NULL, transMesh);
             return cont;
         }
@@ -656,9 +660,12 @@ int Container_SetActivity(Container* cont, const char* actname)
     int result = 0;
 
     if (cont->type == Container_FromActivity) {
-        if (newFrame = Container_Frame_Find(cont, actname, 1)) {
-            if (cont->typeData && (currAnimName = cont->typeData->name)) {
-                if (oldFrame = Container_Frame_Find(cont, currAnimName, 0)) {
+        newFrame = Container_Frame_Find(cont, actname, 1);
+        if (newFrame != NULL) {
+            currAnimName = cont->typeData ? cont->typeData->name : NULL;
+            if (currAnimName != NULL) {
+                oldFrame = Container_Frame_Find(cont, currAnimName, 0);
+                if (oldFrame != NULL) {
                     Container_Frame_SafeAddChild(cont->hiddenFrame, oldFrame);
                 }
                 freeName = currAnimName;
@@ -1428,9 +1435,10 @@ unsigned long Container_Mesh_AddGroup(Container* cont, unsigned long vertexCount
                 mesh->SetAppData(
                     (LPD3DRM_APPDATA)(uintptr_t)(appData->usedCount | 0x80000000));
                 if (appData->usedCount == appData->listSize) {
-                    if (newList = (LPDIRECT3DRMMESH*)realloc(
-                            appData->listSet,
-                            sizeof(LPDIRECT3DRMMESH) * (appData->listSize + 20))) {
+                    newList = (LPDIRECT3DRMMESH*)realloc(
+                        appData->listSet,
+                        sizeof(LPDIRECT3DRMMESH) * (appData->listSize + 20));
+                    if (newList != NULL) {
                         appData->listSize += 20;
                         appData->listSet = newList;
                     }
@@ -1674,7 +1682,8 @@ int Container_Mesh_Scale(Container* cont, float x, float y, float z)
         unsigned long loop;
 
         mesh->Scale(x, y, z);
-        if (appData = (Container_MeshAppData*)mesh->GetAppData()) {
+        appData = (Container_MeshAppData*)mesh->GetAppData();
+        if (appData != NULL) {
             for (loop = 0; loop < appData->usedCount; loop++) {
                 appData->listSet[loop]->Scale(x, y, z);
             }
@@ -1692,7 +1701,8 @@ int Container_Mesh_GetBox(Container* cont, float* box)
     unsigned long loop;
 
     mesh->GetBox(result);
-    if (appData = (Container_MeshAppData*)mesh->GetAppData()) {
+    appData = (Container_MeshAppData*)mesh->GetAppData();
+    if (appData != NULL) {
         for (loop = 0; loop < appData->usedCount; loop++) {
             D3DRMBOX tempBox;
             appData->listSet[loop]->GetBox(&tempBox);
@@ -1722,7 +1732,8 @@ void Container_Mesh_SetColourAlpha(Container* cont, unsigned long groupID, float
 {
     void* transMesh;
 
-    if (transMesh = cont->typeData->transMesh) {
+    transMesh = cont->typeData->transMesh;
+    if (transMesh != NULL) {
         render_object_color_vector_set(transMesh, (int)groupID, r, g, b, 0);
         mesh_group_material_values_set(transMesh, (int)groupID, a, 4);
     }
@@ -1771,7 +1782,8 @@ float Container_SetAnimationTime(Container* cont, float time)
     LPDIRECT3DRMFRAME3 frame;
 
     if (cont->type == Container_FromActivity) {
-        if (frame = Container_Frame_Find(cont, cont->typeData->name, 0)) {
+        frame = Container_Frame_Find(cont, cont->typeData->name, 0);
+        if (frame != NULL) {
             animClone = Container_Frame_GetAnimClone(frame);
             if (cont->flags & CONTAINER_FLAG_ANIMATIONSKIPPED) {
                 char* sample;
@@ -1832,7 +1844,8 @@ void Container_ForceAnimationUpdate(Container* cont)
     if (cont->flags & CONTAINER_FLAG_ANIMATIONUPDATE) {
         if (cont->type == Container_FromActivity) {
             LPDIRECT3DRMFRAME3 frame;
-            if (frame = Container_Frame_Find(cont, cont->typeData->name, 0)) {
+            frame = Container_Frame_Find(cont, cont->typeData->name, 0);
+            if (frame != NULL) {
                 animClone = Container_Frame_GetAnimClone(frame);
                 time = Container_Frame_GetCurrTime(frame);
             }
@@ -1851,7 +1864,8 @@ float Container_GetAnimationTime(Container* cont)
 
     if (cont->type == Container_FromActivity) {
         LPDIRECT3DRMFRAME3 frame;
-        if (frame = Container_Frame_Find(cont, cont->typeData->name, 0)) {
+        frame = Container_Frame_Find(cont, cont->typeData->name, 0);
+        if (frame != NULL) {
             time = Container_Frame_GetCurrTime(frame);
         }
     } else if (cont->type == Container_Anim) {
@@ -2027,7 +2041,8 @@ float Container_GetTransCoef(Container* cont)
 {
     if (cont->type == Container_FromActivity && cont->typeData && cont->typeData->name) {
         LPDIRECT3DRMFRAME3 frame;
-        if (frame = Container_Frame_Find(cont, cont->typeData->name, 0)) {
+        frame = Container_Frame_Find(cont, cont->typeData->name, 0);
+        if (frame != NULL) {
             return Container_Frame_GetTransCo(frame);
         }
     }
@@ -2046,8 +2061,8 @@ Container* Container_SearchOwner(LPDIRECT3DRMFRAME3 frame)
             owner = cont;
         }
         frame->GetParent(&parent);
-        if (frame = parent) frame->Release();
-        else frame = NULL;
+        frame = parent;
+        if (frame != NULL) frame->Release();
     }
 
     return owner;
@@ -2059,7 +2074,8 @@ Container* Container_Frame_GetContainer(LPDIRECT3DRMFRAME3 frame)
     Container* cont = Container_Frame_GetOwner(frame);
 
     if (cont == NULL) {
-        if (cont = Container_Create(NULL)) {
+        cont = Container_Create(NULL);
+        if (cont != NULL) {
             cont->masterFrame->Release();
             cont->activityFrame->Release();
             cont->masterFrame = frame;
@@ -2118,16 +2134,16 @@ void Container_AddList(void)
     unsigned long loop, count;
 
     count = 0x00000001 << containerGlobs.listCount;
-    containerGlobs.listSet[containerGlobs.listCount] =
-        (Container*)malloc(sizeof(Container) * count);
-    if (list = containerGlobs.listSet[containerGlobs.listCount]) {
-        containerGlobs.listCount++;
-        for (loop = 1; loop < count; loop++) {
-            list[loop - 1].nextFree = &list[loop];
-        }
-        list[count - 1].nextFree = containerGlobs.freeList;
-        containerGlobs.freeList = list;
+    list = (Container*)malloc(sizeof(Container) * count);
+    containerGlobs.listSet[containerGlobs.listCount] = list;
+    if (list == NULL) return;
+
+    containerGlobs.listCount++;
+    for (loop = 1; loop < count; loop++) {
+        list[loop - 1].nextFree = &list[loop];
     }
+    list[count - 1].nextFree = containerGlobs.freeList;
+    containerGlobs.freeList = list;
 }
 
 /* The texture loader's state (Container_TextureLoadCallback's data). */

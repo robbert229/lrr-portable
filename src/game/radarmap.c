@@ -188,14 +188,14 @@ RadarMap* radarmap_create(struct TerrainMap* map, const Area2F* screenRect,
 {
     RadarMap* radarMap;
 
-    if (radarMap = (RadarMap*)malloc(sizeof(RadarMap))) {
-        radarMap->screenRect = *screenRect;
-        radarMap->zoom = zoom;
-        radarMap->blockSize = terrain_context_scale_get(map);
-        radarMap->map = map;
-        return radarMap;
-    }
-    return NULL;
+    radarMap = (RadarMap*)malloc(sizeof(RadarMap));
+    if (radarMap == NULL) return NULL;
+
+    radarMap->screenRect = *screenRect;
+    radarMap->zoom = zoom;
+    radarMap->blockSize = terrain_context_scale_get(map);
+    radarMap->map = map;
+    return radarMap;
 }
 
 // FUNCTION: LEGORR 0x0045daf0

@@ -302,6 +302,20 @@ target_link_libraries(units PUBLIC seam_stubs)
 add_executable(program ${LRR_ENTRY_SOURCE})
 set_target_properties(program PROPERTIES OUTPUT_NAME "LegoRR")
 target_link_libraries(program PRIVATE units)
+
+# Lint: compiler warnings this repository's own code is kept free of, as
+# errors, so the native-build check fails on a new one. Third-party code
+# (miniwin, miniaudio, SDL) is not covered. Add a warning here only once the
+# code builds cleanly with it.
+#   parentheses / C4706: an assignment used as a condition, as in
+#     if (x = f()). Assign on its own line and compare: x = f(); if (x != NULL).
+#     In a loop condition, write while ((x = next(x)) != NULL).
+set(LRR_LINT_WARNINGS
+  $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Werror=parentheses>
+  $<$<CXX_COMPILER_ID:MSVC>:/we4706>)
+foreach(_target IN ITEMS units seam_stubs program)
+  target_compile_options(${_target} PRIVATE ${LRR_LINT_WARNINGS})
+endforeach()
 if(WIN32)
   set_target_properties(program PROPERTIES WIN32_EXECUTABLE TRUE)
   # A shared SDL3 (an installed package; the fetched one is static) goes

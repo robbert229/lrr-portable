@@ -62,14 +62,15 @@ TextWindow* text_window_create(Font* font, TextWindowArea* size,
 {
     TextWindow* window;
 
-    if (window = (TextWindow*)malloc(sizeof(TextWindow))) {
-        memset(window, 0, sizeof(TextWindow));
-        window->font = font;
-        window->windowSize = *size;
-        window->windowBuf = (char*)malloc(bufferSize);
-        window->windowBufLen = bufferSize;
-        text_window_enable_centering(window, 1);
-    }
+    window = (TextWindow*)malloc(sizeof(TextWindow));
+    if (window == NULL) return NULL;
+
+    memset(window, 0, sizeof(TextWindow));
+    window->font = font;
+    window->windowSize = *size;
+    window->windowBuf = (char*)malloc(bufferSize);
+    window->windowBufLen = bufferSize;
+    text_window_enable_centering(window, 1);
     return window;
 }
 
@@ -292,7 +293,7 @@ int text_window_update_overlay(TextWindow* window, float time,
 
     lineList[0] = 0;
     lineCount = 1;
-    for (; c = window->secondaryBuf[loop]; loop++) {
+    for (; (c = window->secondaryBuf[loop]) != '\0'; loop++) {
         if (c == '\n') {
             lineWidths[lineCount - 1] = lineWidth;
             lineList[lineCount++] = loop + 1;

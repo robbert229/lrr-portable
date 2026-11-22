@@ -85,41 +85,48 @@ Font* font_load(const char* fname)
     unsigned char* buffer;
     unsigned int offset;
 
-    if (image = image_load_bmp_scaled(fname, 0, 0)) {
-        if (font = font_create(image)) {
-            image_set_pen_zero_trans(image);
-            width = (int)image->width / FONT_GRIDWIDTH;
-            height = (int)image->height / FONT_GRIDHEIGHT;
-            pen255 = image_get_pen255(image);
-            mask = image_get_pixel_mask(image);
-            if (buffer = (unsigned char*)image_lock_surface(image, &pitch, &bpp)) {
-                for (y = 0; y < FONT_GRIDHEIGHT; y++) {
-                    for (x = 0; x < FONT_GRIDWIDTH; x++) {
-                        font->posSet[x][y].x = (float)(x * width);
-                        font->posSet[x][y].y = (float)(y * height);
-                        font->posSet[x][y].width = (float)width;
-                        font->posSet[x][y].height = (float)height;
-                        for (xPos = width - 1; xPos; xPos--) {
-                            offset = (unsigned int)((float)(x * width) + xPos) * (bpp / 8) +
-                                     (unsigned int)(float)(y * height) * pitch;
-                            if ((((((((buffer[offset] << 8) | buffer[offset + 1]) << 8) |
-                                    buffer[offset + 2]) << 8) | buffer[offset + 3]) & mask) == pen255)
-                                font->posSet[x][y].width--;
-                            else
-                                break;
-                        }
-                    }
-                }
-                font->fontHeight = (unsigned int)font->posSet[0][0].height;
-                font->tabWidth = (unsigned int)font->posSet[0][0].width * FONT_TABWIDTH;
-                image_unlock_surface(image);
-                return font;
-            }
-            font_remove(font);
-        }
+    image = image_load_bmp_scaled(fname, 0, 0);
+    if (image == NULL) return NULL;
+
+    font = font_create(image);
+    if (font == NULL) {
         image_surface_release(image);
+        return NULL;
     }
-    return NULL;
+
+    image_set_pen_zero_trans(image);
+    width = (int)image->width / FONT_GRIDWIDTH;
+    height = (int)image->height / FONT_GRIDHEIGHT;
+    pen255 = image_get_pen255(image);
+    mask = image_get_pixel_mask(image);
+    buffer = (unsigned char*)image_lock_surface(image, &pitch, &bpp);
+    if (buffer == NULL) {
+        font_remove(font);
+        image_surface_release(image);
+        return NULL;
+    }
+
+    for (y = 0; y < FONT_GRIDHEIGHT; y++) {
+        for (x = 0; x < FONT_GRIDWIDTH; x++) {
+            font->posSet[x][y].x = (float)(x * width);
+            font->posSet[x][y].y = (float)(y * height);
+            font->posSet[x][y].width = (float)width;
+            font->posSet[x][y].height = (float)height;
+            for (xPos = width - 1; xPos; xPos--) {
+                offset = (unsigned int)((float)(x * width) + xPos) * (bpp / 8) +
+                         (unsigned int)(float)(y * height) * pitch;
+                if ((((((((buffer[offset] << 8) | buffer[offset + 1]) << 8) |
+                        buffer[offset + 2]) << 8) | buffer[offset + 3]) & mask) == pen255)
+                    font->posSet[x][y].width--;
+                else
+                    break;
+            }
+        }
+    }
+    font->fontHeight = (unsigned int)font->posSet[0][0].height;
+    font->tabWidth = (unsigned int)font->posSet[0][0].width * FONT_TABWIDTH;
+    image_unlock_surface(image);
+    return font;
 }
 
 // FUNCTION: LEGORR 0x0047a150
@@ -288,14 +295,16 @@ void font_add_list(void)
     unsigned int count, loop;
 
     count = 0x00000001 << fontGlobs.listCount;
-    if (list = fontGlobs.listSet[fontGlobs.listCount] = (Font*)malloc(sizeof(Font) * count)) {
-        fontGlobs.listCount++;
-        for (loop = 1; loop < count; loop++) {
-            list[loop - 1].nextFree = &list[loop];
-        }
-        list[count - 1].nextFree = fontGlobs.freeList;
-        fontGlobs.freeList = list;
+    list = (Font*)malloc(sizeof(Font) * count);
+    fontGlobs.listSet[fontGlobs.listCount] = list;
+    if (list == NULL) return;
+
+    fontGlobs.listCount++;
+    for (loop = 1; loop < count; loop++) {
+        list[loop - 1].nextFree = &list[loop];
     }
+    list[count - 1].nextFree = fontGlobs.freeList;
+    fontGlobs.freeList = list;
 }
 
 #ifdef __cplusplus
