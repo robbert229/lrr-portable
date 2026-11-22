@@ -32,3 +32,6 @@ lrr_unit_test(sound3d SOURCES ${ENGINE_DIR}/test_sound3d.cpp LABELS sound3d)
 
 # Verify RGB565 packing and the byte layout of a synthetic screenshot BMP.
 lrr_unit_test(directdraw SOURCES ${ENGINE_DIR}/test_directdraw.cpp LABELS directdraw)
+
+# Convert indexed and BGR bitmap rows to top-down RGB565 with stride padding.
+lrr_unit_test(images_unit SOURCES ${ENGINE_DIR}/test_images_unit.cpp LABELS images_unit)
