@@ -66,3 +66,6 @@ lrr_unit_test(soundsys SOURCES ${ENGINE_DIR}/test_soundsys.cpp LABELS soundsys)
 
 # Fill, release and reuse entries in the level-map handle table.
 lrr_unit_test(g98_024 SOURCES ${ENGINE_DIR}/test_g98_024.cpp LABELS g98_024)
+
+# Copy a retained-mode frame tree and verify walk termination and local transforms.
+lrr_unit_test(animclone SOURCES ${ENGINE_DIR}/test_animclone.cpp LABELS animclone)
