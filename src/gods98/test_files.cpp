@@ -57,7 +57,8 @@ static void test_mapping(void)
     write_text("Data/Levels/Map.txt", "x");
     /* A path that exists as spelled is kept, so on a disk that ignores case
      * (macOS's default) the units' spelling stays. */
-    const char* expected = access("DATA/LEVELS/MAP.TXT", F_OK) == 0 ? "DATA/LEVELS/MAP.TXT" : "Data/Levels/Map.txt";
+    const char* expected =
+        access("DATA/LEVELS/MAP.TXT", F_OK) == 0 ? "DATA/LEVELS/MAP.TXT" : "Data/Levels/Map.txt";
     CHECK(files_native_host_path(host, "DATA\\LEVELS\\MAP.TXT", sizeof(host)) != NULL &&
               strcmp(host, expected) == 0,
           "map: separators and case follow the disk");

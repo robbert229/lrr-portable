@@ -10,7 +10,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # No fused multiply-add: the original's x87 code rounds every product, and
 # miniwin's rasterizer needs a shared edge to evaluate to exactly opposite
 # values from its two triangles. Clang contracts a * b + c by default where
-# the target has FMA (arm64) and GCC does on any target that has it.
+# the target has FMA (arm64), and GCC can too.
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   add_compile_options(-ffp-contract=off)
 endif()

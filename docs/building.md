@@ -125,9 +125,11 @@ The `native-hosts` workflow (`.github/workflows/native-hosts.yml`) runs on the
 same events and builds the port on macOS arm64 (`macos-latest`), macOS Intel
 (`macos-15-intel`), both with `CMAKE_OSX_DEPLOYMENT_TARGET=12.0`, and FreeBSD
 15.1 in a VM. Its jobs are not required checks. Each runs
-`tools/setup-miniwin.sh`, then the commands from [Tests](#tests); SDL3 is the
-static build configure fetches at `LRR_SDL3_GIT_TAG`, with SDL's default
-drivers. The `--wrap` tests need GNU ld options and are skipped on macOS.
+`tools/setup-miniwin.sh`, then the commands from [Tests](#tests) with Ninja and
+a Release build; SDL3 is the static build configure fetches at
+`LRR_SDL3_GIT_TAG`, with SDL's default drivers. The `--wrap` tests need GNU ld
+options and are skipped on macOS. The build turns off fused multiply-add
+(`-ffp-contract=off`), which Clang otherwise uses on arm64.
 
 
 ## Sources
