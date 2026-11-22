@@ -66,3 +66,6 @@ lrr_unit_test(encyclopedia SOURCES ${GAME_DIR}/test_encyclopedia.cpp
   WRAP ui_text_output_object_release_target panel_text_window_print_f
     ui_text_output_position_and_draw lego_selected_entity_ground_marker_render
   LABELS encyclopedia)
+
+# Erosion neighbor filtering and lock expiry on a synthetic level.
+lrr_unit_test(erode SOURCES ${GAME_DIR}/test_erode.cpp LABELS erode)
