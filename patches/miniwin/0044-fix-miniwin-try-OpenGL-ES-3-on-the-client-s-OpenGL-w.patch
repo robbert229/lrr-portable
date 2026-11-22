@@ -1,0 +1,66 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sun, 22 Nov 2026 12:04:25 -0800
+Subject: [PATCH] fix(miniwin): try OpenGL ES 3 on the client's OpenGL window
+ where there can be only one
+
+
+diff --git a/miniwin/src/internal/d3drmrenderer_opengles3.h b/miniwin/src/internal/d3drmrenderer_opengles3.h
+index 7de3cda..73b52d9 100644
+--- a/miniwin/src/internal/d3drmrenderer_opengles3.h
++++ b/miniwin/src/internal/d3drmrenderer_opengles3.h
+@@ -196,9 +196,11 @@ inline static void OpenGLES3Renderer_EnumDevice(const IDirect3DMiniwin* d3d, LPD
+ {
+ 	// A client may list the devices before SetCooperativeLevel gives miniwin
+ 	// its window. If its windows are OpenGL windows (Miniwin_SetOpenGLWindows),
+-	// the device is tried on a hidden OpenGL window of its own; otherwise it
+-	// could not draw into the client's window and is not listed.
++	// the device is tried on a hidden OpenGL window of its own, or, where the
++	// platform has only one window (Android), on the client's OpenGL window;
++	// otherwise it could not draw into the client's window and is not listed.
+ 	SDL_Window* probe = nullptr;
++	bool borrowed = false;
+ 	if (!DDWindow) {
+ 		if (!Miniwin_GetOpenGLWindows()) {
+ 			return;
+@@ -210,11 +212,26 @@ inline static void OpenGLES3Renderer_EnumDevice(const IDirect3DMiniwin* d3d, LPD
+ 		Miniwin_SetupWindowCreateProperties(props);
+ 		probe = SDL_CreateWindowWithProperties(props);
+ 		SDL_DestroyProperties(props);
+-		if (!probe) {
+-			SDL_Log("OpenGL ES 3: no window to try the device on (%s)", SDL_GetError());
+-			return;
++		if (probe) {
++			DDWindow = probe;
++		}
++		else {
++			char error[256];
++			SDL_strlcpy(error, SDL_GetError(), sizeof(error));
++			int count = 0;
++			SDL_Window** windows = SDL_GetWindows(&count);
++			for (int i = 0; windows && i < count && !DDWindow; i++) {
++				if (SDL_GetWindowFlags(windows[i]) & SDL_WINDOW_OPENGL) {
++					DDWindow = windows[i];
++				}
++			}
++			SDL_free(windows);
++			if (!DDWindow) {
++				SDL_Log("OpenGL ES 3: no window to try the device on (%s)", error);
++				return;
++			}
++			borrowed = true;
+ 		}
+-		DDWindow = probe;
+ 	}
+ 
+ 	Direct3DRMRenderer* device = OpenGLES3Renderer::Create(
+@@ -231,6 +248,9 @@ inline static void OpenGLES3Renderer_EnumDevice(const IDirect3DMiniwin* d3d, LPD
+ 		DDWindow = nullptr;
+ 		SDL_DestroyWindow(probe);
+ 	}
++	else if (borrowed) {
++		DDWindow = nullptr;
++	}
+ 	if (!created) {
+ 		return;
+ 	}

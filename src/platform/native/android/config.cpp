@@ -25,6 +25,10 @@ void Android_SetupDefaultConfigOverrides(dictionary* p_dictionary)
     }
 
     iniparser_set(p_dictionary, LRR_CONFIG_SAVEPATH, savedata.c_str());
+    // Full screen: an Android window always fills the screen, and only the
+    // full-screen display mode gives miniwin the game's 640x480 to fit in
+    // it; a window would take the screen's size as its own.
+    iniparser_set(p_dictionary, LRR_CONFIG_FULLSCREEN, "true");
     // The game data (Data and the WADs) in the external storage directory;
     // without one, the working directory.
     if (!storage.empty()) {

@@ -85,6 +85,11 @@ what you were doing when it happened.
 > **macOS:** the app isn't notarized by Apple, so the first time you open it,
 > right-click `LegoRR.app` and choose **Open**.
 
+> **Android (experimental):** a test APK comes from the `native-hosts` run's
+> `LegoRR-android-debug` artifact. You copy your game files onto the device
+> with `adb` for now; [docs/building.md](docs/building.md#android) shows how,
+> and what works by touch so far.
+
 ## Your saves
 
 Saves don't go in the game folder any more. They go in a per-user folder,
@@ -96,6 +101,7 @@ installed somewhere read-only:
 | Windows | `%APPDATA%\lrr-portable\LegoRR\` |
 | macOS | `~/Library/Application Support/lrr-portable/LegoRR/` |
 | Linux | `~/.local/share/lrr-portable/LegoRR/` |
+| Android | `/sdcard/Android/data/io.github.robbert229.LegoRR/files/` |
 
 **Have old saves?** The save format hasn't changed. Copy the files from your
 original install's `Data\Saves` folder (`0.sav`, `0.osf`, the `.dat`

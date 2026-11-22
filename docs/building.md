@@ -64,7 +64,7 @@ The game's movies need FFmpeg 7 or later at run time, not at build time:
 libswscale with `SDL_LoadObject`, trying the names `CMakeLists.txt` lists for
 the host (`LRR_VIDEO_LIB*`: `.so`, `.dylib` or `.dll`). Without them the game
 skips its movies. `-DLRR_MOVIES=OFF` builds the video library as a stub that
-always reports no movies; it is off already on Emscripten, iOS, the Nintendo
+always reports no movies; it is off already on Emscripten, iOS, Android, the Nintendo
 targets, Vita and DOS.
 
 miniwin emulates a 16-bit RGB565 display and describes its software renderer
@@ -80,7 +80,8 @@ rectangle clears; ADR 0008, step 6), and miniwin reports which do
 `LegoRR.ini`, the game picks the platform's default device if it can draw,
 else the first device that can (a device the file names wins): on the desktop SDL GPU, which needs a
 Vulkan, Metal or Direct3D 12 device, falling back to the software renderer
-(`3d device = Miniwin driver (Miniwin Emulation)` selects it). The
+(`3d device = Miniwin driver (Miniwin Emulation)` selects it); on Android
+OpenGL ES 3, and on the web the software renderer. The
 per-platform defaults are in `src/platform/native/<platform>/config.h`, and
 `device_choice_test` checks them against each platform's device list.
 
@@ -93,7 +94,9 @@ context (a desktop OpenGL 4.3 or later driver provides one). On an OpenGL
 window miniwin does not list SDL GPU, which cannot share the window with EGL
 (on Wayland the attempt closes the display connection). OpenGL ES 2 and
 OpenGL 1.x are listed there too but cannot draw the level: OpenGL ES 3 is
-the oldest OpenGL the port draws with. The `miniwin_*_gles3` tests run the
+the oldest OpenGL the port draws with. miniwin tries OpenGL ES 3 on a hidden
+window of its own before listing it; where a platform has only one window
+(Android), it tries it on the game's OpenGL window instead. The `miniwin_*_gles3` tests run the
 rendering checks on OpenGL ES 3 where SDL's offscreen driver offers an
 OpenGL ES 3 context through EGL (`LRR_MINIWIN_GLES3_VIDEO_DRIVER` picks
 another driver), and are skipped elsewhere, as on CI.
@@ -328,6 +331,109 @@ The icon, banner and banner sound are original (`packaging/3ds/regenerate.py`
 renders them). An emulator such as [Azahar](https://azahar-emu.org/) runs
 the `.3dsx` with the game data in its emulated SD card's `3ds/LegoRR`.
 
+## Android
+
+The Android app (issue #927) is the Gradle project in `packaging/android`,
+adapted from isle-portable's `android-project`. Building it needs JDK 17
+(Temurin is what CI uses) and the Android SDK with platform 35, NDK
+27.3.13750724 and the SDK's CMake 3.31.5; Gradle installs a missing NDK or
+CMake when the SDK licences are accepted, or install them first:
+
+```sh
+sdkmanager "platforms;android-35" "ndk;27.3.13750724" "cmake;3.31.5"
+tools/setup-miniwin.sh
+cd packaging/android
+ANDROID_HOME=/path/to/sdk ./gradlew assembleDebug
+# app/build/outputs/apk/debug/app-debug.apk
+```
+
+The wrapper fetches Gradle 8.12 and checks its SHA-256. The app's package
+is `io.github.robbert229.LegoRR` (`LRR_APP_ID`), named "LRR Portable",
+with launcher icons that `packaging/icons/regenerate.py` renders from the
+project's own icon. Gradle builds the repository's CMake project once per
+ABI; on Android, `CMakeLists.txt` makes the program the shared library
+`libLegoRR.so`, which SDL's Java activity (`LegoRRActivity`) loads before
+calling its `SDL_main` (`entry.cpp`) on SDL's main thread. `WinMain`
+blocks there, as it does on the desktop. SDL3 is SDL's own Android archive
+(AAR) from the 3.4.18 release, which is also the release CMake fetches
+elsewhere. `app/build.gradle` downloads it into `app/libs`, checks its
+SHA-256, and links it with `find_package(SDL3 ... COMPONENTS Shared)`.
+Movies are off (`LRR_MOVIES`), as Android has no FFmpeg.
+`-PcmakeArgs="..."` passes more CMake arguments.
+
+**ABIs.** The APK holds `arm64-v8a` and `x86_64`: 64-bit ARM is every
+phone and tablet sold in recent years (Google Play requires 64-bit code),
+and `x86_64` runs in the emulator and on Chromebooks. `armeabi-v7a` and
+`x86` are left out: devices that run only 32-bit code are old or low-end
+and a shrinking share, and each ABI adds about 3 MB to the APK and another
+full build to CI. Both still build:
+`./gradlew assembleDebug -PabiFilters=arm64-v8a,armeabi-v7a,x86_64,x86`.
+
+**Display.** The game is landscape and full screen (`full screen = true`
+is Android's default in `LegoRR.ini`): an Android window always fills the
+screen, and the full-screen mode is what lets miniwin fit the game's 640x480
+into it. The default 3D device is OpenGL ES 3 (`ANDROID_DEFAULT_3D_DEVICE`),
+which every device from Android 4.3 on supports, in the OpenGL window its
+name asks for. The software renderer is the fallback when OpenGL ES 3 cannot
+be set up, and `3d device = Miniwin driver (Miniwin Emulation)` selects it.
+SDL GPU is usually not listed on Android: it cannot share the OpenGL window,
+and upstream lists it there only once DirectDraw has a window, after the game
+has listed its devices.
+
+**Game data.** The app reads the game data from its external files
+directory, `/sdcard/Android/data/io.github.robbert229.LegoRR/files/`
+(`legorr:diskpath`), which also holds `LegoRR.ini` and the `saves`
+directory. No permission is needed. A folder picker on first run is #909;
+until then, copy your own game files in with `adb`:
+
+```sh
+P=io.github.robbert229.LegoRR
+adb install app-debug.apk
+adb shell am start -W -n $P/.LegoRRActivity   # creates the directory
+adb shell am force-stop $P
+cd /path/to/game
+adb push LegoRR0.wad LegoRR1.wad Data /sdcard/Android/data/$P/files/
+adb shell chmod -R a+rwX /sdcard/Android/data/$P/files/Data
+```
+
+Push `Music` the same way, and `chmod` it too. The `chmod` matters: a
+directory that `adb push` creates belongs to the shell user, and the app
+cannot read it until the directory is opened to all users. The files pushed
+straight into `files/`, like the WADs, are readable without it. Without the
+`chmod` the game still runs, but without what it reads from `Data`, such as
+the menu's animations from `Data/AVI` and the sounds in `Data/Sounds`. #909
+tracks a better way in. Movies are off, so the `.avi` files in `Data/AVI` (about
+370 MB) can be left out; keep the `.flh` files beside them. Don't edit
+`LegoRR.ini` in place with `adb shell`, because the file it writes belongs
+to the shell user and the app can no longer write it. Pull the file, edit
+it, and push it back, or delete it to get the defaults again. Uninstalling
+the app deletes the directory and everything in it, including the saves.
+
+**Touch.** SDL turns a touch into mouse events: a tap moves the pointer to
+the finger and presses and releases the left button, and miniwin passes
+those on as `WM_MOUSEMOVE` and `WM_LBUTTON*`. A press of a frame or more
+clicks, in the menus and in a level; a tap shorter than one game frame can
+be missed, because the game reads the button state once per frame. A mouse
+and keyboard work. #986 tracks what touch still lacks: a right click,
+scrolling and zooming the map, the keys the game asks for (Space, Escape,
+typing a save's name) and Android's Back button.
+
+**Signing.** CI builds only the debug APK, signed with Android's debug key,
+so it installs for testing. `./gradlew assembleRelease` gives an unsigned,
+minified `app-release-unsigned.apk`. Signing a release is the owner's
+decision, and it needs:
+
+- a release keystore that the owner generates once (`keytool -genkeypair`)
+  and keeps safe. Every update must be signed with the same key.
+- four repository secrets: the base64 keystore, its password, the key alias
+  and the key's password.
+- a CI step that decodes the keystore and signs the APK, either with
+  `apksigner sign` after `assembleRelease` or with a `signingConfig` in
+  `app/build.gradle` that reads the four values from the environment, as
+  isle-portable's does.
+- for Google Play, an Android App Bundle (`bundleRelease`) and Play App
+  Signing.
+
 ## Tests
 
 ```sh
@@ -425,6 +531,16 @@ target in the `devkitpro/devkitarm` image (pinned by digest), with
 `bannertool` 1.2.0 and `makerom` 0.18 downloaded and checked against a
 SHA-256, and uploads `LegoRR.3dsx` and `LegoRR.cia` as the `LegoRR-3ds`
 artifact.
+
+The same workflow's `android` job, also not required, builds the debug APK
+on `ubuntu-24.04` (see [Android](#android)). It checks the Gradle
+wrapper's jar (`gradle/actions/wrapper-validation`), sets up Temurin JDK 17,
+installs the pinned NDK and CMake with `sdkmanager`, runs `./gradlew
+assembleDebug`, and uploads the APK as the `LegoRR-android-debug` artifact.
+Every download it makes is pinned and checked: Gradle by the wrapper's
+`distributionSha256Sum`, SDL's AAR by `app/build.gradle`, and the NDK and
+CMake by the SDK repository's checksums. It signs nothing and uses no
+secrets.
 
 The same workflow's `web-emscripten` job, also not required, sets up emsdk
 6.0.10 (`emscripten-core/setup-emsdk`), builds the web target as in

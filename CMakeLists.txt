@@ -253,7 +253,7 @@ target_link_libraries(units PUBLIC miniwin SDL3::SDL3)
 include(CMakeDependentOption)
 cmake_dependent_option(LRR_MOVIES
   "Build the FFmpeg movie library; off builds a no-movies stub" ON
-  "NOT EMSCRIPTEN;NOT IOS;NOT NINTENDO_3DS;NOT NINTENDO_SWITCH;NOT VITA;NOT DOS" OFF)
+  "NOT EMSCRIPTEN;NOT IOS;NOT ANDROID;NOT NINTENDO_3DS;NOT NINTENDO_SWITCH;NOT VITA;NOT DOS" OFF)
 if(LRR_MOVIES)
   if(APPLE)
     set(LRR_VIDEO_LIBAVFORMAT "libavformat.63.dylib,libavformat.62.dylib,libavformat.61.dylib,libavformat.dylib")
@@ -364,7 +364,14 @@ if(EMSCRIPTEN)
 endif()
 target_link_libraries(units PUBLIC seam_stubs)
 
-add_executable(program ${LRR_ENTRY_SOURCE})
+if(ANDROID)
+  # SDL's Java activity loads the program as libLegoRR.so and calls its
+  # SDL_main on SDL's main thread, where WinMain's loop may block
+  # (packaging/android; isle-portable overrides add_executable the same way).
+  add_library(program SHARED ${LRR_ENTRY_SOURCE})
+else()
+  add_executable(program ${LRR_ENTRY_SOURCE})
+endif()
 set_target_properties(program PROPERTIES OUTPUT_NAME "LegoRR")
 target_link_libraries(program PRIVATE units)
 
