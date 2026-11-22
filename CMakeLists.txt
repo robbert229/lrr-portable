@@ -426,6 +426,22 @@ if(BUILD_TESTING)
       "LINKER:--wrap=idle_register")
     add_test(NAME run_away COMMAND run_away_test)
     set_tests_properties(run_away PROPERTIES LABELS legoobject)
+    # camera_control.c's radar camera moves its root by at most maxMove a frame: the
+    # unit's calls to the scene's position, facing and pose functions reach
+    # the test's __wrap_ stubs, which move fake frames.
+    add_executable(camera_track_test ${GAME_DIR}/test_camera_track.cpp)
+    target_link_libraries(camera_track_test PRIVATE units)
+    target_link_options(camera_track_test PRIVATE
+      "LINKER:--wrap=ddiscene_object_position_get"
+      "LINKER:--wrap=ddiscene_object_position_set"
+      "LINKER:--wrap=ddiscene_object_facing_pair_get"
+      "LINKER:--wrap=ddiscene_object_pose_method_dispatch"
+      "LINKER:--wrap=render_object_rotate_axis"
+      "LINKER:--wrap=scene_object_camera_teleport_or_offset"
+      "LINKER:--wrap=legoobject_type_component_get"
+      "LINKER:--wrap=lego_flags1_bit17_set")
+    add_test(NAME camera_track COMMAND camera_track_test)
+    set_tests_properties(camera_track PROPERTIES LABELS camera)
     # Info.c's $name$ tokens carry the whole image pointer to the panel
     # print and to Font's "%b": the units' image and panel calls reach the
     # test's __wrap_ stubs.
