@@ -192,6 +192,14 @@ if(BUILD_TESTING)
       "LINKER:--wrap=ddiscene_object_position_get")
     add_test(NAME flock_position COMMAND flock_position_test)
     set_tests_properties(flock_position PROPERTIES LABELS legoobject)
+    # FrontEnd.c's save slots on a fixture data directory: Files.c's
+    # start-up finds the fixture's Data directory through the test's
+    # __wrap_files_native_findfirst (the seam's stub finds nothing).
+    add_executable(savegame_test ${GAME_DIR}/test_savegame.cpp)
+    target_link_libraries(savegame_test PRIVATE units)
+    target_link_options(savegame_test PRIVATE "LINKER:--wrap=files_native_findfirst")
+    add_test(NAME savegame COMMAND savegame_test)
+    set_tests_properties(savegame PROPERTIES LABELS savegame)
   endif()
   add_executable(draw_test ${ENGINE_DIR}/test_draw.cpp)
   target_link_libraries(draw_test PRIVATE units)
