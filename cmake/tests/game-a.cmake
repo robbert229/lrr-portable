@@ -95,3 +95,6 @@ lrr_unit_test(interface_unit SOURCES ${GAME_DIR}/test_interface_unit.cpp
 # Lego's level resource accounting and object catalog lookups.
 lrr_unit_test(lego_unit SOURCES ${GAME_DIR}/test_lego_unit.cpp
   WRAP ui_overlay_animation_advance LABELS lego_unit)
+
+# Camera zoom range, free movement, and acceleration on a normalized direction.
+lrr_unit_test(camera_control SOURCES ${GAME_DIR}/test_camera_control.cpp LABELS camera_control)
