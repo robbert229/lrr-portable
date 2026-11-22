@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sat, 21 Nov 2026 22:07:13 -0800
+Subject: [PATCH] fix(miniwin): drop the unused ERROR_SUCCESS from windows.h
+
+libctru's error applet (3ds/applets/error.h, which citro3d.h includes)
+declares ERROR_SUCCESS as an enumerator, so the macro broke the Citro3D
+backend's build on Nintendo 3DS. Nothing in miniwin or LegoRR reads it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/include/miniwin/windows.h b/miniwin/include/miniwin/windows.h
+index 2fa659b..58f84e9 100644
+--- a/miniwin/include/miniwin/windows.h
++++ b/miniwin/include/miniwin/windows.h
+@@ -171,7 +171,6 @@
+ #define BITSPIXEL 12
+ #define PLANES 14
+ 
+-#define ERROR_SUCCESS 0L
+ #define ERROR_ALREADY_EXISTS 183L
+ 
+ #define MAKELPARAM(l, h) ((LPARAM) (DWORD) (((WORD) (l)) | (((DWORD) (WORD) (h)) << 16)))
