@@ -8,7 +8,7 @@
  * original's for a given seed.
  *
  * Include this header after the C library headers: it redefines rand,
- * srand and vsnprintf. */
+ * srand, snprintf and vsnprintf. */
 #ifndef LEGORRR_CRT_VC5NAMES_H
 #define LEGORRR_CRT_VC5NAMES_H
 
@@ -22,10 +22,11 @@
 
 #include <SDL3/SDL_stdinc.h>
 
+#include "crt/safe_format.h"
+
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
-#include <string>
 
 /* _rand and _srand: the VC5 LIBC generator (holdrand * 214013 + 2531011,
  * bits 16-30). */
@@ -148,53 +149,9 @@ inline void crt_splitpath(const char* path, char* drive, char* dir,
 }
 #define _splitpath crt_splitpath
 
-/* _vsnprintf: the host's vsnprintf with VC5 LIBC's handling of two formats
- * where hosts differ; other conversions VC5 lacks still reach the host. VC5 has no "b" conversion: it drops the "%"
- * and any flags, width, precision and size before the "b", prints the "b"
- * as text and takes no argument. glibc prints the argument in binary and
- * the UCRT aborts. A "%" whose specification runs into the end of the
- * format prints nothing in VC5; glibc fails the whole call. Info text
- * reaches TextWindow's vsnprintf with a "%b" for each image token (#951).
- * A "*" width before a "b" takes an int in VC5 but nothing here. */
-inline int crt_vsnprintf(char* buffer, size_t size, const char* format, va_list args)
-{
-    std::string fixed;
-    const char* copied = format;
-    const char* p = format;
-    const char* q;
-    bool changed = false;
-
-    while (*p != '\0') {
-        if (*p != '%') {
-            p++;
-            continue;
-        }
-        q = p + 1;
-        while (*q == '-' || *q == '+' || *q == ' ' || *q == '#' || *q == '0') q++;
-        while (*q == '*' || isdigit((unsigned char)*q)) q++;
-        if (*q == '.') {
-            q++;
-            while (*q == '*' || isdigit((unsigned char)*q)) q++;
-        }
-        if (q[0] == 'I' && q[1] == '6' && q[2] == '4') q += 3;
-        else while (*q == 'h' || *q == 'l' || *q == 'L') q++;
-        if (*q == 'b' || *q == '\0') {
-            fixed.append(copied, p);
-            if (*q == 'b') {
-                fixed += 'b';
-                q++;
-            }
-            copied = q;
-            changed = true;
-            p = q;
-        } else {
-            p = q + 1;
-        }
-    }
-    if (!changed) return vsnprintf(buffer, size, format, args);
-    fixed.append(copied);
-    return vsnprintf(buffer, size, fixed.c_str(), args);
-}
+/* snprintf and vsnprintf: a formatter safe for format strings from game
+ * data (crt/safe_format.h), not the host's directly. */
 #define vsnprintf crt_vsnprintf
+#define snprintf crt_snprintf
 
 #endif /* LEGORRR_CRT_VC5NAMES_H */

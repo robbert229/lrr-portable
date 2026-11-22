@@ -155,6 +155,20 @@ reference.
   original's check.
 - **Where:** b4af5d1f; `src/game/objectrecall.c`.
 
+### Format codes in game text
+
+- **Original:** several kinds of text from `Lego.cfg` (dialogs, level and
+  NERPs messages, tooltips, menus, info messages) are used as printf
+  formats. A `%n` in such text writes to memory.
+- **Port:** a `%n` in game text does nothing. A `%` followed by a letter
+  that is not a standard printf conversion prints as that letter alone, on
+  every host. Standard codes such as `%d` and `%s` print as C defines them.
+- **Why:** mod and custom-level text must not be able to write memory or
+  crash the game.
+- **Configurable:** no.
+- **Where:** `src/crt/safe_format.h` (`[divergence:printf-n]`,
+  `[divergence:printf-unknown-letter]`); #954.
+
 ## 2. Bug fixes in the original
 
 These change the original's code where it misbehaves. Each one is marked
@@ -202,11 +216,3 @@ Known small differences in substitutions meant to behave the same:
 - `entry.cpp` builds the Windows command line from `argv`, so the original's
   flags (`-best`, `-window`, `-nosound`, `-debug`, ...) work unchanged.
 - `crt/vc5names.h` keeps the VC5 `rand`/`srand`, so random sequences match.
-- `crt/vc5names.h`'s `vsprintf` prints a `%b` as `b` and takes no argument,
-  as VC5 does, and drops a `%` left unfinished at the end of the format.
-  Info messages with `$name$` image tokens reach the info panel's
-  TextWindow with a `%b` for each token, so the panel shows a `b` where
-  the token was, as in the original, on every host (#951). glibc would
-  print the image pointer in binary and the UCRT would abort. The image is
-  not drawn; the original never drew it there either. One edge differs: a
-  `*` width before the `b` takes an `int` argument in VC5 and none here.

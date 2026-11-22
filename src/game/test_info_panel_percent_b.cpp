@@ -8,7 +8,7 @@
  * The original's VC5 LIBC has no "b" conversion: it prints the "b" as text
  * and takes no argument. glibc prints the argument in binary and the UCRT
  * aborts, so the units' vsnprintf (crt/vc5names.h) handles "%b" itself and
- * the panel shows the same text on every host. test_vc5_vsprintf checks
+ * the panel shows the same text on every host. test_safe_format checks
  * that vsnprintf on its own.
  *
  * The test links with --wrap for the image loader, the image draw and the
