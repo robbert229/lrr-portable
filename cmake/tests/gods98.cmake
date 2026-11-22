@@ -89,3 +89,6 @@ lrr_unit_test(lwo SOURCES ${ENGINE_DIR}/test_lwo.cpp LABELS lwo)
 
 # Expand stored and method-2 RNC streams and pin canonical Huffman codes.
 lrr_unit_test(rnc SOURCES ${ENGINE_DIR}/test_rnc.cpp LABELS rnc)
+
+# Filter a synthetic display-mode list and look up its exact descriptions.
+lrr_unit_test(init SOURCES ${ENGINE_DIR}/test_init.cpp LABELS init)
