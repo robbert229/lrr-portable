@@ -83,3 +83,6 @@ lrr_unit_test(file_list_streams SOURCES ${ENGINE_DIR}/test_file_list_streams.cpp
 
 # Mount synthetic WWAD archives and check precedence, packed entries and handles.
 lrr_unit_test(wad SOURCES ${ENGINE_DIR}/test_wad.cpp LABELS wad)
+
+# Parse a synthetic LightWave triangle and match surface records to the name table.
+lrr_unit_test(lwo SOURCES ${ENGINE_DIR}/test_lwo.cpp LABELS lwo)
