@@ -1,0 +1,45 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sat, 21 Nov 2026 21:08:59 -0800
+Subject: [PATCH] fix(miniwin): drain the thread's proxied calls in
+ PeekMessageA on the web
+
+With -sPROXY_TO_PTHREAD a game whose message loop blocks never returns its
+worker to the browser. SDL's DOM event handlers are proxied to the worker
+and run only when it drains its queue, which a busy loop does only while
+it sleeps, so a key press and its release can reach SDL together and a
+game that polls SDL's keyboard state never sees the key down. PeekMessageA
+now drains the calling thread's queue first when it is not the main
+browser thread.
+
+diff --git a/miniwin/src/windows/windowmessages.cpp b/miniwin/src/windows/windowmessages.cpp
+index a03c088..9747c84 100644
+--- a/miniwin/src/windows/windowmessages.cpp
++++ b/miniwin/src/windows/windowmessages.cpp
+@@ -2,6 +2,9 @@
+ #include "miniwin/windows.h"
+ 
+ #include <SDL3/SDL.h>
++#ifdef __EMSCRIPTEN__
++#include <emscripten/threading.h>
++#endif
+ #include <deque>
+ #include <string>
+ #include <unordered_map>
+@@ -419,6 +422,16 @@ LRESULT DefWindowProcA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
+ 
+ BOOL PeekMessageA(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax, UINT wRemoveMsg)
+ {
++#if defined(__EMSCRIPTEN__) && defined(__EMSCRIPTEN_PTHREADS__)
++	// A game that blocks on a worker (-sPROXY_TO_PTHREAD) never returns to
++	// the browser, so the DOM events SDL's handlers proxy to its thread run
++	// only when that thread drains its queue. Drain it here, once per pump,
++	// so a key press and its release reach SDL's keyboard state in
++	// different frames rather than together.
++	if (!emscripten_is_main_browser_thread()) {
++		emscripten_current_thread_process_queued_calls();
++	}
++#endif
+ 	SDL_Event event;
+ 	while (SDL_PollEvent(&event)) {
+ 		Translate(event);

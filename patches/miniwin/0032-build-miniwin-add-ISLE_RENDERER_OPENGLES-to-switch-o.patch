@@ -1,0 +1,42 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sat, 21 Nov 2026 21:03:11 -0800
+Subject: [PATCH] build(miniwin): add ISLE_RENDERER_OPENGLES to switch off the
+ GLES backends
+
+The OpenGL ES 2.x and 3.x backends are built wherever their libraries are
+found, and always on Emscripten. ISLE_RENDERER_OPENGLES (default ON), as
+ISLE_RENDERER_SOFTWARE and ISLE_RENDERER_SDLGPU, lets a host leave them
+out: enumerating them creates a WebGL context on the page's canvas, after
+which the canvas has no 2D context for SDL's software render driver.
+
+diff --git a/miniwin/CMakeLists.txt b/miniwin/CMakeLists.txt
+index 45de0a5..d3b0f2d 100644
+--- a/miniwin/CMakeLists.txt
++++ b/miniwin/CMakeLists.txt
+@@ -38,6 +38,7 @@ target_compile_definitions(miniwin PRIVATE
+ 
+ option(ISLE_RENDERER_SOFTWARE "Build the software (SDL_Renderer) backend" ON)
+ option(ISLE_RENDERER_SDLGPU "Build the SDL GPU backend" ON)
++option(ISLE_RENDERER_OPENGLES "Build the OpenGL ES 2.x and 3.x backends where their libraries are found" ON)
+ if(ISLE_RENDERER_SOFTWARE)
+   list(APPEND GRAPHICS_BACKENDS USE_SOFTWARE_RENDER)
+ endif()
+@@ -60,7 +61,7 @@ if(NOT (VITA OR WINDOWS_STORE))
+   endif()
+ 
+   find_library(OPENGL_ES2_LIBRARY NAMES GLESv2)
+-  if(EMSCRIPTEN OR OPENGL_ES2_LIBRARY)
++  if(ISLE_RENDERER_OPENGLES AND (EMSCRIPTEN OR OPENGL_ES2_LIBRARY))
+     message(STATUS "Found OpenGL: enabling OpenGL ES 2.x renderer")
+     target_sources(miniwin PRIVATE src/d3drm/backends/opengles2/renderer.cpp)
+     list(APPEND GRAPHICS_BACKENDS USE_OPENGLES2)
+@@ -72,7 +73,7 @@ if(NOT (VITA OR WINDOWS_STORE))
+   endif()
+ 
+   find_library(OPENGL_ES3_LIBRARY NAMES GLESv3 GLESv2)
+-  if(EMSCRIPTEN OR OPENGL_ES3_LIBRARY)
++  if(ISLE_RENDERER_OPENGLES AND (EMSCRIPTEN OR OPENGL_ES3_LIBRARY))
+     message(STATUS "Found OpenGL: enabling OpenGL ES 3.x renderer")
+     target_sources(miniwin PRIVATE src/d3drm/backends/opengles3/renderer.cpp)
+     list(APPEND GRAPHICS_BACKENDS USE_OPENGLES3)

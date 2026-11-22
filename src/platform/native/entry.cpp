@@ -56,7 +56,14 @@ int main(int argc, char** argv)
         if (!arguments.empty()) arguments += ' ';
         arguments += QuoteArgument(argv[i]);
     }
+#ifdef __EMSCRIPTEN__
+    /* The web build's argv[0] is "./this.program"; WinMain names the WADs
+     * after the program, so it gets a relative LegoRR, as a native run
+     * from its game directory does. */
+    std::string program = "./LegoRR";
+#else
     std::string program = argc > 0 ? argv[0] : "LegoRR.exe";
+#endif
     for (char& c : program) {
         if (c == '/') c = '\\';
     }
@@ -66,6 +73,13 @@ int main(int argc, char** argv)
     if (!arguments.empty()) g_commandLine += " " + arguments;
     seam_command_line = &g_commandLine[0];
 
+#ifdef __EMSCRIPTEN__
+    /* WinMain blocks on a worker (-sPROXY_TO_PTHREAD). A WebGL canvas
+     * shows a frame only when its thread returns to the browser, which
+     * WinMain never does, so SDL renders in software and presents each
+     * frame on the page's canvas from the main browser thread. */
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, SDL_SOFTWARE_RENDERER);
+#endif
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_Init: %s", SDL_GetError());
         return 1;

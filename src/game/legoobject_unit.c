@@ -900,7 +900,7 @@ Lego_Object* legoobject_create(void* model, int type, int id)
             obj->miniFigure = (AnimationObject*)malloc(sizeof(AnimationObject));
             renderer_record_clone((struct AnimationObject*)model, (struct AnimationObject*)obj->miniFigure);
             scene_assign_entity_owner(obj->miniFigure, obj);
-            obj->carryNullFrames = ((uint32_t (*)(void*))flic_opcode25_success_stub)(obj->miniFigure);
+            obj->carryNullFrames = flic_opcode25_success_stub(obj->miniFigure);
             obj->flags3 |= 0x4401f5;
             if (((AnimationObject*)model)->drillNullName) obj->flags3 |= 0x2;
             entity_building_index_set((struct Lego_Object*)obj, 0);
@@ -910,7 +910,7 @@ Lego_Object* legoobject_create(void* model, int type, int id)
             obj->rockMonster = (AnimationObject*)malloc(sizeof(AnimationObject));
             renderer_record_clone((struct AnimationObject*)model, (struct AnimationObject*)obj->rockMonster);
             scene_assign_entity_owner(obj->rockMonster, obj);
-            obj->carryNullFrames = ((uint32_t (*)(void*))flic_opcode25_success_stub)(obj->rockMonster);
+            obj->carryNullFrames = flic_opcode25_success_stub(obj->rockMonster);
             obj->flags3 |= 0x8440200;
             if (((AnimationObject*)model)->drillNullName) obj->flags3 |= 0x2;
             entity_building_index_set((struct Lego_Object*)obj, 0);

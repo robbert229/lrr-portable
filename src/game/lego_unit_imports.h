@@ -208,9 +208,10 @@ void terrain_object_sfx_grid_config_load(struct BlockRec* config,
                                          const char* root_path); /* 0044acc0 */
 /* G98 Images.c (surface.hpp). */
 void renderer_record_table_initialize(void);               /* 0047d410 */
-/* G98 Flic.c (flic.hpp): an empty function; the original's other empty
- * callee at this address (it takes two arguments) is an adapter below. */
-void flic_opcode27_fallback_noop(void);                    /* 00484c90 */
+/* G98 Flic.c (flic_unit.c, Flic_Nothing): an empty function that takes
+ * the FLIC; the original's other empty callee at this address (it takes
+ * two arguments) is an adapter below. */
+void flic_opcode27_fallback_noop(void* fsp);               /* 00484c90 */
 /* GAME-03x map view (frontend.hpp). */
 void screen_coord_normalize_init(void);                    /* 0045d8b0 */
 /* GAME-032 Panel.c (panel_unit.h). */
@@ -450,7 +451,7 @@ void lego_key_callback_set_adapter(unsigned char key, unsigned int type,
 void lego_noop_load_adapter(void* root, const char* name);
 /* Matching build: the original calls the shared no-op (finding 634). */
 #define lego_noop_load_adapter(root, name) \
-    ((void)(root), (void)(name), flic_opcode27_fallback_noop())
+    ((void)(root), (void)(name), flic_opcode27_fallback_noop(NULL))
 /* RockFall_Initialise (0040bfd0): the port's entry takes a style table
  * (rock_fall_styles.cpp). */
 void rock_fall_initialise_adapter(struct BlockRec* config,
@@ -743,9 +744,8 @@ void entity_transform_position_get_outputs(const struct Lego_Object* entity,
 #define radar_map_zoom_set_adapter radarmap_set_zoom
 void radar_map_zoom_set_adapter(void* radarMap, float zoom);
 void radar_map_tv_position_set_adapter(void* radarMap, const float* pos);
-/* NERPs' tutorial flags (00456240): the original passes the NERPs stack
- * argument; the port's system_state_flags_get takes none. Adapter at the
- * end of tutorial_script.cpp. */
+/* NERPs' tutorial flags (00456240): NERPFunc__GetTutorialFlags
+ * (tutorial_script.c), which takes the NERPs stack argument. */
 /* record.hpp: SelectPlace_Hide (00464720). */
 void surface_visibility_set(const void* record, uint32_t flag);
 /* frontend.hpp: HelpWindow_HandleInput-style hit test (00418da0). */
@@ -1120,7 +1120,7 @@ int block_get_bool_path(struct BlockRec* root, const char* path); /* 004790d0 */
 void block_close(struct BlockRec* root);                         /* 00479240 */
 void render_resource_binding_release(
     struct RenderResourceBinding* binding);                      /* 0046c0f0 */
-void flic_opcode27_fallback_noop(void);                          /* 00484c90 */
+void flic_opcode27_fallback_noop(void* fsp);                     /* 00484c90 */
 /* Maths (advisor.h, view.hpp). */
 float vec2_dist(const float* a, const float* b);                 /* 00401240 */
 float* vec_cross(float* dst, const float* b, const float* c);    /* 00401470 */
@@ -1148,9 +1148,8 @@ void loader_profile_entries_release_adapter(const char* profile); /* 0044dd40 */
 /* ---- group F ---- */
 
 /* legoGlobs fields the port models as globals of its own. */
-/* GAME-028 NERPs (tutorial_script.cpp): NERPFunc__GetTutorialFlags. The
- * original takes the NERPs parameter stack; the port's entry takes none.
- * Thin adapter at the end of tutorial_script.cpp. */
+/* GAME-028 NERPs (tutorial_script.c): NERPFunc__GetTutorialFlags, which
+ * takes the NERPs parameter stack. */
 uint32_t system_state_flags_get_original(const int* parameters); /* 00456240 */
 /* GAME-021 part 3 (lego.cpp): Lego_GetLevel. */
 struct Lego_Level* level_current_owner_get(void);         /* 00431560 */
@@ -1535,7 +1534,7 @@ void render_resource_binding_initialize(struct RenderResourceBinding* binding,
 void lego_noop_block_adapter(const int* blockPos);              /* 00484c90 */
 /* Matching build: the original passes the block to the shared no-op. */
 #define lego_noop_block_adapter(blockPos) \
-    ((void)(blockPos), flic_opcode27_fallback_noop())
+    (flic_opcode27_fallback_noop((void*)(blockPos)))
 int lego_vehicle_load_adapter(void* vehicle, unsigned int objID, void* root,
                               const char* filename,
                               const char* gameName);            /* 0046c6f0 */
@@ -1710,7 +1709,7 @@ void lego_noop_point_adapter(const int* blockPos);              /* 00484c90 */
 /* Matching build: the original passes the block to the shared no-op
  * (finding 634). */
 #define lego_noop_point_adapter(blockPos) \
-    ((void)(blockPos), flic_opcode27_fallback_noop())
+    (flic_opcode27_fallback_noop((void*)(blockPos)))
 void selection_mode7_cancel_at_point(const uint32_t coordinate[2]); /* interface_unit.h, 0041cf80 */
 int electric_fence_stud_fits(struct ElectricFenceLevel* level, int bx, int by); /* terrain_cell_objects.h, 0040e1e0 */
 void electric_fence_stud_set(struct ElectricFenceLevel* level, int bx, int by,

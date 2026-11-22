@@ -185,10 +185,11 @@ void scene_mesh_color_set(void* object, unsigned long block, float red, float gr
 void scene_mesh_color_and_alpha_set(void* object, unsigned long block, float red,
                                     float green, float blue,
                                     float alpha);             /* 00475020 */
-/* FlicOpcode25SuccessStub (flic.hpp): six bytes that return 1. The
- * original's creature call (carry null frames) links to it with one
- * argument, so the unit calls it through a one-argument cast. */
-uint32_t flic_opcode25_success_stub(void);                    /* 00484b90 */
+/* Flic_Unsupported (flic_unit.c, flic_link_names.h): six bytes that
+ * return 1. The original's creature call (carry null frames) links to it
+ * with its one argument. Declared with the definition's parameter, as a
+ * call through another function type traps on WebAssembly. */
+uint32_t flic_opcode25_success_stub(void* fsp);               /* 00484b90 */
 /* Creature.c and Building.c (animation_object.h, record.hpp, view.hpp,
  * entity.hpp). */
 void renderer_record_clone(struct AnimationObject* source,
@@ -520,10 +521,11 @@ int legoobject_nearest_cell_coordinate_world_resolve(Lego_Object* obj,
 void legoobject_timed_callback_list_update(float* elapsed);              /* 0044bf00 */
 /* Map3D.c (terrain_map.c). */
 float terrain_map_world_z_get(struct TerrainMap* map, float x, float y);   /* 0044f940 */
-/* NERPs.c (tutorial_script.cpp, message.hpp): the original takes the
- * NERPs argument list; the port's entry takes none. */
-uint32_t system_state_flags_get(void);                                     /* 00456240 */
-#define LegoObjH_NERPsTutorialFlags(args) (((uint32_t (*)(int))system_state_flags_get)(args))
+/* NERPs.c (tutorial_script.c): NERPFunc__GetTutorialFlags, which takes
+ * the NERPs argument list; the original's caller passes 0 as the list. */
+int system_state_flags_get(unsigned int* stack);                           /* 00456240 */
+#define LegoObjH_NERPsTutorialFlags(args) \
+    ((uint32_t)system_state_flags_get((unsigned int*)(uintptr_t)(args)))
 /* Reward.c (reward.c). */
 void global_counter_at_00555324_increment(void);                           /* 00462870 */
 /* SFX.c (sfx.cpp, sound.hpp). */
@@ -812,7 +814,7 @@ void render_object_rotate_axis(void* object, uint32_t mode, float x,
 void scene_object_camera_teleport_or_offset(void* object, uint32_t mode,
                                             float x, float y, float z); /* 004755e0 */
 float* d3drm_vector_random(float* r);                                 /* 00479500 */
-void flic_opcode27_fallback_noop(void);                               /* 00484c90 */
+void flic_opcode27_fallback_noop(void* fsp);                          /* 00484c90 */
 extern uint32_t s_panel_highlight_flags;  /* engine.cpp, 00556ed0 */
 extern int legoGlobs_ReinforceHits;       /* lego_unit.c, 00556f08 */
 /* LegoObject.c part 3 (issue #615): the unit's own functions. */

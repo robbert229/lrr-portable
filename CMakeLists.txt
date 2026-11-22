@@ -19,6 +19,30 @@ elseif(MSVC)
   add_compile_options(/fp:precise)
 endif()
 
+# The web build (issue #926), with isle-portable's Emscripten flags (its
+# CMakeLists.txt, LGPL-3.0) less OffscreenCanvas. -sPROXY_TO_PTHREAD runs
+# main, and so WinMain's blocking loop and the units' nested modal loops,
+# on a worker thread, where blocking is allowed. The canvas stays on the
+# page: a WebGL canvas, the page's or one transferred to the worker, shows
+# a frame only when its thread returns to the browser, which WinMain never
+# does. So the web build draws with miniwin's software renderer through
+# SDL's software render driver (entry.cpp), which presents each frame on
+# the page's canvas from the main browser thread, and leaves out miniwin's
+# OpenGL ES backends, whose device enumeration would claim the canvas for
+# WebGL (#925 brings WebGL 2 back). SDL's DOM event handlers run on the main
+# browser thread and queue the events for the worker. Every object compiles
+# with -pthread, since the threads share one wasm memory. WASMFS and
+# FORCE_FILESYSTEM back the OPFS saves (emscripten/filesystem.cpp).
+if(EMSCRIPTEN)
+  add_compile_options(-pthread)
+  add_link_options(-pthread -sPROXY_TO_PTHREAD=1 -sPTHREAD_POOL_SIZE_STRICT=0
+    -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=128mb -sMAXIMUM_MEMORY=2gb
+    -sFORCE_FILESYSTEM=1 -sWASMFS=1 -sEXIT_RUNTIME=1
+    -sABORT_ON_WASM_EXCEPTIONS=1)
+  set(SDL_PTHREADS ON CACHE BOOL "Enable SDL pthreads" FORCE)
+  set(ISLE_RENDERER_OPENGLES OFF CACHE BOOL "Build miniwin's OpenGL ES backends" FORCE)
+endif()
+
 # MinGW links its C and C++ runtimes and winpthread statically, as
 # isle-portable does, so LegoRR.exe runs outside the msys2 shell.
 if(MINGW)
@@ -324,6 +348,17 @@ if(WIN32)
   add_custom_command(TARGET program POST_BUILD
     COMMAND "$<$<BOOL:$<TARGET_RUNTIME_DLLS:program>>:${CMAKE_COMMAND};-E;copy_if_different;$<TARGET_RUNTIME_DLLS:program>;$<TARGET_FILE_DIR:program>>"
     COMMAND_EXPAND_LISTS)
+endif()
+if(EMSCRIPTEN)
+  # LegoRR.html, beside LegoRR.js and LegoRR.wasm, from the port's page.
+  set(LRR_EMSCRIPTEN_SHELL "${LRR_SRC_ROOT_ABS}/platform/native/emscripten/shell.html")
+  set_target_properties(program PROPERTIES SUFFIX ".html"
+    LINK_DEPENDS "${LRR_EMSCRIPTEN_SHELL}")
+  target_link_options(program PRIVATE "--shell-file=${LRR_EMSCRIPTEN_SHELL}")
+  # WebAssembly checks each call's signature, so a unit that declares
+  # another's function with other parameters links to a trap; wasm-ld only
+  # warns ("function signature mismatch"). Make that an error.
+  target_link_options(program PRIVATE "LINKER:--fatal-warnings")
 endif()
 
 include(CTest)

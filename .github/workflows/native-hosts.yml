@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 #
 # The native port on macOS (arm64 and Intel), FreeBSD, and Windows (MSVC x86,
-# x64 and arm64, and msys2 MinGW64). These jobs are not
-# required checks: native-build is the only one. Each configures, builds and
-# runs ctest as native-build does, with SDL3 fetched by CMake at the pinned
-# commit (CMakeLists.txt, LRR_SDL3_GIT_TAG). The Python tool tests and the
-# unit lint run in native-build only.
+# x64 and arm64, and msys2 MinGW64), and the web build (Emscripten). These
+# jobs are not required checks: native-build is the only one. Each native
+# job configures, builds and runs ctest as native-build does, with SDL3
+# fetched by CMake at the pinned commit (CMakeLists.txt, LRR_SDL3_GIT_TAG);
+# the web job builds LegoRR.html, .js and .wasm and uploads them. The Python
+# tool tests and the unit lint run in native-build only.
 name: native-hosts
 
 on:
@@ -164,3 +165,48 @@ jobs:
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
           cmake --build build
           ctest --test-dir build --output-on-failure
+
+  web:
+    name: web-emscripten
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Set up emsdk
+        # The Emscripten release isle-portable builds its web port with.
+        uses: emscripten-core/setup-emsdk@v15
+        with:
+          version: 6.0.10
+          actions-cache-folder: emsdk-cache
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build
+
+      - name: Bootstrap sparse miniwin
+        run: tools/setup-miniwin.sh
+
+      - name: Configure and build
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: "4"
+        # The tests are native programs (several use GNU ld's --wrap); the
+        # web job builds the game only.
+        run: |
+          emcmake cmake -S . -B build-web -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+          cmake --build build-web --target program
+          ls -l build-web/LegoRR.html build-web/LegoRR.js build-web/LegoRR.wasm
+
+      - name: Upload LegoRR.html, .js and .wasm
+        uses: actions/upload-artifact@v4
+        with:
+          name: LegoRR-web
+          path: |
+            build-web/LegoRR.html
+            build-web/LegoRR.js
+            build-web/LegoRR.wasm
+          if-no-files-found: error
