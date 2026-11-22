@@ -57,21 +57,23 @@ Detail_TextureSet* detail_load_texture_set(const char* textureBaseName,
     unsigned int x, y;
     char name[1024];
 
-    if (textureSet = (Detail_TextureSet*)malloc(sizeof(Detail_TextureSet))) {
-        if (textureSet->textures = (void**)malloc(sizeof(void*) * width * height)) {
-            textureSet->width = width;
-            textureSet->height = height;
-            for (y = 0; y < height; y++) {
-                for (x = 0; x < width; x++) {
-                    // STRING: LEGORR 0x004a1da8
-                    snprintf(name, sizeof(name), "%s%0.1x%0.1x.bmp", textureBaseName, x, y);
-                    textureSet->textures[(y * width) + x] =
-                        detail_container_load_texture2_adapter(name, 1, NULL, NULL);
-                }
-            }
-        } else {
-            free(textureSet);
-            textureSet = NULL;
+    textureSet = (Detail_TextureSet*)malloc(sizeof(Detail_TextureSet));
+    if (textureSet == NULL) return NULL;
+
+    textureSet->textures = (void**)malloc(sizeof(void*) * width * height);
+    if (textureSet->textures == NULL) {
+        free(textureSet);
+        return NULL;
+    }
+
+    textureSet->width = width;
+    textureSet->height = height;
+    for (y = 0; y < height; y++) {
+        for (x = 0; x < width; x++) {
+            // STRING: LEGORR 0x004a1da8
+            snprintf(name, sizeof(name), "%s%0.1x%0.1x.bmp", textureBaseName, x, y);
+            textureSet->textures[(y * width) + x] =
+                detail_container_load_texture2_adapter(name, 1, NULL, NULL);
         }
     }
     return textureSet;
@@ -143,46 +145,51 @@ Detail_Mesh* detail_load_meshes(void* root, const char* uncoveredName,
 
     if (surfaceName == NULL) surfaceName = uncoveredName;
 
-    if (mesh = (Detail_Mesh*)malloc(sizeof(Detail_Mesh))) {
-        // STRING: LEGORR 0x004a1dbc
-        if (mesh->cont[0] = container_load(root, uncoveredName, "LWO:NOTEXTURE", 1)) {
-            if (!(mesh->cont[1] = container_load(root, surfaceName, "LWO:NOTEXTURE", 1))) {
-                mesh->cont[1] = container_load(root, uncoveredName, "LWO:NOTEXTURE", 1);
-            }
+    mesh = (Detail_Mesh*)malloc(sizeof(Detail_Mesh));
+    if (mesh == NULL) return NULL;
 
-            scale = blockSize * 0.01f;
-            mesh->cloneCount = 0;
-            mesh->blockSize = blockSize;
-            mesh->textureSet = textureSet;
-
-            for (loop = 0; loop < DETAIL_MESH_COUNT; loop++) {
-                detail_container_mesh_scale_adapter(mesh->cont[loop], scale, scale, scale);
-                container_mesh_perspective_correction_set(mesh->cont[loop], 0, 1);
-                scene_render_lock_toggle(mesh->cont[loop], 1);
-                memset(mesh->clones[loop], 0, sizeof(mesh->clones[loop]));
-            }
-
-            for (loop = 0; loop < DETAIL_MESH_COUNT; loop++) {
-                if (loop == 0) swapV = swapU = 0;
-                else swapV = swapU = 1;
-
-                detail_container_mesh_get_group_adapter(mesh->cont[loop], 0, &vertexCount,
-                                                        NULL, NULL, NULL, NULL);
-                vertices = (Detail_Vertex*)malloc(sizeof(Detail_Vertex) * vertexCount);
-                lwo_layer_polygon_vertex_data_read(mesh->cont[loop], 0, 0, vertexCount, vertices);
-                for (sub = 0; sub < vertexCount; sub++) {
-                    if (swapU) vertices[sub].tu = 1.0f - vertices[sub].tu;
-                    if (swapV) vertices[sub].tv = 1.0f - vertices[sub].tv;
-                }
-                container_mesh_set_vertices(mesh->cont[loop], 0, 0, vertexCount, vertices);
-                free(vertices);
-            }
-
-            return mesh;
-        }
+    // STRING: LEGORR 0x004a1dbc
+    mesh->cont[0] = container_load(root, uncoveredName, "LWO:NOTEXTURE", 1);
+    if (mesh->cont[0] == NULL) {
         free(mesh);
+        return NULL;
     }
-    return NULL;
+
+    /* Fall back to the uncovered mesh when the surface mesh is missing. */
+    mesh->cont[1] = container_load(root, surfaceName, "LWO:NOTEXTURE", 1);
+    if (mesh->cont[1] == NULL) {
+        mesh->cont[1] = container_load(root, uncoveredName, "LWO:NOTEXTURE", 1);
+    }
+
+    scale = blockSize * 0.01f;
+    mesh->cloneCount = 0;
+    mesh->blockSize = blockSize;
+    mesh->textureSet = textureSet;
+
+    for (loop = 0; loop < DETAIL_MESH_COUNT; loop++) {
+        detail_container_mesh_scale_adapter(mesh->cont[loop], scale, scale, scale);
+        container_mesh_perspective_correction_set(mesh->cont[loop], 0, 1);
+        scene_render_lock_toggle(mesh->cont[loop], 1);
+        memset(mesh->clones[loop], 0, sizeof(mesh->clones[loop]));
+    }
+
+    for (loop = 0; loop < DETAIL_MESH_COUNT; loop++) {
+        if (loop == 0) swapV = swapU = 0;
+        else swapV = swapU = 1;
+
+        detail_container_mesh_get_group_adapter(mesh->cont[loop], 0, &vertexCount,
+                                                NULL, NULL, NULL, NULL);
+        vertices = (Detail_Vertex*)malloc(sizeof(Detail_Vertex) * vertexCount);
+        lwo_layer_polygon_vertex_data_read(mesh->cont[loop], 0, 0, vertexCount, vertices);
+        for (sub = 0; sub < vertexCount; sub++) {
+            if (swapU) vertices[sub].tu = 1.0f - vertices[sub].tu;
+            if (swapV) vertices[sub].tv = 1.0f - vertices[sub].tv;
+        }
+        container_mesh_set_vertices(mesh->cont[loop], 0, 0, vertexCount, vertices);
+        free(vertices);
+    }
+
+    return mesh;
 }
 
 // FUNCTION: LEGORR 0x0040b7d0

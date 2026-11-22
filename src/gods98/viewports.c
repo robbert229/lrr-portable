@@ -183,7 +183,8 @@ Container* viewport_get_camera(Viewport* vp)
     VpAppData* appData;
 
     if (vp->lpVP->GetCamera(&frame) == D3DRM_OK) {
-        if (appData = (VpAppData*)frame->GetAppData()) {
+        appData = (VpAppData*)frame->GetAppData();
+        if (appData != NULL) {
             cont = appData->ownerContainer;
         }
         frame->Release();
@@ -356,16 +357,16 @@ void viewport_add_list(void)
 
     count = 0x00000001 << viewportGlobs.listCount;
 
-    if (list = viewportGlobs.listSet[viewportGlobs.listCount] =
-            (Viewport*)malloc(sizeof(Viewport) * count)) {
-        viewportGlobs.listCount++;
+    list = (Viewport*)malloc(sizeof(Viewport) * count);
+    viewportGlobs.listSet[viewportGlobs.listCount] = list;
+    if (list == NULL) return;
 
-        for (loop = 1; loop < count; loop++) {
-            list[loop - 1].nextFree = &list[loop];
-        }
-        list[count - 1].nextFree = viewportGlobs.freeList;
-        viewportGlobs.freeList = list;
+    viewportGlobs.listCount++;
+    for (loop = 1; loop < count; loop++) {
+        list[loop - 1].nextFree = &list[loop];
     }
+    list[count - 1].nextFree = viewportGlobs.freeList;
+    viewportGlobs.freeList = list;
 }
 
 // FUNCTION: LEGORR 0x004773e0
@@ -378,10 +379,9 @@ void viewport_remove_all(void)
         if (viewportGlobs.listSet[list]) {
             count = 0x00000001 << list;
             for (loop = 0; loop < count; loop++) {
-                if (tempViewport = &viewportGlobs.listSet[list][loop]) {
-                    if (tempViewport->nextFree == tempViewport) {
-                        tempViewport->lpVP->Release();
-                    }
+                tempViewport = &viewportGlobs.listSet[list][loop];
+                if (tempViewport->nextFree == tempViewport) {
+                    tempViewport->lpVP->Release();
                 }
             }
         }
