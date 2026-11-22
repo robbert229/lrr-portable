@@ -11,16 +11,7 @@
 /* Flic_GetHeight links under its port name (flic_link_names.h). */
 #define Flic_GetHeight object_field10_get
 #include "gods98/flic_unit.h"
-
-static int s_failures = 0;
-
-static void CHECK(int cond, const char* what)
-{
-    if (!cond) {
-        printf("FAIL: %s\n", what);
-        ++s_failures;
-    }
-}
+#include "lrr_test.h"
 
 /* What Flic_Setup leaves for a 176x232 flic, around the given file
  * buffer. */
@@ -42,14 +33,13 @@ int main(void)
 
     /* A streamed flic, as FrontEnd.c's overlays open them (flags 0). */
     make_flic(&fsp, 0, NULL);
-    CHECK(Flic_GetWidth(&fsp) == 176, "streamed flic's width");
-    CHECK(Flic_GetHeight(&fsp) == 232, "streamed flic's height");
+    CHECK_EQ(Flic_GetWidth(&fsp), 176);
+    CHECK_EQ(Flic_GetHeight(&fsp), 232);
 
     /* A flic held in memory and looping, as Pointer.c opens them. */
     make_flic(&fsp, FLICMEMORY | FLICLOOPINGON, ram);
-    CHECK(Flic_GetWidth(&fsp) == 176, "in-memory flic's width");
-    CHECK(Flic_GetHeight(&fsp) == 232, "in-memory flic's height");
+    CHECK_EQ(Flic_GetWidth(&fsp), 176);
+    CHECK_EQ(Flic_GetHeight(&fsp), 232);
 
-    if (s_failures == 0) printf("flic_size: ok\n");
-    return s_failures != 0;
+    return lrr_test_result("flic_size");
 }

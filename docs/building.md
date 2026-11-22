@@ -472,6 +472,50 @@ The SDL GPU backend's shaders are HLSL in miniwin's
 `tools/miniwin-shaders/regenerate.sh` regenerates them on Linux with
 SDL_shadercross and vkd3d-utils; its header lists what it needs.
 
+### Writing a test
+
+A test is one source file registered in the `if(BUILD_TESTING)` block of
+`CMakeLists.txt` with `lrr_unit_test` (`cmake/LrrTesting.cmake`, whose header
+lists every option):
+
+```cmake
+# What the test establishes, in a sentence or two.
+lrr_unit_test(block_grid SOURCES ${GAME_DIR}/test_block_grid.cpp
+  WRAP ddiscene_object_position_get entity_state_flags_get
+  LABELS block_grid)
+```
+
+That builds `block_grid_test`, links it with `units` (`LINK` replaces that),
+and adds the ctest test `block_grid`. `WRAP` reroutes the units' calls to a
+symbol to the test's `__wrap_<symbol>` through GNU ld's `--wrap`; where the
+toolchain has no `--wrap` (Apple, Windows, compilers other than GCC and
+Clang), `lrr_unit_test` leaves such a test out, so it needs no platform
+check around it. `ARGS`, `ENVIRONMENT`, `SKIP_RETURN_CODE` (77 for a test
+that skips), `INCLUDES` and `DEFINES` cover the rest.
+
+The assertions are in `src/test/lrr_test.h`, header-only, on every test's
+include path:
+
+```cpp
+#include "lrr_test.h"
+
+int main(void)
+{
+    CHECK(grid != NULL, "the grid is allocated");
+    CHECK_EQ(block_index(grid, x, y), 0u);
+    CHECK_NEAR(position.x, 1.2f, 1e-6);
+    CHECK_STREQ(record.name, "Building3");
+    return lrr_test_result("block_grid");
+}
+```
+
+A failed check prints its file and line, and for the `CHECK_EQ`, `_NEAR`
+and `_STREQ` forms the value it got and the one it expected, then the test
+carries on. `lrr_test_result` returns 1 if any check failed. Scratch
+directories for tests that write files are in
+`src/platform/native/test_fixture.h`, and a miniwin device for drawing
+tests in `src/platform/native/test_miniwin_device.h`.
+
 ## Continuous integration
 
 The `native-build` workflow (`.github/workflows/native-build.yml`) runs on pull
