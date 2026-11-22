@@ -18,20 +18,24 @@ backend, with the software backend as the reference.
   Gouraud shading was; texture coordinates are perspective-correct.
 - Pipelines are created per blend factors and z states. The depth
   buffer holds 1 - z, so that clearing it to 0 is the far plane for
-  immediate and retained-mode draws alike. The viewport is shifted by
-  half a pixel to sample where Direct3D's rasterizer does.
+  immediate and retained-mode draws alike (the two encode depth
+  differently between the planes, so they do not sort against each
+  other within one frame). The viewport is shifted by half a pixel to
+  sample where Direct3D's rasterizer does.
 - Draws and rectangle clears are recorded and replayed in one render
   pass after a single upload of their vertices; everything else that
-  draws flushes them first, so the drawing order is kept.
+  draws flushes them first, so the drawing order is kept, and a
+  retained-mode mesh after a flush gets its pipeline and viewport back.
 - Textures are keyed (colour key and decal colour) as the software
-  backend keys them.
+  backend keys them, for both modes; upstream's retained-mode shaders
+  show the decal key only through alpha blending.
 - The 'Unsupported number of lights' error is logged once: immediate
   mode lights with every light, and the retained-mode shader's limit of
   three no longer floods the log every frame.
 
 The ImmediateVertex and ImmediatePixel headers were generated with
 SDL_shadercross and DXC 1.9.2609 (SPIR-V, DXIL, MSL) and vkd3d-utils 1.17
-(DXBC). Retained-mode drawing is unchanged.
+(DXBC). Retained-mode shaders are unchanged.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
@@ -49,7 +53,7 @@ index b3cadc8..45de0a5 100644
  set(miniwin_shaders_DEPENDS
    "${shader_src_dir}/Common.hlsl"
 diff --git a/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp b/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp
-index 28639df..07b3f45 100644
+index 28639df..4c5399f 100644
 --- a/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp
 +++ b/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp
 @@ -10,6 +10,7 @@
@@ -164,7 +168,7 @@ index 28639df..07b3f45 100644
  	AddTextureDestroyCallback((Uint32) (m_textures.size() - 1), texture);
  	return (Uint32) (m_textures.size() - 1);
  }
-@@ -742,15 +778,27 @@ void Direct3DRMSDL3GPURenderer::StartRenderPass(float r, float g, float b, bool
+@@ -742,15 +778,17 @@ void Direct3DRMSDL3GPURenderer::StartRenderPass(float r, float g, float b, bool
  
  void Direct3DRMSDL3GPURenderer::Clear(float r, float g, float b)
  {
@@ -178,7 +182,27 @@ index 28639df..07b3f45 100644
  	if (!m_renderPass) {
  		StartRenderPass(0, 0, 0, false);
  	}
- 	SDL_BindGPUGraphicsPipeline(m_renderPass, m_opaquePipeline);
+-	SDL_BindGPUGraphicsPipeline(m_renderPass, m_opaquePipeline);
++	UseRetainedPipeline(m_opaquePipeline);
+ 	memcpy(&m_uniforms.projection, m_projection, sizeof(D3DRMMATRIX4D));
+ 
+ 	return DD_OK;
+@@ -758,7 +796,27 @@ HRESULT Direct3DRMSDL3GPURenderer::BeginFrame()
+ 
+ void Direct3DRMSDL3GPURenderer::EnableTransparency()
+ {
+-	SDL_BindGPUGraphicsPipeline(m_renderPass, m_transparentPipeline);
++	FlushImmediate();
++	UseRetainedPipeline(m_transparentPipeline);
++}
++
++// Retained-mode meshes draw with pipeline, into the current viewport. A
++// flush of immediate-mode draws (a user visual's, between two meshes)
++// leaves its own pipeline bound and the whole target as the viewport.
++void Direct3DRMSDL3GPURenderer::UseRetainedPipeline(SDL_GPUGraphicsPipeline* pipeline)
++{
++	m_retainedPipeline = pipeline;
++	SDL_BindGPUGraphicsPipeline(m_renderPass, pipeline);
 +	SDL_GPUViewport viewport = {
 +		static_cast<float>(m_viewportRect.x),
 +		static_cast<float>(m_viewportRect.y),
@@ -189,26 +213,20 @@ index 28639df..07b3f45 100644
 +	};
 +	SDL_SetGPUViewport(m_renderPass, &viewport);
 +	SDL_SetGPUScissor(m_renderPass, &m_viewportRect);
- 	memcpy(&m_uniforms.projection, m_projection, sizeof(D3DRMMATRIX4D));
- 
- 	return DD_OK;
-@@ -758,6 +806,7 @@ HRESULT Direct3DRMSDL3GPURenderer::BeginFrame()
- 
- void Direct3DRMSDL3GPURenderer::EnableTransparency()
- {
-+	FlushImmediate();
- 	SDL_BindGPUGraphicsPipeline(m_renderPass, m_transparentPipeline);
  }
  
-@@ -770,6 +819,7 @@ void Direct3DRMSDL3GPURenderer::SubmitDraw(
+ void Direct3DRMSDL3GPURenderer::SubmitDraw(
+@@ -770,6 +828,9 @@ void Direct3DRMSDL3GPURenderer::SubmitDraw(
  	const Appearance& appearance
  )
  {
-+	FlushImmediate();
++	if (FlushImmediate() && m_retainedPipeline) {
++		UseRetainedPipeline(m_retainedPipeline);
++	}
  	memcpy(&m_uniforms.worldViewMatrix, modelViewMatrix, sizeof(D3DRMMATRIX4D));
  	PackNormalMatrix(normalMatrix, m_uniforms.normalMatrix);
  	m_fragmentShadingData.color = appearance.color;
-@@ -799,6 +849,7 @@ HRESULT Direct3DRMSDL3GPURenderer::FinalizeFrame()
+@@ -799,6 +860,7 @@ HRESULT Direct3DRMSDL3GPURenderer::FinalizeFrame()
  
  void Direct3DRMSDL3GPURenderer::Resize(int width, int height, const ViewportTransform& viewportTransform)
  {
@@ -216,7 +234,7 @@ index 28639df..07b3f45 100644
  	m_width = width;
  	m_height = height;
  	m_viewportTransform = viewportTransform;
-@@ -847,10 +898,12 @@ void Direct3DRMSDL3GPURenderer::Resize(int width, int height, const ViewportTran
+@@ -847,10 +909,12 @@ void Direct3DRMSDL3GPURenderer::Resize(int width, int height, const ViewportTran
  		);
  		return;
  	}
@@ -229,7 +247,7 @@ index 28639df..07b3f45 100644
  	if (!m_cmdbuf) {
  		return;
  	}
-@@ -889,10 +942,13 @@ void Direct3DRMSDL3GPURenderer::Draw2DImage(
+@@ -889,10 +953,13 @@ void Direct3DRMSDL3GPURenderer::Draw2DImage(
  	FColor color
  )
  {
@@ -243,7 +261,7 @@ index 28639df..07b3f45 100644
  
  	SDL_GPUTexture* tex;
  	SDL_Rect expandedDstRect;
-@@ -962,6 +1018,7 @@ void Direct3DRMSDL3GPURenderer::SetDither(bool dither)
+@@ -962,6 +1029,7 @@ void Direct3DRMSDL3GPURenderer::SetDither(bool dither)
  
  void Direct3DRMSDL3GPURenderer::Download(SDL_Surface* target)
  {
@@ -251,7 +269,7 @@ index 28639df..07b3f45 100644
  	if (!m_cmdbuf) {
  		StartRenderPass(0, 0, 0, false);
  	}
-@@ -1013,3 +1070,411 @@ void Direct3DRMSDL3GPURenderer::Download(SDL_Surface* target)
+@@ -1013,3 +1081,412 @@ void Direct3DRMSDL3GPURenderer::Download(SDL_Surface* target)
  	SDL_DestroySurface(renderedImage);
  	SDL_UnmapGPUTransferBuffer(m_device, m_downloadBuffer);
  }
@@ -560,18 +578,18 @@ index 28639df..07b3f45 100644
 +	m_immediateVertices.clear();
 +}
 +
-+void Direct3DRMSDL3GPURenderer::FlushImmediate()
++bool Direct3DRMSDL3GPURenderer::FlushImmediate()
 +{
 +	if (m_immediateCommands.empty()) {
 +		m_immediateVertices.clear();
-+		return;
++		return false;
 +	}
 +	if (!m_cmdbuf) {
 +		m_cmdbuf = SDL_AcquireGPUCommandBuffer(m_device);
 +		if (!m_cmdbuf) {
 +			SDL_LogError(LOG_CATEGORY_MINIWIN, "SDL_AcquireGPUCommandBuffer failed (%s)", SDL_GetError());
 +			DiscardImmediate();
-+			return;
++			return false;
 +		}
 +	}
 +
@@ -606,7 +624,7 @@ index 28639df..07b3f45 100644
 +	if (!mapped) {
 +		SDL_LogError(LOG_CATEGORY_MINIWIN, "Immediate-mode vertex upload failed (%s)", SDL_GetError());
 +		DiscardImmediate();
-+		return;
++		return false;
 +	}
 +	memcpy(mapped, m_immediateVertices.data(), size);
 +	SDL_UnmapGPUTransferBuffer(m_device, m_immediateTransfer);
@@ -662,6 +680,7 @@ index 28639df..07b3f45 100644
 +	SDL_SetGPUViewport(m_renderPass, &fullTarget);
 +	SDL_SetGPUScissor(m_renderPass, &fullScissor);
 +	DiscardImmediate();
++	return true;
 +}
 diff --git a/miniwin/src/d3drm/backends/sdl3gpu/shaders/generated/ImmediatePixel.frag.h b/miniwin/src/d3drm/backends/sdl3gpu/shaders/generated/ImmediatePixel.frag.h
 new file mode 100644
@@ -7058,7 +7077,7 @@ index 0000000..0560c97
 +    "num_uniform_buffers": 0
 +}
 diff --git a/miniwin/src/internal/d3drmrenderer_sdl3gpu.h b/miniwin/src/internal/d3drmrenderer_sdl3gpu.h
-index 9802874..7eb0693 100644
+index 9802874..b84717d 100644
 --- a/miniwin/src/internal/d3drmrenderer_sdl3gpu.h
 +++ b/miniwin/src/internal/d3drmrenderer_sdl3gpu.h
 @@ -4,8 +4,10 @@
@@ -7142,7 +7161,7 @@ index 9802874..7eb0693 100644
  
  private:
  	Direct3DRMSDL3GPURenderer(
-@@ -99,6 +157,21 @@ class Direct3DRMSDL3GPURenderer : public Direct3DRMRenderer {
+@@ -99,6 +157,24 @@ class Direct3DRMSDL3GPURenderer : public Direct3DRMRenderer {
  	SDL_GPUTexture* CreateTextureFromSurface(SDL_Surface* surface);
  	void AddMeshDestroyCallback(Uint32 id, IDirect3DRMMesh* mesh);
  	SDL3MeshCache UploadMesh(const MeshGroup& meshGroup);
@@ -7158,13 +7177,16 @@ index 9802874..7eb0693 100644
 +		DWORD zFunc,
 +		bool colorWrite
 +	);
-+	void FlushImmediate();
++	// Returns whether it replayed anything, which rebinds the render pass's
++	// pipeline, viewport and scissor.
++	bool FlushImmediate();
++	void UseRetainedPipeline(SDL_GPUGraphicsPipeline* pipeline);
 +	void DiscardImmediate();
 +	SDL_Rect ToRenderPixels(const D3DRECT& rect) const;
  
  	MeshGroup m_uiMesh;
  	SDL3MeshCache m_uiMeshCache;
-@@ -126,6 +199,22 @@ class Direct3DRMSDL3GPURenderer : public Direct3DRMRenderer {
+@@ -126,6 +202,23 @@ class Direct3DRMSDL3GPURenderer : public Direct3DRMRenderer {
  	SDL_GPUCommandBuffer* m_cmdbuf = nullptr;
  	SDL_GPURenderPass* m_renderPass = nullptr;
  	SDL_GPUFence* m_uploadFence = nullptr;
@@ -7183,6 +7205,7 @@ index 9802874..7eb0693 100644
 +	Uint32 m_immediateBufferSize = 0;
 +	SDL_GPUTransferBuffer* m_immediateTransfer = nullptr;
 +	Uint32 m_immediateTransferSize = 0;
++	SDL_GPUGraphicsPipeline* m_retainedPipeline = nullptr; // the pipeline SubmitDraw draws with
 +	bool m_warnedLightCount = false;
  };
  

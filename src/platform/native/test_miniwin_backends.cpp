@@ -26,6 +26,8 @@
 
 #include <SDL3/SDL.h>
 
+#include "test_miniwin_device.h"
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,7 +48,6 @@ static const int kSize = 64;
 static const int kTexSize = 8;
 static const int kChannelTolerance = 12;
 static const double kMaxEdgeMismatch = 0.04;
-static const int kSkip = 77;
 
 struct RGB {
     int r, g, b;
@@ -535,7 +536,7 @@ int main()
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         fprintf(stderr, "SDL_Init: %s (skipped)\n", SDL_GetError());
-        return kSkip;
+        return kMiniwinTestSkip;
     }
 
     std::vector<RGB> reference, gpu;
@@ -547,7 +548,7 @@ int main()
     if (result == SetUpResult::Missing) {
         fprintf(stderr, "no SDL3 GPU HAL device that draws offscreen: skipped\n");
         SDL_Quit();
-        return kSkip;
+        return kMiniwinTestSkip;
     }
     if (result != SetUpResult::Ok) {
         fprintf(stderr, "SDL GPU set-up failed\n");

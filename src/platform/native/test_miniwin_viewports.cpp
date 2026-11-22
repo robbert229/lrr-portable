@@ -147,7 +147,7 @@ static void Quad(IDirect3DDevice3* im, D3DMATERIALHANDLE material, float s, floa
     CHECK(im->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, D3DFVF_VERTEX, v, 4, indices, 6, 0) == DD_OK);
 }
 
-static HRESULT FindSoftwareDevice(LPGUID guid, LPSTR name, LPSTR, LPD3DDEVICEDESC, LPD3DDEVICEDESC, LPVOID ctx)
+static HRESULT FindTestDevice(LPGUID guid, LPSTR name, LPSTR, LPD3DDEVICEDESC, LPD3DDEVICEDESC, LPVOID ctx)
 {
     if (SDL_strcmp(name, MiniwinTestDevice()) == 0) {
         *static_cast<GUID*>(ctx) = *guid;
@@ -181,15 +181,15 @@ static bool SetUp(SDL_Window* window)
     if (g_dd->CreateSurface(&desc, &g_back, nullptr) != DD_OK) {
         return false;
     }
-    GUID software = {};
+    GUID device = {};
     IDirect3D2* d3d2 = nullptr;
     dd1->QueryInterface(IID_IDirect3D2, (void**) &d3d2);
     if (!d3d2) {
         return false;
     }
-    d3d2->EnumDevices(FindSoftwareDevice, &software);
+    d3d2->EnumDevices(FindTestDevice, &device);
     d3d2->Release();
-    if (MiniwinTestDeviceMissing(software)) {
+    if (MiniwinTestDeviceMissing(device)) {
         return false;
     }
     IDirect3DRM* d3drm1 = nullptr;
@@ -200,7 +200,7 @@ static bool SetUp(SDL_Window* window)
     d3drm1->Release();
     IDirectDrawSurface* back1 = nullptr;
     g_back->QueryInterface(IID_IDirectDrawSurface, (void**) &back1);
-    if (!g_d3drm || !back1 || g_d3drm->CreateDeviceFromSurface(&software, dd1, back1, 0, &g_device) != DD_OK) {
+    if (!g_d3drm || !back1 || g_d3drm->CreateDeviceFromSurface(&device, dd1, back1, 0, &g_device) != DD_OK) {
         return false;
     }
     back1->Release();

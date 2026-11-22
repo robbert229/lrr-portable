@@ -301,11 +301,14 @@ The decision stands. Step 6 follows it with one refinement:
   without hardware T&L worked this way, and it keeps lighting results equal
   between the two backends. LEGO Island's retained-mode shaders are left as
   they are.
-- **Retained mode stays as upstream draws it on SDL3 GPU.** The
+- **Retained mode keeps upstream's shaders on SDL3 GPU.** The
   retained-mode additions of steps 3 and 4 (decal transparency, and
-  specular scaled by a light's reach) are on the software backend only,
-  until a scenario needs them there (step 7). The level does not use
-  retained-mode meshes.
+  specular scaled by a light's reach) are drawn by the software backend
+  only, until a scenario needs them there (step 7). The GPU backend keys
+  decal colours in every texture it uploads, but upstream's retained-mode
+  shaders show that only through alpha blending. Retained and immediate
+  draws keep different depth encodings, so they do not sort against each
+  other within one frame. The level draws no retained-mode meshes.
 - **Verification.** CI has no GPU, so it builds the backend and skips its
   tests. The `_sdlgpu` ctest runs and `miniwin_backends`, which compares
   the two backends with a stated tolerance, run where an SDL GPU device can

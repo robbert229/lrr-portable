@@ -101,7 +101,9 @@ ctest --test-dir build --output-on-failure
 
 `make test` runs the same build and ctest in `BUILD_DIR`. The tests call
 units directly (bezier, steering, animation_object, draw, registry) or
-miniwin (miniwin_dx6), on synthetic data only.
+miniwin (miniwin_dx6), on synthetic data only. Passing tests establishes the
+behavior covered by those tests; gameplay comparison against the original is
+a separate check.
 
 The miniwin rendering tests (`miniwin_immediate`, `_viewports`,
 `_textures`, `_lights` and `_fog`) draw with the software renderer. Their
@@ -125,9 +127,7 @@ build/miniwin_backends_test`.
 The SDL GPU backend's shaders are HLSL in miniwin's
 `shaders/src`, compiled into the headers in `shaders/generated`.
 `tools/miniwin-shaders/regenerate.sh` regenerates them on Linux with
-SDL_shadercross and vkd3d-utils; its header lists what it needs. Passing tests establishes the
-behavior covered by those tests; gameplay comparison against the original is
-a separate check.
+SDL_shadercross and vkd3d-utils; its header lists what it needs.
 
 ## Continuous integration
 

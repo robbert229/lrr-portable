@@ -423,9 +423,50 @@ static void CheckPostRender(Visual& visual, D3DMATERIALHANDLE red, D3DMATERIALHA
     CHECK(Near(Pixel(50, 32), 255, 0, 0));
 }
 
+static void CheckRetainedAfterVisual(Visual& visual, D3DMATERIALHANDLE green)
+{
+    // A retained-mesh frame walked after the user visual's: its mesh draws
+    // after the visual's immediate-mode draws in the same frame, through
+    // the device's own retained-mode pipeline.
+    IDirect3DRMFrame3* frame = nullptr;
+    IDirect3DRMMesh* mesh = nullptr;
+    CHECK(g_scene.d3drm->CreateFrame(g_scene.root, &frame) == DD_OK && frame);
+    CHECK(g_scene.d3drm->CreateMesh(&mesh) == DD_OK && mesh);
+    if (!frame || !mesh) {
+        return;
+    }
+    unsigned int faces[6] = {0, 1, 2, 2, 1, 3};
+    D3DRMGROUPINDEX group = 0;
+    CHECK(mesh->AddGroup(4, 2, 3, faces, &group) == DD_OK);
+    D3DRMVERTEX v[4] = {};
+    const float pos[4][2] = {{-4, 4}, {4, 4}, {-4, -4}, {4, -4}};
+    for (int i = 0; i < 4; ++i) {
+        v[i].position = {pos[i][0], pos[i][1], 10};
+        v[i].normal = {0, 0, -1};
+    }
+    CHECK(mesh->SetVertices(group, 0, 4, v) == DD_OK);
+    mesh->SetGroupColorRGB(group, 1.0f, 0.0f, 0.0f);
+    frame->AddVisual(mesh);
+
+    visual.draw = [&](IDirect3DDevice3* im) {
+        ResetStates(im);
+        UseMaterial(im, green);
+        DrawQuad(im, 1, 5);
+    };
+    RenderFrame();
+    CHECK(Near(Pixel(32, 32), 0, 255, 0)); // the visual's near quad
+    CHECK(Near(Pixel(50, 32), 255, 0, 0)); // the mesh around it
+    CHECK(Near(Pixel(2, 2), 0, 0, 0));     // nothing beyond the mesh
+
+    frame->DeleteVisual(mesh);
+    g_scene.root->DeleteChild(frame);
+    mesh->Release();
+    frame->Release();
+}
+
 // ---- set-up -------------------------------------------------------------
 
-static HRESULT FindSoftwareDevice(LPGUID guid, LPSTR name, LPSTR, LPD3DDEVICEDESC, LPD3DDEVICEDESC, LPVOID ctx)
+static HRESULT FindTestDevice(LPGUID guid, LPSTR name, LPSTR, LPD3DDEVICEDESC, LPD3DDEVICEDESC, LPVOID ctx)
 {
     if (SDL_strcmp(name, MiniwinTestDevice()) == 0) {
         *static_cast<GUID*>(ctx) = *guid;
@@ -464,15 +505,15 @@ static bool SetUp(SDL_Window* window, Visual* visual)
         return false;
     }
 
-    GUID software = {};
+    GUID device = {};
     IDirect3D2* d3d2 = nullptr;
     dd1->QueryInterface(IID_IDirect3D2, (void**) &d3d2);
     if (!d3d2) {
         return false;
     }
-    d3d2->EnumDevices(FindSoftwareDevice, &software);
+    d3d2->EnumDevices(FindTestDevice, &device);
     d3d2->Release();
-    if (MiniwinTestDeviceMissing(software)) {
+    if (MiniwinTestDeviceMissing(device)) {
         return false;
     }
 
@@ -484,7 +525,7 @@ static bool SetUp(SDL_Window* window, Visual* visual)
     d3drm1->Release();
     IDirectDrawSurface* back1 = nullptr;
     s.back->QueryInterface(IID_IDirectDrawSurface, (void**) &back1);
-    if (!s.d3drm || !back1 || s.d3drm->CreateDeviceFromSurface(&software, dd1, back1, 0, &s.device) != DD_OK) {
+    if (!s.d3drm || !back1 || s.d3drm->CreateDeviceFromSurface(&device, dd1, back1, 0, &s.device) != DD_OK) {
         return false;
     }
     back1->Release();
@@ -583,6 +624,7 @@ int main()
     CheckBlending(visual, blue, red, halfRed);
     CheckCulling(visual, red);
     CheckPostRender(visual, red, green);
+    CheckRetainedAfterVisual(visual, green);
 
     for (IDirect3DMaterial3* material : materials) {
         if (material) {

@@ -409,7 +409,7 @@ static void CheckDecalTransparency()
 
 // ---- set-up ---------------------------------------------------------------
 
-static HRESULT FindSoftwareDevice(LPGUID guid, LPSTR name, LPSTR, LPD3DDEVICEDESC, LPD3DDEVICEDESC, LPVOID ctx)
+static HRESULT FindTestDevice(LPGUID guid, LPSTR name, LPSTR, LPD3DDEVICEDESC, LPD3DDEVICEDESC, LPVOID ctx)
 {
     if (SDL_strcmp(name, MiniwinTestDevice()) == 0) {
         *static_cast<GUID*>(ctx) = *guid;
@@ -446,15 +446,15 @@ static bool SetUp(SDL_Window* window)
         return false;
     }
 
-    GUID software = {};
+    GUID device = {};
     IDirect3D2* d3d2 = nullptr;
     dd1->QueryInterface(IID_IDirect3D2, (void**) &d3d2);
     if (!d3d2) {
         return false;
     }
-    d3d2->EnumDevices(FindSoftwareDevice, &software);
+    d3d2->EnumDevices(FindTestDevice, &device);
     d3d2->Release();
-    if (MiniwinTestDeviceMissing(software)) {
+    if (MiniwinTestDeviceMissing(device)) {
         return false;
     }
 
@@ -466,7 +466,7 @@ static bool SetUp(SDL_Window* window)
     d3drm1->Release();
     IDirectDrawSurface* back1 = nullptr;
     s.back->QueryInterface(IID_IDirectDrawSurface, (void**) &back1);
-    if (!s.d3drm || !back1 || s.d3drm->CreateDeviceFromSurface(&software, dd1, back1, 0, &s.device) != DD_OK) {
+    if (!s.d3drm || !back1 || s.d3drm->CreateDeviceFromSurface(&device, dd1, back1, 0, &s.device) != DD_OK) {
         return false;
     }
     back1->Release();
