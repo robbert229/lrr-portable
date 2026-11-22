@@ -177,18 +177,33 @@ target_link_libraries(units PUBLIC miniwin SDL3::SDL3)
 
 # The libraries the units' substitutions call (ADR 0007, decision 3).
 # The video library loads FFmpeg at run time, trying each library's
-# comma-separated sonames in order, so the build needs no FFmpeg package;
+# comma-separated file names in order, so the build needs no FFmpeg package;
 # without the libraries at run time the units skip their movies.
-if(APPLE)
-  set(LRR_VIDEO_LIBAVFORMAT "libavformat.63.dylib,libavformat.62.dylib,libavformat.61.dylib,libavformat.dylib")
-  set(LRR_VIDEO_LIBAVCODEC "libavcodec.63.dylib,libavcodec.62.dylib,libavcodec.61.dylib,libavcodec.dylib")
-  set(LRR_VIDEO_LIBAVUTIL "libavutil.61.dylib,libavutil.60.dylib,libavutil.59.dylib,libavutil.dylib")
-  set(LRR_VIDEO_LIBSWSCALE "libswscale.10.dylib,libswscale.9.dylib,libswscale.8.dylib,libswscale.dylib")
-else()
-  set(LRR_VIDEO_LIBAVFORMAT "libavformat.so.63,libavformat.so.62,libavformat.so.61,libavformat.so")
-  set(LRR_VIDEO_LIBAVCODEC "libavcodec.so.63,libavcodec.so.62,libavcodec.so.61,libavcodec.so")
-  set(LRR_VIDEO_LIBAVUTIL "libavutil.so.61,libavutil.so.60,libavutil.so.59,libavutil.so")
-  set(LRR_VIDEO_LIBSWSCALE "libswscale.so.10,libswscale.so.9,libswscale.so.8,libswscale.so")
+# LRR_MOVIES off builds the video library as a stub that always reports
+# "no movies" (issue #919), for the hosts whose runtimes carry no FFmpeg.
+include(CMakeDependentOption)
+cmake_dependent_option(LRR_MOVIES
+  "Build the FFmpeg movie library; off builds a no-movies stub" ON
+  "NOT EMSCRIPTEN;NOT IOS;NOT NINTENDO_3DS;NOT NINTENDO_SWITCH;NOT VITA;NOT DOS" OFF)
+if(LRR_MOVIES)
+  if(APPLE)
+    set(LRR_VIDEO_LIBAVFORMAT "libavformat.63.dylib,libavformat.62.dylib,libavformat.61.dylib,libavformat.dylib")
+    set(LRR_VIDEO_LIBAVCODEC "libavcodec.63.dylib,libavcodec.62.dylib,libavcodec.61.dylib,libavcodec.dylib")
+    set(LRR_VIDEO_LIBAVUTIL "libavutil.61.dylib,libavutil.60.dylib,libavutil.59.dylib,libavutil.dylib")
+    set(LRR_VIDEO_LIBSWSCALE "libswscale.10.dylib,libswscale.9.dylib,libswscale.8.dylib,libswscale.dylib")
+  elseif(WIN32)
+    # The Windows builds' DLL names, for the same library majors as the
+    # sonames below (FFmpeg 7 and later).
+    set(LRR_VIDEO_LIBAVFORMAT "avformat-63.dll,avformat-62.dll,avformat-61.dll")
+    set(LRR_VIDEO_LIBAVCODEC "avcodec-63.dll,avcodec-62.dll,avcodec-61.dll")
+    set(LRR_VIDEO_LIBAVUTIL "avutil-61.dll,avutil-60.dll,avutil-59.dll")
+    set(LRR_VIDEO_LIBSWSCALE "swscale-10.dll,swscale-9.dll,swscale-8.dll")
+  else()
+    set(LRR_VIDEO_LIBAVFORMAT "libavformat.so.63,libavformat.so.62,libavformat.so.61,libavformat.so")
+    set(LRR_VIDEO_LIBAVCODEC "libavcodec.so.63,libavcodec.so.62,libavcodec.so.61,libavcodec.so")
+    set(LRR_VIDEO_LIBAVUTIL "libavutil.so.61,libavutil.so.60,libavutil.so.59,libavutil.so")
+    set(LRR_VIDEO_LIBSWSCALE "libswscale.so.10,libswscale.so.9,libswscale.so.8,libswscale.so")
+  endif()
 endif()
 # The audio library decodes the CD tracks' files with miniaudio: the copy
 # isle-portable vendors when its submodules are checked out, else the same
@@ -216,10 +231,15 @@ target_compile_definitions(library PRIVATE MA_NO_DEVICE_IO MA_NO_ENCODING
   MA_NO_THREADING)
 set_source_files_properties("${SRC_ROOT}/library/miniaudio_impl.c" PROPERTIES
   COMPILE_OPTIONS "$<IF:$<C_COMPILER_ID:MSVC>,/w,-w>")
-foreach(_name IN ITEMS LIBAVFORMAT LIBAVCODEC LIBAVUTIL LIBSWSCALE)
-  target_compile_definitions(library PRIVATE
-    "LRR_VIDEO_${_name}=\"${LRR_VIDEO_${_name}}\"")
-endforeach()
+if(LRR_MOVIES)
+  foreach(_name IN ITEMS LIBAVFORMAT LIBAVCODEC LIBAVUTIL LIBSWSCALE)
+    target_compile_definitions(library PRIVATE
+      "LRR_VIDEO_${_name}=\"${LRR_VIDEO_${_name}}\"")
+  endforeach()
+  target_compile_definitions(library PRIVATE LRR_MOVIES=1)
+else()
+  target_compile_definitions(library PRIVATE LRR_MOVIES=0)
+endif()
 target_link_libraries(library PUBLIC miniwin SDL3::SDL3 ${CMAKE_DL_LIBS})
 if(UNIX)
   target_link_libraries(library PUBLIC m)
@@ -361,7 +381,8 @@ if(BUILD_TESTING)
   set_tests_properties(input_keys PROPERTIES LABELS input)
 
   # The video library on a synthetic clip: against the host's FFmpeg
-  # (skipped without it), and built with sonames that never load.
+  # (skipped without it), built with sonames that never load, and built as
+  # the no-movies stub.
   set(LRR_VIDEO_TEST_CLIP "${LRR_SRC_ROOT_ABS}/library/testdata/synthetic.avi")
   add_executable(video_test ${SRC_ROOT}/library/test_video_ffmpeg.cpp)
   target_compile_definitions(video_test PRIVATE "LRR_VIDEO_TEST_CLIP=\"${LRR_VIDEO_TEST_CLIP}\"")
@@ -378,9 +399,18 @@ if(BUILD_TESTING)
     "LRR_VIDEO_LIBAVCODEC=\"liblrr-missing-avcodec.so\""
     "LRR_VIDEO_LIBAVUTIL=\"liblrr-missing-avutil.so\""
     "LRR_VIDEO_LIBSWSCALE=\"liblrr-missing-swscale.so\"")
-  target_link_libraries(video_missing_test PRIVATE SDL3::SDL3 ${CMAKE_DL_LIBS})
+  target_link_libraries(video_missing_test PRIVATE SDL3::SDL3)
   add_test(NAME video_missing COMMAND video_missing_test)
   set_tests_properties(video_missing PROPERTIES LABELS video)
+  # The LRR_MOVIES=OFF stub, which every build checks whatever the option.
+  add_executable(video_stub_test ${SRC_ROOT}/library/test_video_ffmpeg.cpp
+    ${SRC_ROOT}/library/video_ffmpeg.cpp)
+  target_include_directories(video_stub_test PRIVATE ${SRC_ROOT})
+  target_compile_definitions(video_stub_test PRIVATE LRR_VIDEO_TEST_MISSING
+    LRR_MOVIES=0 "LRR_VIDEO_TEST_CLIP=\"${LRR_VIDEO_TEST_CLIP}\"")
+  target_link_libraries(video_stub_test PRIVATE SDL3::SDL3)
+  add_test(NAME video_stub COMMAND video_stub_test)
+  set_tests_properties(video_stub PROPERTIES LABELS video)
 
   # The audio library and the units' audio substitution on synthetic
   # waves: buffers, wave readers and the CD device on SDL's dummy driver,

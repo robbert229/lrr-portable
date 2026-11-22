@@ -5,12 +5,16 @@
  * call sites; it holds no game logic.
  *
  * FFmpeg is a runtime capability, not a build requirement. The library
- * includes no FFmpeg header and links no FFmpeg library: it dlopens
- * libavformat, libavcodec, libavutil and libswscale on first use, trying the
- * ordered, comma-separated soname lists that CMake passes in
- * (LRR_VIDEO_LIB*), and resolves
- * the few symbols it calls. When they are missing, or older than FFmpeg 7,
+ * includes no FFmpeg header and links no FFmpeg library: it loads
+ * libavformat, libavcodec, libavutil and libswscale on first use with
+ * SDL_LoadObject, trying the ordered, comma-separated file name lists that
+ * CMake passes in (LRR_VIDEO_LIB*), and resolves the few symbols it calls
+ * with SDL_LoadFunction. When they are missing, or older than FFmpeg 7,
  * video_open returns NULL and the unit plays no movie.
+ *
+ * With the LRR_MOVIES CMake option off, the library is a stub that always
+ * reports "no movies": the units skip their movies, as they do without
+ * FFmpeg.
  *
  * The movie's audio track, which DirectShow's default audio renderer
  * played, goes to an SDL3 audio stream. */
