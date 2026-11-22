@@ -92,3 +92,7 @@ lrr_unit_test(vehicle_model SOURCES ${GAME_DIR}/test_vehicle_model.cpp
   WRAP ddiscene_advance_by_time_target ddiscene_object_frame_position_get
        xf_texture_name_format resource_name_register_or_query_target
   LABELS vehicle_model)
+
+# Pool connectivity and opening and sealing an outlet.
+lrr_unit_test(water SOURCES ${GAME_DIR}/test_water.cpp
+  WRAP scene_render_lock_toggle terrain_map_block_vertices_get LABELS water)
