@@ -20,8 +20,8 @@
 extern "C" {
 #endif
 
-unsigned int flh_magic_uu_noop(void);                          /* 00456210 */
-#define Flic_Sound(fsp) (((unsigned int (*)(LPFLICSTRUCT))flh_magic_uu_noop)(fsp))
+unsigned int flh_magic_uu_noop(unsigned int* stack);           /* 00456210 */
+#define Flic_Sound(fsp) (flh_magic_uu_noop((unsigned int*)(fsp)))
 
 #ifdef __cplusplus
 }

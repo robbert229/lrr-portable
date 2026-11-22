@@ -498,7 +498,7 @@ int nerpfunc_get_random100(unsigned int* stack);
 int nerpfunc_get_random10(unsigned int* stack);
 int nerpfunc_get_random_true_false(unsigned int* stack);
 int nerpfunc_get_random(unsigned int* stack);
-uint32_t flh_magic_uu_noop(void);
+uint32_t flh_magic_uu_noop(unsigned int* stack);
 int nerpfunc_get_ore_currently_stored(unsigned int* stack);
 int nerpfunc_get_ore_picked_up(unsigned int* stack);
 int nerpfunc_get_tutorial_flags(unsigned int* stack);
@@ -3639,13 +3639,12 @@ int nerpfunc_get_crystals_currently_stored(unsigned int* stack)
 }
 
 /* NERPFunc__Stop, False, Null, GetCrystalsUsed, GetCrystalsStolen,
- * GetOreUsed and GetOreStolen. The port's name: flic_unit.cpp and crt.cpp
- * call the same zero-returning body (the original's callers there reach
- * 00456210 too). Shared only under MSVC x86: natively the port tail keeps
- * its own definition, so the gods98 tests that call it do not pull this
- * unit (and its gods98 callees) in after the last gods98 pass of the link. */
+ * GetOreUsed and GetOreStolen, which take the NERPs stack as every NERPs
+ * function does. The port's name: flic_unit.c's FLIC sound chunk calls the
+ * same zero-returning body (the original's caller there reaches 00456210
+ * too). */
 // FUNCTION: LEGORR 0x00456210
-uint32_t flh_magic_uu_noop(void)
+uint32_t flh_magic_uu_noop(unsigned int* stack)
 {
     return 0;
 }

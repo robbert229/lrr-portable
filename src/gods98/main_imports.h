@@ -22,9 +22,9 @@ void window_mode_flag_set(unsigned int mode);                       /* 0048b280 
 void ledger_stub_0048b290_StartupStreamsClose(void);                /* 0048b290 */
 void startup_config_stream_load(void);                              /* 0048b2f0 */
 
-/* 00484c90, the original's shared empty function (Flic.c's Flic_Nothing
- * in the matching build, flic_link_names.h; flic.hpp natively). */
-void flic_opcode27_fallback_noop(void);                             /* 00484c90 */
+/* 00484c90, the original's shared empty function (Flic.c's Flic_Nothing,
+ * flic_link_names.h), declared with its one parameter. */
+void flic_opcode27_fallback_noop(void* fsp);                        /* 00484c90 */
 
 /* Lego.c's Gods_Go (GAME-021, lego_unit.h). */
 void lego_game_config_callback_registry_init(const char* gameName); /* 0041fa20 */

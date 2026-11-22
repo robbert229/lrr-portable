@@ -79,8 +79,8 @@
 #include <SDL3/SDL_timer.h>
 
 /* WinMain's shutdown passes FALSE to the shared empty function at
- * 00484c90; the port's own definition takes no arguments. */
-#define main_shutdown_nothing() (flic_opcode27_fallback_noop())
+ * 00484c90 (Flic_Nothing, which takes one pointer). */
+#define main_shutdown_nothing() (flic_opcode27_fallback_noop(NULL))
 
 #define lpD3DRM()   ((LPDIRECT3DRM3)s_main_d3drm)
 #define lpDevice()  ((LPDIRECT3DRMDEVICE3)s_main_device)

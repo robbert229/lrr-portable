@@ -76,7 +76,7 @@
 #define entity_type_grid_record_count_get nerps_object_count /* 00455300 */
 #define system_state_flags_get_original nerpfunc_get_tutorial_flags /* 00456240 */
 /* legoobject_unit.c (#610) calls 00456240 with the original's argument
- * through LegoObjH_NERPsTutorialFlags, a cast of the port's declaration. */
+ * through LegoObjH_NERPsTutorialFlags. */
 #define system_state_flags_get nerpfunc_get_tutorial_flags /* 00456240 */
 #define system_state_flags_set_target nerpfunc_set_tutorial_flags /* 00456550 */
 #define engine_mode_set_target nerpfunc_set_message_permit /* 004565f0 */
