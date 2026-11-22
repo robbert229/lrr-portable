@@ -1,0 +1,121 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+// The Android app (issue #927). Adapted from isle-portable's
+// android-project/app/build.gradle (LGPL-3.0-or-later): AGP builds the
+// repository's CMake project for each ABI, with SDL3 from its Android
+// archive (AAR). The program is libLegoRR.so (CMakeLists.txt), which SDL's
+// activity loads (LegoRRActivity). docs/building.md, "Android", describes
+// the build, the game data and signing.
+//
+// Properties (-P on the Gradle command line):
+//   abiFilters  comma-separated ABIs, default arm64-v8a,x86_64; armeabi-v7a
+//               and x86 build too (docs/building.md says why they are off).
+//   cmakeArgs   extra CMake arguments, separated by spaces.
+plugins {
+    id 'com.android.application'
+}
+
+def androidProject = projectDir.parentFile
+def repositoryRoot = androidProject.parentFile.parentFile
+
+// The SDL release the AAR comes from: the same release as LRR_SDL3_GIT_TAG
+// in CMakeLists.txt (3.4.18, commit 829a65d7), from SDL's GitHub release,
+// checked against its SHA-256.
+def sdlVersion = '3.4.18'
+def sdlDevelZip = "SDL3-devel-${sdlVersion}-android.zip"
+def sdlDevelUrl = "https://github.com/libsdl-org/SDL/releases/download/release-${sdlVersion}/${sdlDevelZip}"
+def sdlDevelSha256 = 'e09e4d6593335d089ba124375e8b8abd0fd75173dffcd2c17012b45af121d4e9'
+def sdlAar = file("${projectDir}/libs/SDL3-${sdlVersion}.aar")
+
+// The version: project(lrr-portable VERSION x.y.z) in CMakeLists.txt.
+def cmakeVersion = (file("${repositoryRoot}/CMakeLists.txt").text =~ /(?m)^project\(\S+\s+VERSION\s+(\d+)\.(\d+)\.(\d+)/)
+if (!cmakeVersion.find()) {
+    throw new GradleException('CMakeLists.txt has no project(... VERSION x.y.z)')
+}
+def (versionMajor, versionMinor, versionPatch) = (1..3).collect { cmakeVersion.group(it) as int }
+
+def abis = (project.findProperty('abiFilters') ?: 'arm64-v8a,x86_64').split(',').collect { it.trim() }.findAll { it }
+
+android {
+    namespace 'io.github.robbert229.LegoRR'
+    compileSdk 35
+    // NDK r27d, the GitHub ubuntu-24.04 image's default; r27 links with
+    // 16 KB page alignment (ANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES).
+    ndkVersion '27.3.13750724'
+
+    defaultConfig {
+        // LRR_APP_ID in packaging/CMakeLists.txt.
+        applicationId 'io.github.robbert229.LegoRR'
+        // SDL3's minimum.
+        minSdk 21
+        targetSdk 35
+        versionCode versionMajor * 10000 + versionMinor * 100 + versionPatch
+        versionName "${versionMajor}.${versionMinor}.${versionPatch}"
+
+        externalNativeBuild {
+            cmake {
+                // No tests (they are host programs), no movies (no FFmpeg
+                // on Android; CMakeLists.txt turns LRR_MOVIES off there),
+                // and one download directory for every ABI.
+                arguments '-DANDROID_STL=c++_shared',
+                        '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON',
+                        '-DBUILD_TESTING=OFF',
+                        "-DFETCHCONTENT_BASE_DIR=${androidProject}/build/_deps"
+                if (project.hasProperty('cmakeArgs')) {
+                    project.cmakeArgs.split(' ').findAll { it }.each { arg -> arguments arg }
+                }
+                targets 'program'
+                abiFilters(*abis)
+            }
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            // The SDK's CMake package (sdkmanager "cmake;3.31.5"), which the
+            // GitHub ubuntu-24.04 image carries; isle-portable uses 3.30.5.
+            version '3.31.5'
+            path "${repositoryRoot}/CMakeLists.txt"
+        }
+    }
+
+    // No release signing here: an unsigned release APK comes out of
+    // assembleRelease, and signing it is the owner's decision
+    // (docs/building.md, "Signing").
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    buildFeatures {
+        prefab true
+    }
+}
+
+// SDL3's AAR, from the release's Android development archive: downloaded
+// once into app/libs (ignored by git) and checked against its SHA-256.
+tasks.register('downloadSDL3') {
+    outputs.file(sdlAar)
+    doLast {
+        def zip = file("${buildDir}/sdl3/${sdlDevelZip}")
+        zip.parentFile.mkdirs()
+        new URL(sdlDevelUrl).withInputStream { input -> zip.withOutputStream { it << input } }
+        def digest = java.security.MessageDigest.getInstance('SHA-256').digest(zip.bytes).encodeHex().toString()
+        if (digest != sdlDevelSha256) {
+            throw new GradleException("${sdlDevelZip}: SHA-256 ${digest}, expected ${sdlDevelSha256}")
+        }
+        copy {
+            from zipTree(zip)
+            include "SDL3-${sdlVersion}.aar"
+            into sdlAar.parentFile
+        }
+    }
+    onlyIf { !sdlAar.exists() }
+}
+
+dependencies {
+    implementation files(sdlAar).builtBy('downloadSDL3')
+}

@@ -1,0 +1,19 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+// The Android app (issue #927). Adapted from isle-portable's
+// android-project/settings.gradle (LGPL-3.0-or-later).
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+rootProject.name = "lrr-portable"
+include ':app'

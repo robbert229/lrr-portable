@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
+<!-- The application name: LRR_APP_NAME in packaging/CMakeLists.txt. -->
+<resources>
+    <string name="app_name">LRR Portable</string>
+</resources>

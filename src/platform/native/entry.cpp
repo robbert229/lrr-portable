@@ -16,6 +16,11 @@
  * names the file, which otherwise lives in the preference directory. The
  * option does not reach WinMain. */
 #include <SDL3/SDL.h>
+#ifdef __ANDROID__
+/* SDL's activity calls the program's SDL_main: SDL_main.h renames main
+ * and exports it from libLegoRR.so. */
+#include <SDL3/SDL_main.h>
+#endif
 
 #include <miniwin/windows.h>
 #include <miniwin/miniwindevice.h>
@@ -57,12 +62,12 @@ int main(int argc, char** argv)
         if (!arguments.empty()) arguments += ' ';
         arguments += QuoteArgument(argv[i]);
     }
-#if defined(__EMSCRIPTEN__) || defined(__3DS__)
-    /* The web build's argv[0] is "./this.program", and the 3DS's is the
-     * .3dsx's path (sdmc:/3ds/LegoRR.3dsx, under any name the user gave
-     * it) or nothing at all for a .cia; WinMain names the WADs after the
-     * program, so it gets a relative LegoRR, as a native run from its game
-     * directory does. */
+#if defined(__EMSCRIPTEN__) || defined(__3DS__) || defined(__ANDROID__)
+    /* The web build's argv[0] is "./this.program", Android's is
+     * "app_process", and the 3DS's is the .3dsx's path
+     * (sdmc:/3ds/LegoRR.3dsx, under any name the user gave it) or nothing at
+     * all for a .cia; WinMain names the WADs after the program, so it gets a
+     * relative LegoRR, as a native run from its game directory does. */
     std::string program = "./LegoRR";
 #else
     std::string program = argc > 0 ? argv[0] : "LegoRR.exe";
@@ -82,6 +87,11 @@ int main(int argc, char** argv)
      * WinMain never does, so SDL renders in software and presents each
      * frame on the page's canvas from the main browser thread. */
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, SDL_SOFTWARE_RENDERER);
+#endif
+#ifdef __ANDROID__
+    /* The game is landscape. SDL lets a resizable window take any
+     * orientation, and the activity's own landscape setting with it. */
+    SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
 #endif
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_Init: %s", SDL_GetError());

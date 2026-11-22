@@ -8,9 +8,12 @@
 
 #include "platform/native/config.h"
 
-/* The default 3D device (LRR_Default3DDevice): SDL GPU, through Vulkan.
- * The software renderer works but is too slow on the device's CPU. */
-#define ANDROID_DEFAULT_3D_DEVICE LRR_DEVICE_SDLGPU
+/* The default 3D device (LRR_Default3DDevice): the software renderer,
+ * which draws on every device and emulator (issue #927). SDL GPU needs
+ * Vulkan, which many devices and emulators lack or implement badly, and
+ * the OpenGL ES 3 backend does not draw the level yet (#925). A device
+ * named in LegoRR.ini still wins. */
+#define ANDROID_DEFAULT_3D_DEVICE LRR_DEVICE_SOFTWARE
 
 void Android_SetupDefaultConfigOverrides(dictionary* p_dictionary);
 

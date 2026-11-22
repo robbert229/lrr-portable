@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 #
 # The native port on macOS (arm64 and Intel), FreeBSD, and Windows (MSVC x86,
-# x64 and arm64, and msys2 MinGW64), the web build (Emscripten) and the
-# Nintendo 3DS build (devkitARM). These
+# x64 and arm64, and msys2 MinGW64), the web build (Emscripten), the
+# Nintendo 3DS build (devkitARM) and Android (Gradle). These
 # jobs are not required checks: native-build is the only one. Each native
 # job configures, builds and runs ctest as native-build does, with SDL3
 # fetched by CMake at the pinned commit (CMakeLists.txt, LRR_SDL3_GIT_TAG);
@@ -10,7 +10,8 @@
 # job LegoRR.3dsx and LegoRR.cia. The Python
 # tool tests and the unit lint run in native-build only. The macOS and
 # Windows jobs also build the CPack package (packaging/) and upload it as an
-# artifact; the Linux packages are in native-packages.
+# artifact; the Linux packages are in native-packages. The Android job
+# builds the debug APK (packaging/android) and uploads it.
 name: native-hosts
 
 on:
@@ -302,4 +303,52 @@ jobs:
           path: |
             build-3ds/LegoRR.3dsx
             build-3ds/LegoRR.cia
+          if-no-files-found: error
+
+  android:
+    name: android
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      # gradlew runs the wrapper jar committed in packaging/android; check it
+      # against Gradle's published checksums before running it.
+      - name: Validate the Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      # The NDK and CMake app/build.gradle pins (ndkVersion, cmake version).
+      # The image carries both; sdkmanager installs them, checked against
+      # the SDK repository's checksums, if a later image drops them. Gradle
+      # itself is checked by the wrapper (distributionSha256Sum) and SDL's
+      # AAR by build.gradle (sdlDevelSha256).
+      - name: Install the NDK and CMake
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;27.3.13750724" "cmake;3.31.5"
+
+      - name: Bootstrap sparse miniwin
+        run: tools/setup-miniwin.sh
+
+      - name: Build the debug APK
+        working-directory: packaging/android
+        run: ./gradlew --no-daemon assembleDebug
+
+      # Debug-signed (Android's debug key), for testing: see
+      # docs/building.md, "Android", for the game data and signing.
+      - name: Upload the debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: LegoRR-android-debug
+          path: packaging/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

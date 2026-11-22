@@ -140,14 +140,72 @@ class Nintendo3DSTests(unittest.TestCase):
         self.assertRegex(text, r'(?m)^\s*Title\s*:\s*"LRR Portable"')
 
 
+class AndroidTests(unittest.TestCase):
+    """The Gradle project (packaging/android, issue #927)."""
+
+    ANDROID = PACKAGING / "android"
+
+    def setUp(self):
+        self.gradle = (self.ANDROID / "app/build.gradle").read_text()
+
+    def test_package_is_the_app_id(self):
+        app_id = cmake_variable("LRR_APP_ID")
+        self.assertIn(f"applicationId '{app_id}'", self.gradle)
+        self.assertIn(f"namespace '{app_id}'", self.gradle)
+        manifest = (self.ANDROID / "app/src/main/AndroidManifest.xml").read_text()
+        self.assertIn('android:name=".LegoRRActivity"', manifest)
+        activity = self.ANDROID / "app/src/main/java" / app_id.replace(".", "/") / "LegoRRActivity.java"
+        self.assertIn(f"package {app_id};", activity.read_text())
+
+    def test_activity_loads_the_program(self):
+        app_id = cmake_variable("LRR_APP_ID")
+        activity = self.ANDROID / "app/src/main/java" / app_id.replace(".", "/") / "LegoRRActivity.java"
+        # CMakeLists.txt's program is libLegoRR.so on Android; SDL runs the
+        # last library's SDL_main.
+        self.assertRegex(activity.read_text(), r'"SDL3", "LegoRR" \}')
+
+    def test_app_name(self):
+        strings = ET.parse(self.ANDROID / "app/src/main/res/values/strings.xml").getroot()
+        self.assertEqual(strings.findtext("string[@name='app_name']"), cmake_variable("LRR_APP_NAME"))
+
+    def test_default_abis(self):
+        match = re.search(r"findProperty\('abiFilters'\) \?: '([^']*)'", self.gradle)
+        self.assertIsNotNone(match)
+        self.assertEqual(match.group(1).split(","), ["arm64-v8a", "x86_64"])
+
+    def test_downloads_are_pinned(self):
+        self.assertRegex(self.gradle, r"(?m)^def sdlDevelSha256 = '[0-9a-f]{64}'$")
+        # The AAR is SDL's release, the same one CMakeLists.txt fetches.
+        version = re.search(r"(?m)^def sdlVersion = '([0-9.]+)'$", self.gradle).group(1)
+        workflow = (ROOT / ".github/workflows/native-build.yml").read_text()
+        self.assertRegex(workflow, rf"SDL_VERSION: ['\"]?{re.escape(version)}['\"]?")
+        wrapper = (self.ANDROID / "gradle/wrapper/gradle-wrapper.properties").read_text()
+        self.assertRegex(wrapper, r"(?m)^distributionSha256Sum=[0-9a-f]{64}$")
+
+    def test_no_signing_secrets(self):
+        self.assertNotIn("signingConfig", self.gradle)
+
+    def test_launcher_icons(self):
+        res = self.ANDROID / "app/src/main/res"
+        for density, scale in [("mdpi", 1), ("hdpi", 1.5), ("xhdpi", 2), ("xxhdpi", 3), ("xxxhdpi", 4)]:
+            for name, dp in [("ic_launcher", 48), ("ic_launcher_foreground", 108)]:
+                data = (res / f"mipmap-{density}" / f"{name}.png").read_bytes()
+                self.assertEqual(data[:8], b"\x89PNG\r\n\x1a\n", name)
+                size = round(dp * scale)
+                self.assertEqual(struct.unpack(">II", data[16:24]), (size, size), f"{density}/{name}")
+
+
 class LicenceTests(unittest.TestCase):
     def test_recipes_carry_spdx_headers(self):
         # The rendered images and sound are generated from sources that
         # carry the header (the SVGs, regenerate.py).
         for path in PACKAGING.rglob("*"):
-            if path.suffix in {".icns", ".png", ".wav"} or not path.is_file():
+            if path.suffix in {".icns", ".png", ".wav", ".jar"} or not path.is_file():
                 continue
-            self.assertIn("SPDX-License-Identifier", path.read_text()[:400], path)
+            # Build output and Gradle's caches in a local Android build.
+            if {"build", ".gradle", ".cxx", "libs"} & set(path.relative_to(PACKAGING).parts):
+                continue
+            self.assertIn("SPDX-License-Identifier", path.read_text()[:1000], path)
 
 
 if __name__ == "__main__":
