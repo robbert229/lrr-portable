@@ -151,8 +151,11 @@ int main(void)
 
     /* A unit's own relative Windows path ("Data\\..."; Images.c, the CD
      * key check) maps into the diskpath too. */
+    /* On a disk that ignores case the units' spelling stays (test_files). */
+    const std::string loose = access((install + "/DATA/LOOSE.TXT").c_str(), F_OK) == 0 ?
+        install + "/DATA/LOOSE.TXT" : install + "/Data/Loose.txt";
     CHECK(files_native_host_path(host, "DATA\\LOOSE.TXT", sizeof(host)) != NULL &&
-              install + "/Data/Loose.txt" == host,
+              loose == host,
           "map: a relative path is taken from the diskpath");
 
     /* An empty diskpath keeps the working directory. */

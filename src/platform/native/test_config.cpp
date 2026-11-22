@@ -2,8 +2,9 @@
 /* test_config — the port's configuration file (platform/native/config.h),
  * as isle-portable's isle.ini: written with defaults in the preference
  * directory the first time, read from there or from an explicit path, and
- * applied to the save directory, the data directory and the display settings. XDG_DATA_HOME points the preference
- * directory into the fixture. */
+ * applied to the save directory, the data directory and the display settings. XDG_DATA_HOME, or
+ * CFFIXED_USER_HOME on macOS, points the preference directory into the
+ * fixture. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,6 +12,8 @@
 #include <unistd.h>
 
 #include <string>
+
+#include <SDL3/SDL.h>
 
 #include "gods98/files_native.h"
 #include "platform/native/config.h"
@@ -71,8 +74,21 @@ int main(void)
         return 1;
     }
     const std::string root = cwd;
+    /* The preference directory, inside the fixture: XDG_DATA_HOME on
+     * Linux and the BSDs, CoreFoundation's home override on macOS. A host
+     * that keeps it elsewhere is skipped, so a run never touches the
+     * user's own LegoRR.ini. */
     setenv("XDG_DATA_HOME", (root + "/xdg").c_str(), 1);
-    const std::string prefDir = root + "/xdg/" LRR_CONFIG_ORG "/" LRR_CONFIG_APP;
+    setenv("CFFIXED_USER_HOME", (root + "/home").c_str(), 1);
+    mkdir((root + "/home").c_str(), 0755);
+    char* pref = SDL_GetPrefPath(LRR_CONFIG_ORG, LRR_CONFIG_APP);
+    std::string prefDir = pref != NULL ? pref : "";
+    SDL_free(pref);
+    while (prefDir.size() > 1 && prefDir.back() == '/') prefDir.pop_back();
+    if (prefDir.compare(0, root.size() + 1, root + "/") != 0) {
+        printf("SKIP: the preference directory \"%s\" is outside the fixture\n", prefDir.c_str());
+        return 77;
+    }
     const std::string defaultIni = prefDir + "/" LRR_CONFIG_FILE;
 
     /* First run: the defaults are written to the preference directory, and

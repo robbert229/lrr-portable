@@ -121,6 +121,14 @@ keep `LRR_SDL3_GIT_TAG` in `CMakeLists.txt` on the same commit. An existing
 build directory keeps its cached `LRR_SDL3_GIT_TAG`; delete that entry, or
 the directory, to pick up a new one.
 
+The `native-hosts` workflow (`.github/workflows/native-hosts.yml`) runs on the
+same events and builds the port on macOS arm64 (`macos-latest`), macOS Intel
+(`macos-15-intel`), both with `CMAKE_OSX_DEPLOYMENT_TARGET=12.0`, and FreeBSD
+15.1 in a VM. Its jobs are not required checks. Each runs
+`tools/setup-miniwin.sh`, then the commands from [Tests](#tests); SDL3 is the
+static build configure fetches at `LRR_SDL3_GIT_TAG`, with SDL's default
+drivers. The `--wrap` tests need GNU ld options and are skipped on macOS.
+
 
 ## Sources
 

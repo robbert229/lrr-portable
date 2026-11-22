@@ -354,7 +354,9 @@ if(BUILD_TESTING)
   add_executable(config_test ${PLATFORM_DIR}/native/test_config.cpp)
   target_link_libraries(config_test PRIVATE units)
   add_test(NAME config COMMAND config_test)
-  set_tests_properties(config PROPERTIES LABELS config)
+  # Skipped (77) where the preference directory cannot be moved into the
+  # fixture.
+  set_tests_properties(config PROPERTIES LABELS config SKIP_RETURN_CODE 77)
   add_executable(draw_test ${ENGINE_DIR}/test_draw.cpp)
   target_link_libraries(draw_test PRIVATE units)
   add_test(NAME draw COMMAND draw_test)
