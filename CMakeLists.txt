@@ -29,7 +29,8 @@ endif()
 # SDL's software render driver (entry.cpp), which presents each frame on
 # the page's canvas from the main browser thread, and leaves out miniwin's
 # OpenGL ES backends, whose device enumeration would claim the canvas for
-# WebGL (#925 brings WebGL 2 back). SDL's DOM event handlers run on the main
+# WebGL (docs/building.md: WebGL 2 needs a main loop that returns to the
+# browser between frames). SDL's DOM event handlers run on the main
 # browser thread and queue the events for the worker. Every object compiles
 # with -pthread, since the threads share one wasm memory. WASMFS and
 # FORCE_FILESYSTEM back the OPFS saves and the streamed game data
@@ -761,6 +762,20 @@ if(BUILD_TESTING)
   target_link_libraries(miniwin_backends_test PRIVATE miniwin)
   add_test(NAME miniwin_backends COMMAND miniwin_backends_test)
   set_tests_properties(miniwin_backends PROPERTIES LABELS "miniwin;sdlgpu" SKIP_RETURN_CODE 77)
+
+  # The same checks, and the same comparison with the software backend, on
+  # the OpenGL ES 3 backend (#925). They need an OpenGL ES 3 context on an
+  # OpenGL window on MINIWIN_TEST_VIDEO_DRIVER (offscreen, through EGL);
+  # without one, as on CI, they are skipped. Override the driver with
+  # LRR_MINIWIN_GLES3_VIDEO_DRIVER (x11 or wayland on a desktop).
+  set(LRR_MINIWIN_GLES3_VIDEO_DRIVER "offscreen" CACHE STRING
+    "SDL video driver the miniwin OpenGL ES 3 tests draw on")
+  foreach(name immediate viewports textures lights fog backends)
+    add_test(NAME miniwin_${name}_gles3 COMMAND miniwin_${name}_test)
+    set_tests_properties(miniwin_${name}_gles3 PROPERTIES LABELS "miniwin;gles3"
+      SKIP_RETURN_CODE 77
+      ENVIRONMENT "MINIWIN_TEST_DEVICE=OpenGL ES 3.0 HAL;MINIWIN_TEST_VIDEO_DRIVER=${LRR_MINIWIN_GLES3_VIDEO_DRIVER}")
+  endforeach()
 
   # Main.c's window procedure under miniwin: SDL mouse events as client
   # coordinate messages, and SDL's quit event as WM_CLOSE.

@@ -1,0 +1,93 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sun, 22 Nov 2026 10:28:17 -0800
+Subject: [PATCH] feat(miniwin): create OpenGL windows on request
+
+CreateWindowExA made every window without SDL_WINDOW_OPENGL, so the
+OpenGL backends could neither be listed nor draw for a client that creates
+its window through it. Miniwin_SetOpenGLWindows(true) makes it create
+them with Miniwin_SetupWindowCreateProperties instead.
+
+It is off by default: SDL GPU cannot claim a window whose surface SDL has
+bound to EGL, so a client asks for an OpenGL window only when it expects
+to choose an OpenGL device.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/include/miniwin/miniwindevice.h b/miniwin/include/miniwin/miniwindevice.h
+index e45d245..872b984 100644
+--- a/miniwin/include/miniwin/miniwindevice.h
++++ b/miniwin/include/miniwin/miniwindevice.h
+@@ -10,4 +10,16 @@ struct IDirect3DRMMiniwinDevice : virtual public IUnknown {
+ 	virtual bool ConvertRenderToWindowCoordinates(Sint32 inX, Sint32 inY, Sint32& outX, Sint32& outY) = 0;
+ };
+ 
++// Sets up SDL window properties for the OpenGL backends: an OpenGL window,
++// double-buffered, with a 24-bit depth buffer. Does nothing in a build
++// without them.
+ void Miniwin_SetupWindowCreateProperties(SDL_PropertiesID props);
++
++// Whether CreateWindowExA makes its windows with
++// Miniwin_SetupWindowCreateProperties. The OpenGL backends are listed and
++// created only on an OpenGL window; SDL GPU may not be listed on one (on
++// Android an EGL surface keeps Vulkan from claiming the window). So a client
++// that creates its window before it chooses a device asks for an OpenGL
++// window only when it expects to choose an OpenGL device. Off by default.
++void Miniwin_SetOpenGLWindows(bool opengl);
++bool Miniwin_GetOpenGLWindows();
+diff --git a/miniwin/src/d3drm/d3drmrenderer.cpp b/miniwin/src/d3drm/d3drmrenderer.cpp
+index 76f6c6b..5718a8a 100644
+--- a/miniwin/src/d3drm/d3drmrenderer.cpp
++++ b/miniwin/src/d3drm/d3drmrenderer.cpp
+@@ -359,6 +359,18 @@ void Miniwin_SetupWindowCreateProperties(SDL_PropertiesID props)
+ #endif
+ }
+ 
++static bool g_openGLWindows = false;
++
++void Miniwin_SetOpenGLWindows(bool opengl)
++{
++	g_openGLWindows = opengl;
++}
++
++bool Miniwin_GetOpenGLWindows()
++{
++	return g_openGLWindows;
++}
++
+ bool Miniwin_DeviceDrawsImmediateMode(const GUID& guid)
+ {
+ 	// The backends that override SubmitImmediate.
+diff --git a/miniwin/src/windows/windowmessages.cpp b/miniwin/src/windows/windowmessages.cpp
+index e67db46..6090c26 100644
+--- a/miniwin/src/windows/windowmessages.cpp
++++ b/miniwin/src/windows/windowmessages.cpp
+@@ -1,5 +1,6 @@
+ #include "miniwin.h"
+ #include "miniwin/windows.h"
++#include "miniwin/miniwindevice.h"
+ #include "presentation_impl.h"
+ 
+ #include <SDL3/SDL.h>
+@@ -401,7 +402,20 @@ HWND CreateWindowExA(
+ 	if (dwStyle & WS_THICKFRAME) {
+ 		flags |= SDL_WINDOW_RESIZABLE;
+ 	}
+-	SDL_Window* window = SDL_CreateWindow(lpWindowName ? lpWindowName : "", nWidth, nHeight, flags);
++	SDL_Window* window = nullptr;
++	if (Miniwin_GetOpenGLWindows()) {
++		SDL_PropertiesID props = SDL_CreateProperties();
++		SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, lpWindowName ? lpWindowName : "");
++		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, nWidth);
++		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, nHeight);
++		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, (Sint64) flags);
++		Miniwin_SetupWindowCreateProperties(props);
++		window = SDL_CreateWindowWithProperties(props);
++		SDL_DestroyProperties(props);
++	}
++	else {
++		window = SDL_CreateWindow(lpWindowName ? lpWindowName : "", nWidth, nHeight, flags);
++	}
+ 	if (!window) {
+ 		SDL_LogError(LOG_CATEGORY_MINIWIN, "SDL_CreateWindow: %s", SDL_GetError());
+ 		return NULL;

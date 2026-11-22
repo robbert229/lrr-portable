@@ -237,6 +237,12 @@ const char* LRR_Default3DDevice()
 #endif
 }
 
+bool LRR_UseOpenGLWindow(const char* configured, const char* platformDefault)
+{
+    const char* device = configured != NULL && configured[0] != '\0' ? configured : platformDefault;
+    return device != NULL && SDL_strstr(device, "OpenGL") != NULL;
+}
+
 bool LRR_LoadConfig(const char* iniPath)
 {
 #ifdef __EMSCRIPTEN__

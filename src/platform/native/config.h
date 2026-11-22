@@ -63,6 +63,7 @@ struct LRR_DisplayConfig {
 /* The 3D devices, by their descriptions as DirectDraw.c lists them. */
 #define LRR_DEVICE_SDLGPU "Miniwin driver (SDL3 GPU HAL)"
 #define LRR_DEVICE_SOFTWARE "Miniwin driver (Miniwin Emulation)"
+#define LRR_DEVICE_GLES3 "Miniwin driver (OpenGL ES 3.0 HAL)"
 
 /* A 3D device the [library:config] substitution in Init.c can choose:
  * its description as DirectDraw.c lists it, whether it draws the level
@@ -100,6 +101,16 @@ int LRR_ChooseDeviceAfterFailure(LRR_DeviceCandidate* devices, unsigned int coun
  * Metal or Direct3D 12), falling back to the first device that draws, the
  * software renderer, where SDL GPU cannot create a device. */
 const char* LRR_Default3DDevice();
+
+/* Whether the main window must be an OpenGL window (miniwin's
+ * Miniwin_SetOpenGLWindows), without which miniwin lists no OpenGL device.
+ * The window is created before the devices are listed, so this is decided
+ * from the device the game will most likely choose: `configured`
+ * (legorr:3D Device) when it is set, else `platformDefault`. It is true
+ * when that device's description names OpenGL. An OpenGL window is never
+ * asked for otherwise: on it SDL GPU may not be listed (Android), and on
+ * the web the canvas would be taken for WebGL. */
+bool LRR_UseOpenGLWindow(const char* configured, const char* platformDefault);
 
 /* tweaks:Training Save (docs/divergences.md, "Save after a training
  * mission"). The original shows no rewards screen, and so no Save button,

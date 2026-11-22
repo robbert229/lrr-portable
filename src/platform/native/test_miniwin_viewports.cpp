@@ -304,7 +304,7 @@ int main()
         fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
         return 1;
     }
-    SDL_Window* window = SDL_CreateWindow("miniwin_viewports", kSize, kSize, 0);
+    SDL_Window* window = SDL_CreateWindow("miniwin_viewports", kSize, kSize, MiniwinTestWindowFlags());
     if (!window) {
         return MiniwinTestUnavailable("SDL_CreateWindow");
     }

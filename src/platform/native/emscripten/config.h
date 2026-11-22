@@ -9,8 +9,10 @@
 #include "platform/native/config.h"
 
 /* The default 3D device (LRR_Default3DDevice): the software renderer. SDL
- * GPU has no WebGPU path here, and the OpenGL ES 3 backend does not draw
- * the level yet (#925). */
+ * GPU has no WebGPU path here. The OpenGL ES 3 backend draws the level, but
+ * a WebGL canvas shows a frame only when its thread returns to the browser,
+ * which WinMain's worker never does (docs/building.md), so the web build
+ * leaves it out. */
 #define EMSCRIPTEN_DEFAULT_3D_DEVICE LRR_DEVICE_SOFTWARE
 
 void Emscripten_SetupDefaultConfigOverrides(dictionary* p_dictionary);

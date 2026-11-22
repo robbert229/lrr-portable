@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-// The SDL GPU backend against the software backend (ADR 0008, step 6): one
-// scene drawn the way gods98's Mesh.c draws, on each device in turn, compared
-// pixel by pixel. The scene has lit, specular and table-fogged Gouraud
+// A GPU backend against the software backend (ADR 0008, step 6): one scene
+// drawn the way gods98's Mesh.c draws, on each device in turn, compared
+// pixel by pixel. The GPU device is SDL GPU, or MINIWIN_TEST_DEVICE (such as
+// "OpenGL ES 3.0 HAL"). The scene has lit, specular and table-fogged Gouraud
 // geometry, a colour-keyed and bilinear-filtered texture, additive and
 // SRCALPHA blending, and a second viewport in a sub-rectangle with its own
 // Clear2, as the level and its radar have.
@@ -16,9 +17,10 @@
 //    kChannelTolerance between neighbours;
 //  - at most kMaxEdgeMismatch of the target's pixels may mismatch.
 //
-// Synthetic only. Skipped (77) where miniwin offers no "SDL3 GPU HAL" device
-// that can draw on SDL's offscreen video driver, as on CI; Mesa's lavapipe
-// (VK_DRIVER_FILES=.../lvp_icd.x86_64.json) provides one without a GPU.
+// Synthetic only. Skipped (77) where miniwin offers no such device that can
+// draw on SDL's offscreen video driver (or MINIWIN_TEST_VIDEO_DRIVER), as on
+// CI; Mesa's lavapipe (VK_DRIVER_FILES=.../lvp_icd.x86_64.json) provides an
+// SDL GPU device without a GPU, and Mesa's llvmpipe an OpenGL ES 3 one.
 #include <miniwin/d3d.h>
 #include <miniwin/d3drm.h>
 #include <miniwin/ddraw.h>
@@ -476,7 +478,7 @@ static std::vector<RGB> ReadBack()
 
 static SetUpResult Render(const char* deviceName, const char* title, std::vector<RGB>& pixels)
 {
-    SDL_Window* window = SDL_CreateWindow(title, kSize, kSize, 0);
+    SDL_Window* window = SDL_CreateWindow(title, kSize, kSize, MiniwinTestWindowFlags(deviceName));
     if (!window) {
         // The video driver cannot open a window here (macOS runners have no
         // offscreen GL for SDL's offscreen driver).
@@ -552,19 +554,20 @@ int main()
         fprintf(stderr, "software set-up failed\n");
         return 1;
     }
-    SetUpResult result = Render("SDL3 GPU HAL", "miniwin_backends sdlgpu", gpu);
+    const char* device = MiniwinTestDefaultDevice() ? "SDL3 GPU HAL" : MiniwinTestDevice();
+    SetUpResult result = Render(device, "miniwin_backends gpu", gpu);
     if (result == SetUpResult::Missing) {
-        fprintf(stderr, "no SDL3 GPU HAL device that draws offscreen: skipped\n");
+        fprintf(stderr, "no %s device that draws on this video driver: skipped\n", device);
         SDL_Quit();
         return kMiniwinTestSkip;
     }
     if (result != SetUpResult::Ok) {
-        fprintf(stderr, "SDL GPU set-up failed\n");
+        fprintf(stderr, "%s set-up failed\n", device);
         return 1;
     }
 
     Dump(reference, "software");
-    Dump(gpu, "sdlgpu");
+    Dump(gpu, "gpu");
 
     // The scene draws something in each of its parts.
     const RGB background = {16, 32, 48};
@@ -618,6 +621,6 @@ int main()
         fprintf(stderr, "%d check(s) failed\n", failures);
         return 1;
     }
-    printf("miniwin backends: SDL GPU matches software within tolerance\n");
+    printf("miniwin backends: %s matches software within tolerance\n", device);
     return 0;
 }

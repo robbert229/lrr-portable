@@ -73,21 +73,33 @@ as a hardware device, which is what `-best` looks for (see the
 `CMakeLists.txt`). miniwin builds through upstream's `miniwin/CMakeLists.txt`,
 which adds each platform's renderer backends: SDL GPU, plus OpenGL 1.x and
 OpenGL ES 2 and 3 when CMake finds their libraries, DirectX 9 on Windows, and
-Citro3D, GXM and Glide on 3DS, Vita and DOS. Only the software and SDL GPU
-backends draw the level (immediate mode, viewport rectangles and rectangle
-clears; ADR 0008, step 6), and miniwin reports which do
+Citro3D, GXM and Glide on 3DS, Vita and DOS. Only the software, SDL GPU and
+OpenGL ES 3 backends draw the level (immediate mode, viewport rectangles and
+rectangle clears; ADR 0008, step 6), and miniwin reports which do
 (`Miniwin_DeviceDrawsImmediateMode`). With an empty `3d device` in
 `LegoRR.ini`, the game picks the platform's default device if it can draw,
 else the first device that can (a device the file names wins): on the desktop SDL GPU, which needs a
 Vulkan, Metal or Direct3D 12 device, falling back to the software renderer
 (`3d device = Miniwin driver (Miniwin Emulation)` selects it). The
 per-platform defaults are in `src/platform/native/<platform>/config.h`, and
-`device_choice_test` checks them against each platform's device list. The
-OpenGL backends also need an OpenGL window
-(`Miniwin_SetupWindowCreateProperties`), which the port doesn't create yet;
-that is left to the OpenGL ES 3 work (#925), along with drawing the level. For a headless
-run, use SDL's offscreen driver and have miniwin write each presented frame
-to a file:
+`device_choice_test` checks them against each platform's device list.
+
+The OpenGL backends draw only into an OpenGL window, and the window exists
+before the game lists its devices. So the port asks miniwin for an OpenGL
+window (`Miniwin_SetOpenGLWindows`) when `3d device` names an OpenGL device,
+or is empty and the platform's default is one; `3d device = Miniwin driver
+(OpenGL ES 3.0 HAL)` selects OpenGL ES 3, which needs an OpenGL ES 3.0
+context (a desktop OpenGL 4.3 or later driver provides one). On an OpenGL
+window miniwin does not list SDL GPU, which cannot share the window with EGL
+(on Wayland the attempt closes the display connection). OpenGL ES 2 and
+OpenGL 1.x are listed there too but cannot draw the level: OpenGL ES 3 is
+the oldest OpenGL the port draws with. The `miniwin_*_gles3` tests run the
+rendering checks on OpenGL ES 3 where SDL's offscreen driver offers an
+OpenGL ES 3 context through EGL (`LRR_MINIWIN_GLES3_VIDEO_DRIVER` picks
+another driver), and are skipped elsewhere, as on CI.
+
+For a headless run, use SDL's offscreen driver and have miniwin write each
+presented frame to a file:
 
 ```sh
 cd /path/to/game
@@ -134,7 +146,11 @@ the web build draws with miniwin's software renderer through SDL's software
 render driver (`entry.cpp`), which puts each frame on the page's canvas from
 the main browser thread. miniwin's OpenGL ES backends are left out
 (`ISLE_RENDERER_OPENGLES`), as enumerating them would take the canvas for
-WebGL; #925 brings WebGL 2 back. SDL's DOM event handlers queue each mouse
+WebGL. The OpenGL ES 3 backend draws the level, but WebGL 2 from this
+worker would need `-sOFFSCREEN_FRAMEBUFFER`, which runs every GL call on
+the main thread synchronously, thousands of calls a frame, and an explicit
+commit of each frame; a web build that draws with WebGL 2 needs a main loop
+that returns to the browser between frames instead. SDL's DOM event handlers queue each mouse
 and key event for the worker, and miniwin's `PeekMessageA` runs that queue
 once per message pump (`patches/miniwin`). The page,
 `src/platform/native/emscripten/shell.html`, sizes the canvas with CSS at
