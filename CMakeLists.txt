@@ -266,6 +266,12 @@ if(BUILD_TESTING)
   target_link_libraries(diskpath_test PRIVATE units)
   add_test(NAME diskpath COMMAND diskpath_test)
   set_tests_properties(diskpath PROPERTIES LABELS files)
+  # The block grids' index (game/block_grid.h): a NaN position's INT_MIN
+  # coordinates resolve to block 0, as the original's 32-bit arithmetic.
+  add_executable(block_grid_test ${GAME_DIR}/test_block_grid.cpp)
+  target_link_libraries(block_grid_test PRIVATE units)
+  add_test(NAME block_grid COMMAND block_grid_test)
+  set_tests_properties(block_grid PROPERTIES LABELS block_grid)
   add_executable(config_test ${PLATFORM_DIR}/native/test_config.cpp)
   target_link_libraries(config_test PRIVATE units)
   add_test(NAME config COMMAND config_test)

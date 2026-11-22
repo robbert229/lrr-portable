@@ -18,6 +18,7 @@
  * lego_unit_imports.h give this unit's functions the names Lego.c calls;
  * natively the port serves those names and nothing calls these. */
 #include "water_link_names.h"
+#include "block_grid.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -56,7 +57,7 @@ void water_initialise(void* contRoot, Lego_Level* level)
     for (by = 0; by < level->height; by++) {
         bxStart = bxEnd = 0;
         for (bx = 0; bx < level->width; bx++) {
-            if (level->blocks[(by * level->width) + bx].f_02 == 7) {
+            if (level->blocks[lrr_block_index((by * level->width) + bx, level->width, level->height)].f_02 == 7) {
                 if (bxStart == bxEnd) bxStart = bx;
                 bxEnd = bx + 1;
             } else {
@@ -114,7 +115,7 @@ void water_init_entries(void* contRoot, Lego_Level* level)
                 x = (int)(offsets[d].x + pool->points[j].x);
                 y = (int)(pool->points[j].y + offsets[d].y);
                 if (x >= 0 && x < (int)level->width && y >= 0 && y < (int)level->height) {
-                    terrain = level->blocks[(y * (int)level->width) + x].f_02;
+                    terrain = level->blocks[lrr_block_index((y * (int)level->width) + x, level->width, level->height)].f_02;
                     if (terrain != 7 && terrain != 1) {
                         pool->entries[pool->entryCount].pointIndex = j;
                         pool->entries[pool->entryCount].direction = d;
@@ -153,7 +154,7 @@ void water_init_vertices(void* contRoot, Lego_Level* level)
             for (k = 0; k < 4; k++) {
                 int bx = (int)(pool->points[j].x + offsets[k].x);
                 int by = (int)(pool->points[j].y + offsets[k].y);
-                if (level->blocks[(by * level->width) + bx].f_00 == 0) {
+                if (level->blocks[lrr_block_index((by * level->width) + bx, level->width, level->height)].f_00 == 0) {
                     if (vertPos[k].z > pool->startLevel) pool->startLevel = vertPos[k].z;
                 } else {
                     pool->flags |= WATER_FLAG_VISIBLE;

@@ -17,6 +17,7 @@
  * records below (Weapons_Object, the vehicle and building weapon model) are
  * the original's Win32 layout and are read only in the matching build. */
 #include <math.h>
+#include "block_grid.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -756,7 +757,7 @@ Weapons_Object* weapons_fire_lazer(Weapons_Vector3F* fromPos, Weapons_Vector3F* 
                                    &blockPos[0], &blockPos[1]);
         if (terrain_cell_walkable_flag_current(blockPos[0], blockPos[1]) &&
             !terrain_cell_state_equals_one_current(blockPos)) {
-            surface = legoGlobs_currLevel_blocks[legoGlobs_currLevel->width * blockPos[1] + blockPos[0]].f_02;
+            surface = legoGlobs_currLevel_blocks[lrr_block_index(legoGlobs_currLevel->width * blockPos[1] + blockPos[0], legoGlobs_currLevel->width, legoGlobs_currLevel->height)].f_02;
             if (surface != 0xb) {
                 coef = weapon_type_wall_destroy_time_get_target(weaponType, surface);
                 if (terrain_cell_drill_work_add_current(blockPos[0], blockPos[1], coef, elapsed)) {

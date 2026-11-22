@@ -23,6 +23,7 @@
  * reads them by the port's names. */
 /* Matching build: LegoObject.c callers call legoobject_unit.c (#575). */
 #include "legoobject_port_aliases.h"
+#include "block_grid.h"
 #include "aitask_port_aliases.h"
 #include <ctype.h>
 #include <math.h>
@@ -1943,15 +1944,15 @@ void lego_terrain_cell_flag_cleanup(Lego_Level* level, float elapsed)
         pos[0] = x;
         pos[1] = y;
         legoGlobs_currLevel->blocks
-            [y * legoGlobs_currLevel->width + x].flags1 &= ~0x800;
+            [lrr_block_index(y * legoGlobs_currLevel->width + x, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 &= ~0x800;
         if (!(legoGlobs_currLevel->blocks
-                  [y * legoGlobs_currLevel->width + x].flags1 & 0x1000)) {
+                  [lrr_block_index(y * legoGlobs_currLevel->width + x, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 0x1000)) {
             cmd_produce(0x14, 0, 0, pos);
         }
         legoGlobs_currLevel->blocks
-            [y * legoGlobs_currLevel->width + x].flags1 &= ~0x1000;
+            [lrr_block_index(y * legoGlobs_currLevel->width + x, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 &= ~0x1000;
         legoGlobs_currLevel->blocks
-            [pos[1] * legoGlobs_currLevel->width + pos[0]].flags1 &= ~0x8000000;
+            [lrr_block_index(pos[1] * legoGlobs_currLevel->width + pos[0], legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 &= ~0x8000000;
     }
 }
 
@@ -2658,7 +2659,7 @@ void lego_terrain_pointer_command_update(void)
                     if (s_lego_radarBlockX == bx && s_lego_radarBlockY == by) {
                         if ((bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1)
                                 ? legoGlobs_currLevel->blocks
-                                      [by * legoGlobs_currLevel->width + bx].flags1 & 4
+                                      [lrr_block_index(by * legoGlobs_currLevel->width + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 4
                                 : 0) {
                             int pos[2];
                             pos[0] = bx;
@@ -2894,7 +2895,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
             legoGlobs_viewMain, legoInput_mouseX, legoInput_mouseY, &bx, &by,
             (struct TerrainMapVector3*)&wPos)) {
         picked = 1;
-        block = &level->blocks[level->width * by + bx];
+        block = &level->blocks[lrr_block_index(level->width * by + bx, level->width, level->height)];
         ddiscene_object_position_set(legoGlobs_f_556108, NULL, wPos.x, wPos.y,
                                      wPos.z - 250.0f);
         simtick_route_position_blocked_state_set(0);
@@ -3636,7 +3637,7 @@ void lego_terrain_command_feedback_dispatch(const int* blockPos, int showConstru
     level = legoGlobs_currLevel;
     by = blockPos[1];
     bx = blockPos[0];
-    block = &level->blocks[level->width * by + bx];
+    block = &level->blocks[lrr_block_index(level->width * by + bx, level->width, level->height)];
     if (s_lego_toolTipBlockX != bx || s_lego_toolTipBlockY != by) {
         s_lego_toolTipBlockX = blockPos[0];
         s_lego_toolTipBlockY = blockPos[1];
@@ -3645,8 +3646,8 @@ void lego_terrain_command_feedback_dispatch(const int* blockPos, int showConstru
 
     flags = block->flags1;
     if ((flags & 0x100000) &&
-        !(legoGlobs_currLevel->blocks[legoGlobs_currLevel->width * by + bx].flags1 & 0x400) &&
-        !(legoGlobs_currLevel->blocks[legoGlobs_currLevel->width * by + bx].flags2 & 4) &&
+        !(legoGlobs_currLevel->blocks[lrr_block_index(legoGlobs_currLevel->width * by + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 0x400) &&
+        !(legoGlobs_currLevel->blocks[lrr_block_index(legoGlobs_currLevel->width * by + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags2 & 4) &&
         !(flags & 0x8000)) {
         site = block->construct;
         usesStuds = site->flags & 8;
@@ -3701,15 +3702,15 @@ void lego_terrain_command_feedback_dispatch(const int* blockPos, int showConstru
             show = 1;
         } else {
             if (bx >= 0 && by >= 0 && bx < (int)legoGlobs_currLevel->width && by < (int)legoGlobs_currLevel->height)
-                valid = legoGlobs_currLevel->blocks[legoGlobs_currLevel->width * by + bx].flags1 & 0x20000000;
+                valid = legoGlobs_currLevel->blocks[lrr_block_index(legoGlobs_currLevel->width * by + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 0x20000000;
             else
                 valid = 0;
             if (valid || (flags & 0x8000)) {
                 text = lego_terrain_surface_type_name_get(0xe);
                 sfx = lego_surface_type_configured_value_at_index(0xe);
                 show = 1;
-            } else if (!(legoGlobs_currLevel->blocks[legoGlobs_currLevel->width * by + bx].flags1 & 0x400) &&
-                       !(legoGlobs_currLevel->blocks[legoGlobs_currLevel->width * by + bx].flags2 & 4) &&
+            } else if (!(legoGlobs_currLevel->blocks[lrr_block_index(legoGlobs_currLevel->width * by + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 0x400) &&
+                       !(legoGlobs_currLevel->blocks[lrr_block_index(legoGlobs_currLevel->width * by + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags2 & 4) &&
                        !(flags & 0x100000)) {
                 if (showCavern) {
                     text = lego_terrain_surface_type_name_get(0x11);
@@ -3927,7 +3928,7 @@ void lego_level_debug_input_cell_mutator_dispatch(int bx, int by, struct Lego_Ob
             entity_try_create_linked_at_position_original(unit, x, y, boulder);
             object_list_field_assign_all(boulder,
                 packed_grid_cell_value_get(level->textureSet,
-                    level->blocks[level->width * y + x].texture));
+                    level->blocks[lrr_block_index(level->width * y + x, level->width, level->height)].texture));
         }
     }
     if (LEGO_KEY_PRESSED(0x31) && selection_active_has_any_get())
@@ -3990,12 +3991,12 @@ void lego_block_visible_callback(int bx, int by)
 {
     Lego_Level* level = legoGlobs_currLevel;
     uint32_t flags1 = level->blocks
-        [by * level->width + bx].flags1;
+        [lrr_block_index(by * level->width + bx, level->width, level->height)].flags1;
 
     if (flags1 & 0x4000) {
         transient_effect_enable_set((void*)(uintptr_t)
             level->blocks
-                [by * legoGlobs_currLevel->width + bx].f_1c, 0);
+                [lrr_block_index(by * legoGlobs_currLevel->width + bx, level->width, level->height)].f_1c, 0);
     }
 }
 
@@ -4006,7 +4007,8 @@ void* lego_terrain_cell_palette_resource_at_grid_position(const int* xy)
     int idx = xy[0] + xy[1] * legoGlobs_currLevel->width;
     return packed_grid_cell_value_get(
         legoGlobs_currLevel->textureSet,
-        legoGlobs_currLevel->blocks[idx].texture);
+        legoGlobs_currLevel->blocks[lrr_block_index(idx, legoGlobs_currLevel->width,
+                                                    legoGlobs_currLevel->height)].texture);
 }
 
 
@@ -5154,8 +5156,8 @@ int lego_load_erode_cryore(Lego_Level* level, const char* filename, int modifier
                 for (x = 0; x < width; x++) {
                     value = level_map_cell_get(handle, x, y) - modifier;
                     if (value == 5) value = 4;
-                    level->blocks[y * level->width + x].f_02 = (unsigned char)value;
-                    block = &level->blocks[y * level->width + x];
+                    level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_02 = (unsigned char)value;
+                    block = &level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)];
                     if (block->f_02 == 6) {
                         block->f_07 = 4;
                     } else if (block->f_02 == 11) {
@@ -5183,7 +5185,7 @@ int lego_terrain_cell_byte_state_classify_current(const int* blockPos,
     unsigned int* oreLv0, unsigned int* oreLv1)
 {
     unsigned int cryOre = legoGlobs_currLevel->blocks
-        [blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].f_05;
+        [lrr_block_index(blockPos[1] * legoGlobs_currLevel->width + blockPos[0], legoGlobs_currLevel->width, legoGlobs_currLevel->height)].f_05;
     unsigned int counts[5];
     unsigned int count;
 
@@ -5216,7 +5218,7 @@ int lego_load_path_ai(Lego_Level* level, const char* filename, char modifier)
         if (width == level->width && height == level->height) {
             for (y = 0; y < height; y++) {
                 for (x = 0; x < width; x++) {
-                    level->blocks[y * level->width + x].f_05 =
+                    level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_05 =
                         (unsigned char)((char)level_map_cell_get(handle, x, y) - modifier);
                 }
             }
@@ -5246,7 +5248,7 @@ int lego_load_fallin(Lego_Level* level, const char* filename, int modifier)
                     blockPos[0] = x;
                     blockPos[1] = y;
                     value = level_map_cell_get(handle, x, y) - modifier;
-                    flags1 = &level->blocks[y * level->width + x].flags1;
+                    flags1 = &level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].flags1;
                     if (*flags1 & 0x8) {
                         if (value == 2) {
                             *flags1 |= 0x20000000;
@@ -5255,21 +5257,21 @@ int lego_load_fallin(Lego_Level* level, const char* filename, int modifier)
                              * level copy keeps the third test from reusing
                              * the block address, as in the original. */
                             Lego_Level* currLevel = legoGlobs_currLevel;
-                            Lego_Block* block = &currLevel->blocks[blockPos[1] * currLevel->width + blockPos[0]];
+                            Lego_Block* block = &currLevel->blocks[lrr_block_index(blockPos[1] * currLevel->width + blockPos[0], currLevel->width, currLevel->height)];
                             int i;
 
                             if (!(block->flags1 & 0x400) &&
                                 !(block->flags2 & 0x4) &&
-                                !(legoGlobs_currLevel->blocks[blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags1 & 0x8000) &&
+                                !(legoGlobs_currLevel->blocks[lrr_block_index(blockPos[1] * legoGlobs_currLevel->width + blockPos[0], legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 0x8000) &&
                                 !terrain_cell_predicate_check_current((const uint32_t*)blockPos)) {
-                                legoGlobs_currLevel->blocks[blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags1 &= ~0x200000;
-                                legoGlobs_currLevel->blocks[blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags1 &= ~0x20000000;
-                                legoGlobs_currLevel->blocks[blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags1 &= ~0x40000000;
+                                legoGlobs_currLevel->blocks[lrr_block_index(blockPos[1] * legoGlobs_currLevel->width + blockPos[0], legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 &= ~0x200000;
+                                legoGlobs_currLevel->blocks[lrr_block_index(blockPos[1] * legoGlobs_currLevel->width + blockPos[0], legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 &= ~0x20000000;
+                                legoGlobs_currLevel->blocks[lrr_block_index(blockPos[1] * legoGlobs_currLevel->width + blockPos[0], legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 &= ~0x40000000;
                                 entity_activity_scene_state_update_retail();
                                 coordinate_pair_callback_dispatch(blockPos);
                                 lego_noop_block_adapter(blockPos);
                                 for (i = 0; i < 4; i++) coordinate_pair_event_queue(blockPos, (void*)0x3d);
-                                legoGlobs_currLevel->blocks[blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags1 |= 0x3;
+                                legoGlobs_currLevel->blocks[lrr_block_index(blockPos[1] * legoGlobs_currLevel->width + blockPos[0], legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 |= 0x3;
                             }
                         }
                     }
@@ -5299,16 +5301,16 @@ int lego_load_block_pointers(Lego_Level* level, const char* filename)
             for (y = 0; y < height; y++) {
                 for (x = 0; x < width; x++) {
                     value = level_map_cell_get(handle, x, y);
-                    level->blocks[y * level->width + x].f_3c = 0;
+                    level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_3c = 0;
                     if (value != 0) {
-                        level->blocks[y * level->width + x].f_3c = value;
-                        level->blocks[y * level->width + x].f_40 =
-                            (float)((unsigned int)level->blocks[y * level->width + x].f_20 %
+                        level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_3c = value;
+                        level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_40 =
+                            (float)((unsigned int)level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_20 %
                                     (value * legoGlobs_f_556f14 * 25));
-                        level->blocks[y * level->width + x].f_38 = 0;
+                        level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_38 = 0;
                         if (value > 4) {
-                            level->blocks[y * level->width + x].f_3c = value - 4;
-                            level->blocks[y * level->width + x].f_38 = 1;
+                            level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_3c = value - 4;
+                            level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_38 = 1;
                         }
                     }
                 }
@@ -5337,13 +5339,13 @@ void lego_camera_grid_expiry(float elapsed)
             for (x = 0; x < width; x++) {
                 blockPos[0] = x;
                 blockPos[1] = y;
-                block = &level->blocks[y * level->width + x];
+                block = &level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)];
                 if (block->f_3c != 0) {
-                    level->blocks[y * level->width + x].f_40 += elapsed;
-                    if ((float)(level->blocks[y * level->width + x].f_3c * legoGlobs_f_556f14 * 25) < level->blocks[y * level->width + x].f_40) {
-                        level->blocks[y * level->width + x].f_40 = 0.0f;
+                    level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_40 += elapsed;
+                    if ((float)(level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_3c * legoGlobs_f_556f14 * 25) < level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_40) {
+                        level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_40 = 0.0f;
                         if (lava_erosion_cell_eligible_and_mutate(blockPos,
-                                level->blocks[y * level->width + x].f_38)) {
+                                level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_38)) {
                             info_send(6, NULL, NULL, (struct InfoPoint2I*)blockPos);
                         }
                     }
@@ -5367,7 +5369,7 @@ int lego_load_terrain_map(Lego_Level* level, const char* filename, int modifier)
             for (y = 0; y < height; y++) {
                 for (x = 0; x < width; x++) {
                     value = level_map_cell_get(handle, x, y) - modifier;
-                    level->blocks[y * level->width + x].f_04 = (unsigned char)value;
+                    level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_04 = (unsigned char)value;
                 }
             }
             level_map_slot_release(handle);
@@ -5851,7 +5853,7 @@ int lego_object_list_load_file(Lego_Level* level, const char* fileName)
                     s_lego_radar_zoom = 15.0f;
                 } else if (!((bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1)
                                  ? (legoGlobs_currLevel->blocks
-                                        [legoGlobs_currLevel->width * by + bx].flags1 & 8)
+                                        [lrr_block_index(legoGlobs_currLevel->width * by + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 8)
                                  : 0)) {
                     hiddenPos = wPos;
                     deferred_olist_entity_queue_add_original(objModel, objType, objID, &hiddenPos.x,
@@ -6295,10 +6297,10 @@ const char* lego_level_free(void)
 void lego_terrain_cell_edge_flag_set_and_update(Lego_Level* level, int bx, int by, int on)
 {
     if (on) {
-        level->blocks[level->width * by + bx].flags1 |= 0x200;
+        level->blocks[lrr_block_index(level->width * by + bx, level->width, level->height)].flags1 |= 0x200;
         lego_cell_init_pass(level, bx, by, 0);
     } else {
-        level->blocks[level->width * by + bx].flags1 &= ~0x200;
+        level->blocks[lrr_block_index(level->width * by + bx, level->width, level->height)].flags1 &= ~0x200;
         lego_cell_init_pass(level, bx, by, 0);
     }
 }
@@ -6320,10 +6322,10 @@ unsigned char lego_terrain_neighbor_coordinate_check(int bx, int by, unsigned ch
         x = bx + dirs[i][0];
         y = by + dirs[i][1];
         if (x >= 0 && y >= 0 && x < (int)legoGlobs_currLevel->width && y < (int)legoGlobs_currLevel->height)
-            solid = legoGlobs_currLevel->blocks[y * legoGlobs_currLevel->width + x].flags1 & 0x20000000;
+            solid = legoGlobs_currLevel->blocks[lrr_block_index(y * legoGlobs_currLevel->width + x, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 0x20000000;
         else
             solid = 0;
-        if (solid || (legoGlobs_currLevel->blocks[legoGlobs_currLevel->width * y + x].flags1 & 0x400))
+        if (solid || (legoGlobs_currLevel->blocks[lrr_block_index(legoGlobs_currLevel->width * y + x, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 0x400))
             mask |= 1 << i;
     }
 
@@ -6371,7 +6373,7 @@ unsigned char lego_terrain_neighbor_coordinate_check(int bx, int by, unsigned ch
 
 /* The current level's block at (x, y). */
 #define LEGO_2E_CURR_BLOCK(x, y) \
-    (legoGlobs_currLevel->blocks[legoGlobs_currLevel->width * (y) + (x)])
+    (legoGlobs_currLevel->blocks[lrr_block_index(legoGlobs_currLevel->width * (y) + (x), legoGlobs_currLevel->width, legoGlobs_currLevel->height)])
 
 /* CellInitPass (Level_BlockUpdateSurface): choose a block's surface
  * texture and direction from its walls and flags, and update the map. */
@@ -6399,7 +6401,7 @@ void lego_cell_init_pass(Lego_Level* level, unsigned int bx, unsigned int by, in
 
     map = level->map;
     wallCount = 0;
-    block = &level->blocks[by * level->width + bx];
+    block = &level->blocks[lrr_block_index(by * level->width + bx, level->width, level->height)];
     /* Assigned after the block lookup, as the original schedules them. */
     dirs[0][0] = 0; dirs[0][1] = 0; dirs[1][0] = 1; dirs[1][1] = 0;
     dirs[2][0] = 1; dirs[2][1] = 1; dirs[3][0] = 0; dirs[3][1] = 1;
@@ -6415,7 +6417,7 @@ void lego_cell_init_pass(Lego_Level* level, unsigned int bx, unsigned int by, in
 
     notWallPtr = notWall;
     for (i = 0; i < 4; i++) {
-        if (level->blocks[(by + dirs[i][1]) * level->width + bx + dirs[i][0]].f_00 == 1) {
+        if (level->blocks[lrr_block_index((by + dirs[i][1]) * level->width + bx + dirs[i][0], level->width, level->height)].f_00 == 1) {
             wallDir = (unsigned char)i;
             wallCount++;
         } else {
@@ -7186,9 +7188,9 @@ void lego_terrain_neighbor_work_flag_scan(unsigned int bx, unsigned int by)
                 pos = lists[curr][i];
                 for (y = (int)pos.y - 1; y <= (int)pos.y + 1; y++) {
                     for (x = (int)pos.x - 1; x <= (int)pos.x + 1; x++) {
-                        if (level->blocks[y * level->width + x].flags1 & 0x20000) {
+                        if (level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].flags1 & 0x20000) {
                             lego_terrain_cell_mutate(level, x, y, 1);
-                            level->blocks[y * level->width + x].flags1 &= ~0x20000;
+                            level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].flags1 &= ~0x20000;
                             if (pos.x != (float)x || pos.y != (float)y) {
                                 lists[!curr][counts[!curr]].x = (float)x;
                                 lists[!curr][counts[!curr]].y = (float)y;
@@ -7228,7 +7230,7 @@ void lego_terrain_stamp_impact_handle(unsigned int bx, unsigned int by,
             offsets[i].x += (float)bx;
             offsets[i].y += (float)by;
             if (legoGlobs_currLevel->blocks
-                    [legoGlobs_currLevel->width * (int)offsets[i].y + (int)offsets[i].x].flags1 & 8)
+                    [lrr_block_index(legoGlobs_currLevel->width * (int)offsets[i].y + (int)offsets[i].x, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 8)
                 count++;
         }
     }
@@ -7253,7 +7255,7 @@ void lego_terrain_stamp_impact_handle(unsigned int bx, unsigned int by,
                                         x, y),
                 dirs[direction].x, dirs[direction].y)) {
             legoGlobs_currLevel->blocks
-                [legoGlobs_currLevel->width * by + bx].flags1 |= 0x800;
+                [lrr_block_index(legoGlobs_currLevel->width * by + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 |= 0x800;
         }
     }
 }
@@ -7263,7 +7265,7 @@ void lego_terrain_stamp_impact_handle(unsigned int bx, unsigned int by,
 int lego_terrain_cell_material_get(int bx, int by)
 {
     return legoGlobs_currLevel->blocks
-        [legoGlobs_currLevel->width * by + bx].f_02;
+        [lrr_block_index(legoGlobs_currLevel->width * by + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].f_02;
 }
 
 /* MapFileCellGet [group 2G]: a cell of a level map file (a Map_* image),
@@ -7330,9 +7332,9 @@ int lego_terrain_placement_blocked_adjacent_cell_scan(int bx, int by,
     blockPos[1] = by;
     blockPos[0] = bx;
     block = &legoGlobs_currLevel->blocks
-        [legoGlobs_currLevel->width * by + bx];
+        [lrr_block_index(legoGlobs_currLevel->width * by + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)];
     if (!(legoGlobs_currLevel->blocks
-              [legoGlobs_currLevel->width * by + bx].flags2 & 0x20) &&
+              [lrr_block_index(legoGlobs_currLevel->width * by + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags2 & 0x20) &&
         !terrain_cell_predicate_check_current((const uint32_t*)blockPos) &&
         !(block->flags1 & 0x20000000)) {
         if ((!mode || !water || block->f_02 == 9) &&
@@ -7344,7 +7346,7 @@ int lego_terrain_placement_blocked_adjacent_cell_scan(int bx, int by,
                 int DIRECTIONS[4][2] = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
                 for (i = 0; i < 4; i++) {
                     if (legoGlobs_currLevel->blocks
-                            [(DIRECTIONS[i][1] + by) * legoGlobs_currLevel->width + bx + DIRECTIONS[i][0]].f_02 == 11)
+                            [lrr_block_index((DIRECTIONS[i][1] + by) * legoGlobs_currLevel->width + bx + DIRECTIONS[i][0], legoGlobs_currLevel->width, legoGlobs_currLevel->height)].f_02 == 11)
                         return 0;
                 }
                 return 1;
@@ -7376,8 +7378,8 @@ int lego_first_free_neighbor_cell_pick(struct Lego_Object* liveObj,
             (bx = DIRECTIONS[dir][0] + blockPos[0], by = DIRECTIONS[dir][1] + blockPos[1],
              wall = 0,
              (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1 &&
-              (legoGlobs_currLevel->blocks[by * legoGlobs_currLevel->width + bx].flags1 & 0x10) &&
-              !(legoGlobs_currLevel->blocks[by * legoGlobs_currLevel->width + bx].flags1 & 8))
+              (legoGlobs_currLevel->blocks[lrr_block_index(by * legoGlobs_currLevel->width + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 0x10) &&
+              !(legoGlobs_currLevel->blocks[lrr_block_index(by * legoGlobs_currLevel->width + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 8))
                  ? (wall = 1) : 0,
              !wall)) {
             if (lego_terrain_cell_route_and_occupancy_check(liveObj,
@@ -7405,8 +7407,8 @@ int lego_terrain_cell_route_and_occupancy_check(struct Lego_Object* liveObj,
     uint32_t crossOther = 1;
     uint32_t enterLava = 0;
     uint32_t crossRubble = 0;
-    Lego_Block* block = &level->blocks[by * level->width + bx];
-    Lego_Block* toBlock = &level->blocks[toY * level->width + toX];
+    Lego_Block* block = &level->blocks[lrr_block_index(by * level->width + bx, level->width, level->height)];
+    Lego_Block* toBlock = &level->blocks[lrr_block_index(toY * level->width + toX, level->width, level->height)];
     int result = 1;
     int DIRECTIONS[4][2] = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
     unsigned int dir;
@@ -7456,13 +7458,13 @@ int lego_terrain_cell_route_and_occupancy_check(struct Lego_Object* liveObj,
             result = 3;
         if (block->f_00 == 0)
             return 0;
-        if ((level->blocks[by * level->width + bx].flags1 & 0x10) &&
-            (level->blocks[by * level->width + bx - 1].f_02 == 6 ||
-             level->blocks[(by - 1) * level->width + bx].f_02 == 6))
+        if ((level->blocks[lrr_block_index(by * level->width + bx, level->width, level->height)].flags1 & 0x10) &&
+            (level->blocks[lrr_block_index(by * level->width + bx - 1, level->width, level->height)].f_02 == 6 ||
+             level->blocks[lrr_block_index((by - 1) * level->width + bx, level->width, level->height)].f_02 == 6))
             return 0;
-        if ((level->blocks[by * level->width + bx].flags1 & 0x10) &&
-            (level->blocks[by * level->width + bx - 1].f_02 == 7 ||
-             level->blocks[(by - 1) * level->width + bx].f_02 == 7))
+        if ((level->blocks[lrr_block_index(by * level->width + bx, level->width, level->height)].flags1 & 0x10) &&
+            (level->blocks[lrr_block_index(by * level->width + bx - 1, level->width, level->height)].f_02 == 7 ||
+             level->blocks[lrr_block_index((by - 1) * level->width + bx, level->width, level->height)].f_02 == 7))
             return 0;
         if (dir == 0) {
             if (flags & 0x2000)
@@ -7474,8 +7476,8 @@ int lego_terrain_cell_route_and_occupancy_check(struct Lego_Object* liveObj,
         return 0;
     }
     if (toX != bx && toY != by) {
-        if ((level->blocks[toY * level->width + bx].flags1 & 8) &&
-            (level->blocks[by * level->width + toX].flags1 & 8))
+        if ((level->blocks[lrr_block_index(toY * level->width + bx, level->width, level->height)].flags1 & 8) &&
+            (level->blocks[lrr_block_index(by * level->width + toX, level->width, level->height)].flags1 & 8))
             return 2;
     }
     return result;
@@ -7489,7 +7491,7 @@ void lego_terrain_cell_flag100_set_and_track(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
     int32_t (*list)[2] = s_cell_refresh_track;
-    level->blocks[level->width * blockPos[1] + blockPos[0]].flags2 |= 0x100;
+    level->blocks[lrr_block_index(level->width * blockPos[1] + blockPos[0], level->width, level->height)].flags2 |= 0x100;
     list[s_cell_refresh_track_count][0] = blockPos[0];
     list[s_cell_refresh_track_count][1] = blockPos[1];
     s_cell_refresh_track_count++;
@@ -7501,7 +7503,7 @@ uint32_t lego_terrain_cell_secondary_flag_100(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
     return level->blocks
-        [blockPos[1] * level->width + blockPos[0]].flags2 & 0x100;
+        [lrr_block_index(blockPos[1] * level->width + blockPos[0], level->width, level->height)].flags2 & 0x100;
 }
 
 // FUNCTION: LEGORR 0x004321a0
@@ -7512,7 +7514,7 @@ void lego_terrain_cell_update_queue_flush(void)
 
     for (i = 0; i < (unsigned int)s_cell_previous_track_count; i++) {
         if (!(level->blocks
-                  [level->width * s_cell_previous_track[i][1] + s_cell_previous_track[i][0]].flags2 & 0x100))
+                  [lrr_block_index(level->width * s_cell_previous_track[i][1] + s_cell_previous_track[i][0], level->width, level->height)].flags2 & 0x100))
             lego_cell_init_pass(level, s_cell_previous_track[i][0], s_cell_previous_track[i][1], 0);
     }
     s_cell_previous_track_count = 0;
@@ -7535,7 +7537,7 @@ void lego_terrain_cell_previous_state_track(void)
         s_cell_previous_track[i][0] = s_cell_refresh_track[i][0];
         s_cell_previous_track[i][1] = s_cell_refresh_track[i][1];
         level->blocks
-            [s_cell_refresh_track[i][1] * level->width + s_cell_refresh_track[i][0]].flags2 &= ~0x100;
+            [lrr_block_index(s_cell_refresh_track[i][1] * level->width + s_cell_refresh_track[i][0], level->width, level->height)].flags2 &= ~0x100;
     }
     s_cell_previous_track_count = s_cell_refresh_track_count;
     s_cell_refresh_track_count = 0;
@@ -7546,7 +7548,7 @@ void lego_terrain_cell_visited_flag_set_and_track(const int blockPos[2])
 {
     int32_t (*list)[2] = s_cell_visited_track;
     legoGlobs_currLevel->blocks
-        [legoGlobs_currLevel->width * blockPos[1] + blockPos[0]].flags2 |= 2;
+        [lrr_block_index(legoGlobs_currLevel->width * blockPos[1] + blockPos[0], legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags2 |= 2;
     list[s_cell_visited_track_count][0] = blockPos[0];
     list[s_cell_visited_track_count][1] = blockPos[1];
     s_cell_visited_track_count++;
@@ -7557,7 +7559,7 @@ uint32_t lego_terrain_cell_visited_flag(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
     return level->blocks
-        [blockPos[1] * level->width + blockPos[0]].flags2 & 2;
+        [lrr_block_index(blockPos[1] * level->width + blockPos[0], level->width, level->height)].flags2 & 2;
 }
 
 /* Shared under MSVC x86 with the port's name: same contract, same globals.
@@ -7571,7 +7573,7 @@ void terrain_cell_visited_flags_clear_all_current(void)
 
     for (i = 0; i < (unsigned int)s_cell_visited_track_count; i++) {
         level->blocks
-            [s_cell_visited_track[i][1] * level->width + s_cell_visited_track[i][0]].flags2 &= ~2;
+            [lrr_block_index(s_cell_visited_track[i][1] * level->width + s_cell_visited_track[i][0], level->width, level->height)].flags2 &= ~2;
     }
     s_cell_visited_track_count = 0;
 }
@@ -7580,8 +7582,8 @@ void terrain_cell_visited_flags_clear_all_current(void)
 void lego_terrain_cell_primary_flags_mask_clear_and_refresh(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
-    level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 &= 0xdfef7bff;
-    level->blocks[level->width * blockPos[1] + blockPos[0]].flags2 &= ~4;
+    level->blocks[lrr_block_index(level->width * blockPos[1] + blockPos[0], level->width, level->height)].flags1 &= 0xdfef7bff;
+    level->blocks[lrr_block_index(level->width * blockPos[1] + blockPos[0], level->width, level->height)].flags2 &= ~4;
     lego_cell_init_pass(level, blockPos[0], blockPos[1], 0);
 }
 
@@ -7590,15 +7592,15 @@ void lego_terrain_cell_secondary_bit0_clear(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
     level->blocks
-        [blockPos[1] * level->width + blockPos[0]].flags2 &= ~1;
+        [lrr_block_index(blockPos[1] * level->width + blockPos[0], level->width, level->height)].flags2 &= ~1;
 }
 
 // FUNCTION: LEGORR 0x004323f0
 void lego_terrain_cell_flags_set_and_refresh(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
-    level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 |= 0x108000;
-    level->blocks[level->width * blockPos[1] + blockPos[0]].flags2 |= 4;
+    level->blocks[lrr_block_index(level->width * blockPos[1] + blockPos[0], level->width, level->height)].flags1 |= 0x108000;
+    level->blocks[lrr_block_index(level->width * blockPos[1] + blockPos[0], level->width, level->height)].flags2 |= 4;
     lego_cell_init_pass(level, blockPos[0], blockPos[1], 0);
 }
 
@@ -7606,7 +7608,7 @@ void lego_terrain_cell_flags_set_and_refresh(const int blockPos[2])
 void lego_terrain_cell_flags_set_mask100400(int bx, int by)
 {
     Lego_Level* level = legoGlobs_currLevel;
-    level->blocks[level->width * by + bx].flags1 |= 0x100400;
+    level->blocks[lrr_block_index(level->width * by + bx, level->width, level->height)].flags1 |= 0x100400;
     lego_cell_init_pass(level, bx, by, 0);
 }
 
@@ -7614,7 +7616,7 @@ void lego_terrain_cell_flags_set_mask100400(int bx, int by)
 void lego_terrain_cell_flags_set_mask20108000(int bx, int by)
 {
     Lego_Level* level = legoGlobs_currLevel;
-    level->blocks[level->width * by + bx].flags1 |= 0x20108000;
+    level->blocks[lrr_block_index(level->width * by + bx, level->width, level->height)].flags1 |= 0x20108000;
     lego_cell_init_pass(level, bx, by, 0);
 }
 
@@ -7664,16 +7666,16 @@ void terrain_cell_secondary_flag_8_set_current(int bx, int by, int on)
 {
     Lego_Level* level = legoGlobs_currLevel;
     if (on) {
-        level->blocks[level->width * by + bx].flags2 |= 8;
+        level->blocks[lrr_block_index(level->width * by + bx, level->width, level->height)].flags2 |= 8;
         return;
     }
-    level->blocks[level->width * by + bx].flags2 &= ~8;
+    level->blocks[lrr_block_index(level->width * by + bx, level->width, level->height)].flags2 &= ~8;
 }
 
 // FUNCTION: LEGORR 0x00432520
 uint32_t terrain_cell_secondary_flag_8_current(int bx, int by)
 {
-    return LEGO_3A_BLOCKS[legoGlobs_currLevel->width * by + bx].flags2 & 8;
+    return LEGO_3A_BLOCKS[lrr_block_index(legoGlobs_currLevel->width * by + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags2 & 8;
 }
 
 // FUNCTION: LEGORR 0x00432550
@@ -7687,9 +7689,9 @@ void terrain_cell_flag40000000_clear_or_set_current(const int blockPos[2], int o
 {
     Lego_Level* level = legoGlobs_currLevel;
     if (on)
-        level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 |= 0x40000000;
+        level->blocks[lrr_block_index(level->width * blockPos[1] + blockPos[0], level->width, level->height)].flags1 |= 0x40000000;
     else
-        level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 &= ~0x40000000;
+        level->blocks[lrr_block_index(level->width * blockPos[1] + blockPos[0], level->width, level->height)].flags1 &= ~0x40000000;
     lego_cell_init_pass(level, blockPos[0], blockPos[1], 0);
 }
 
@@ -7705,14 +7707,14 @@ void terrain_cell_flag40000000_clear_or_set_current(const int blockPos[2], int o
 // FUNCTION: LEGORR 0x004325d0
 void terrain_cell_secondary_bit0_set_current(const int blockPos[2])
 {
-    LEGO_3A_BLOCKS[blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags2 |= 1;
+    LEGO_3A_BLOCKS[lrr_block_index(blockPos[1] * legoGlobs_currLevel->width + blockPos[0], legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags2 |= 1;
 }
 
 // FUNCTION: LEGORR 0x00432600
 int terrain_cell_variant_flag_propagate_current(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
-    Lego_Block* block = &level->blocks[level->width * blockPos[1] + blockPos[0]];
+    Lego_Block* block = &level->blocks[lrr_block_index(level->width * blockPos[1] + blockPos[0], level->width, level->height)];
     uint32_t flags = block->flags1;
 
     if ((flags & 0x200000) && block->f_02 != 6) {
@@ -7731,11 +7733,11 @@ int terrain_cell_variant_flag_propagate_current(const int blockPos[2])
         offsets[4][1] = 0;
         if (flags & 0x80000000) {
             lava_erosion_pending_cell_add(blockPos, 0);
-            level->blocks[level->width * blockPos[1] + blockPos[0]].f_07 = 0;
+            level->blocks[lrr_block_index(level->width * blockPos[1] + blockPos[0], level->width, level->height)].f_07 = 0;
         } else {
             block->flags1 = flags | 0x20000000;
         }
-        level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 &= ~0x40000000;
+        level->blocks[lrr_block_index(level->width * blockPos[1] + blockPos[0], level->width, level->height)].flags1 &= ~0x40000000;
         for (i = 0; i < 5; i++)
             lego_cell_init_pass(level, blockPos[0] + offsets[i][0], offsets[i][1] + blockPos[1], 0);
         entity_activity_scene_state_update_retail();
@@ -7749,10 +7751,10 @@ void terrain_cell_flag_80000_clear_or_set_current(const int blockPos[2], int on)
 {
     Lego_Level* level = legoGlobs_currLevel;
     if (on) {
-        level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 |= 0x80000;
+        level->blocks[lrr_block_index(level->width * blockPos[1] + blockPos[0], level->width, level->height)].flags1 |= 0x80000;
         return;
     }
-    level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 &= ~0x80000;
+    level->blocks[lrr_block_index(level->width * blockPos[1] + blockPos[0], level->width, level->height)].flags1 &= ~0x80000;
 }
 
 /* Shared in the matching build only: the port's callers in ai.cpp and
@@ -7764,7 +7766,7 @@ int terrain_cell_walkability_query_current(const struct Lego_Object* liveObj,
                                            int digging, int ignoreFlag400)
 {
     Lego_Level* level = legoGlobs_currLevel;
-    Lego_Block* block = &level->blocks[by * level->width + bx];
+    Lego_Block* block = &level->blocks[lrr_block_index(by * level->width + bx, level->width, level->height)];
 
     if (!(entity_stats_word_get(liveObj) & 0x20000) || liveObj->driveObject != NULL) {
         if (digging && !(entity_stats_word_get(liveObj) & 1))
@@ -7796,13 +7798,13 @@ int terrain_cell_walkability_query_current(const struct Lego_Object* liveObj,
                     offsets[3][1] = 0;
                     for (i = 0; i < 4; i++) {
                         if (level->blocks
-                                [(offsets[i][1] + by) * level->width + bx + offsets[i][0]].f_00 != 0)
+                                [lrr_block_index((offsets[i][1] + by) * level->width + bx + offsets[i][0], level->width, level->height)].f_00 != 0)
                             break;
                     }
                     if (i < 4) {
                         for (i = 0; i < 4; i++) {
                             unsigned char type = level->blocks
-                                [(offsets[i + 4][1] + by) * level->width + bx + offsets[i + 4][0]].f_02;
+                                [lrr_block_index((offsets[i + 4][1] + by) * level->width + bx + offsets[i + 4][0], level->width, level->height)].f_02;
                             if (type != 1 && type != 7)
                                 break;
                         }
@@ -7829,7 +7831,7 @@ int lego_entity_move_destination_cell_usable(struct Lego_Object* liveObj, unsign
     Lego_Level* level = legoGlobs_currLevel;
     if ((liveObj->flags3 & 0x8000) && bx > 0 && by > 0 &&
         bx < level->width - 2 && by < level->height - 2) {
-        Lego_Block* block = &level->blocks[by * level->width + bx];
+        Lego_Block* block = &level->blocks[lrr_block_index(by * level->width + bx, level->width, level->height)];
         uint32_t flags = block->flags1;
         unsigned char type;
         if ((flags & 0x10) && !(flags & 0x40) && (type = block->f_02) != 1 && type != 11 && type != 7)
@@ -7844,7 +7846,7 @@ int level_cell_flag8_check_target(const void* unused, int bx, int by)
 {
     Lego_Level* level = legoGlobs_currLevel;
     if (level_coord_pair_within_bounds_target((const unsigned int*)level->map, bx, by) &&
-        (level->blocks[level->width * by + bx].flags1 & 8))
+        (level->blocks[lrr_block_index(level->width * by + bx, level->width, level->height)].flags1 & 8))
         return 1;
     return 0;
 }
@@ -7856,7 +7858,7 @@ int lego_terrain_cell_allows_placement(struct Lego_Object* liveObj, unsigned int
     Lego_Level* level = legoGlobs_currLevel;
     if ((liveObj == NULL || (liveObj->flags3 & 4)) && bx > 0 && by > 0 &&
         bx < level->width - 2 && by < level->height - 2) {
-        Lego_Block* block = &level->blocks[by * level->width + bx];
+        Lego_Block* block = &level->blocks[lrr_block_index(by * level->width + bx, level->width, level->height)];
         uint32_t flags = block->flags1;
         unsigned char type;
         if ((flags & 0x10) && !(flags & 0x20) && (type = block->f_02) != 11 && type != 8 && type != 10)
@@ -7870,23 +7872,22 @@ int lego_terrain_cell_allows_placement(struct Lego_Object* liveObj, unsigned int
 uint32_t terrain_cell_occupied_or_flag_current(int bx, int by, int checkFlags2)
 {
     Lego_Level* level = legoGlobs_currLevel;
-    /* PORT-ONLY: a NaN position converts to INT_MIN block coordinates; the
-     * original's 32-bit index arithmetic wraps those to block 0. */
-    if ((uint32_t)bx >= level->width || (uint32_t)by >= level->height) bx = by = 0;
+    /* A NaN position's INT_MIN block coordinates resolve to block 0, as
+     * the original's 32-bit index arithmetic does (block_grid.h). */
     if (checkFlags2) {
-        Lego_Block* block = &level->blocks[level->width * by + bx];
+        Lego_Block* block = &level->blocks[lrr_block_index(level->width * by + bx, level->width, level->height)];
         if (!(block->flags1 & 0x400) && !(block->flags2 & 4))
             return 0;
         return 1;
     }
-    return level->blocks[level->width * by + bx].flags1 & 0x400;
+    return level->blocks[lrr_block_index(level->width * by + bx, level->width, level->height)].flags1 & 0x400;
 }
 
 // FUNCTION: LEGORR 0x00432b00
 uint32_t terrain_cell_flag_800_bounded_current(uint32_t bx, uint32_t by)
 {
     if (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1)
-        return LEGO_3A_BLOCKS[by * legoGlobs_currLevel->width + bx].flags1 & 0x800;
+        return LEGO_3A_BLOCKS[lrr_block_index(by * legoGlobs_currLevel->width + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 0x800;
     return 0;
 }
 
@@ -7894,14 +7895,14 @@ uint32_t terrain_cell_flag_800_bounded_current(uint32_t bx, uint32_t by)
 uint32_t terrain_cell_flag_8_bounded_current(uint32_t bx, uint32_t by)
 {
     if (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1)
-        return LEGO_3A_BLOCKS[by * legoGlobs_currLevel->width + bx].flags1 & 8;
+        return LEGO_3A_BLOCKS[lrr_block_index(by * legoGlobs_currLevel->width + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 8;
     return 0;
 }
 
 // FUNCTION: LEGORR 0x00432b90
 int terrain_cell_type_is_8_or_10_or_11_current(int bx, int by)
 {
-    unsigned char type = LEGO_3A_BLOCKS[legoGlobs_currLevel->width * by + bx].f_02;
+    unsigned char type = LEGO_3A_BLOCKS[lrr_block_index(legoGlobs_currLevel->width * by + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].f_02;
     if (type == 8 || type == 10 || type == 11)
         return 1;
     return 0;
@@ -7911,7 +7912,7 @@ int terrain_cell_type_is_8_or_10_or_11_current(int bx, int by)
 int terrain_cell_walkable_flag_current(uint32_t bx, uint32_t by)
 {
     if (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1) {
-        uint32_t flags = LEGO_3A_BLOCKS[by * legoGlobs_currLevel->width + bx].flags1;
+        uint32_t flags = LEGO_3A_BLOCKS[lrr_block_index(by * legoGlobs_currLevel->width + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1;
         if ((flags & 0x10) && !(flags & 8))
             return 1;
     }
@@ -7921,14 +7922,14 @@ int terrain_cell_walkable_flag_current(uint32_t bx, uint32_t by)
 // FUNCTION: LEGORR 0x00432c20
 uint32_t terrain_cell_flag_wave_current(int bx, int by)
 {
-    return LEGO_3A_BLOCKS[legoGlobs_currLevel->width * by + bx].flags1 & 0x40000;
+    return LEGO_3A_BLOCKS[lrr_block_index(legoGlobs_currLevel->width * by + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 0x40000;
 }
 
 // FUNCTION: LEGORR 0x00432c50
 int terrain_cell_speed_class_current(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
-    uint32_t flags = level->blocks[level->width * blockPos[1] + blockPos[0]].flags1;
+    uint32_t flags = level->blocks[lrr_block_index(level->width * blockPos[1] + blockPos[0], level->width, level->height)].flags1;
     if (flags & 0x200000)
         return 0;
     return (flags & 3) + 1;
@@ -7939,7 +7940,7 @@ int terrain_cell_state_update_current(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
     int result = 1;
-    Lego_Block* block = &level->blocks[level->width * blockPos[1] + blockPos[0]];
+    Lego_Block* block = &level->blocks[lrr_block_index(level->width * blockPos[1] + blockPos[0], level->width, level->height)];
     uint32_t flags = block->flags1;
     uint32_t stage = flags & 3;
 
@@ -7971,7 +7972,7 @@ int terrain_cell_state_update_current(const int blockPos[2])
 uint32_t terrain_cell_flag_20_bounded_current(uint32_t bx, uint32_t by)
 {
     if (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1)
-        return LEGO_3A_BLOCKS[by * legoGlobs_currLevel->width + bx].flags1 & 0x20;
+        return LEGO_3A_BLOCKS[lrr_block_index(by * legoGlobs_currLevel->width + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 0x20;
     return 0;
 }
 
@@ -7989,7 +7990,7 @@ uint32_t terrain_cell_flag_20_bounded_current(uint32_t bx, uint32_t by)
 // FUNCTION: LEGORR 0x00432dd0
 uint32_t terrain_cell_flag_reserved_current(const int blockPos[2])
 {
-    return LEGO_3A_BLOCKS[blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags1 & 0x8000000;
+    return LEGO_3A_BLOCKS[lrr_block_index(blockPos[1] * legoGlobs_currLevel->width + blockPos[0], legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 0x8000000;
 }
 
 // FUNCTION: LEGORR 0x00432e00
@@ -7997,16 +7998,16 @@ void level_tile_mark_current_target(const int blockPos[2], int on)
 {
     Lego_Level* level = legoGlobs_currLevel;
     if (on) {
-        level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 |= 0x8000000;
+        level->blocks[lrr_block_index(level->width * blockPos[1] + blockPos[0], level->width, level->height)].flags1 |= 0x8000000;
         return;
     }
-    level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 &= ~0x8000000;
+    level->blocks[lrr_block_index(level->width * blockPos[1] + blockPos[0], level->width, level->height)].flags1 &= ~0x8000000;
 }
 
 // FUNCTION: LEGORR 0x00432e60
 uint32_t terrain_cell_mask_c0_current(int bx, int by)
 {
-    if ((LEGO_3A_BLOCKS[legoGlobs_currLevel->width * by + bx].flags1 & 0x40) || (LEGO_3A_BLOCKS[legoGlobs_currLevel->width * by + bx].flags1 & 0x80))
+    if ((LEGO_3A_BLOCKS[lrr_block_index(legoGlobs_currLevel->width * by + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 0x40) || (LEGO_3A_BLOCKS[lrr_block_index(legoGlobs_currLevel->width * by + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 0x80))
         return 1;
     return 0;
 }
@@ -8027,7 +8028,7 @@ uint32_t terrain_cell_mask_c0_current(int bx, int by)
 uint32_t terrain_cell_edge_wall_current(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
-    return level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 & 0x4000000;
+    return level->blocks[lrr_block_index(level->width * blockPos[1] + blockPos[0], level->width, level->height)].flags1 & 0x4000000;
 }
 
 /* MSVC 5 swaps the two base registers (ecx/edx) of this accessor in every
@@ -8046,21 +8047,21 @@ uint32_t terrain_cell_edge_wall_current(const int blockPos[2])
 int terrain_cell_state_equals_one_current(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
-    return level->blocks[level->width * blockPos[1] + blockPos[0]].f_02 == 1;
+    return level->blocks[lrr_block_index(level->width * blockPos[1] + blockPos[0], level->width, level->height)].f_02 == 1;
 }
 
 // FUNCTION: LEGORR 0x00432f00
 int terrain_cell_state_equals_six_current(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
-    return level->blocks[blockPos[1] * level->width + blockPos[0]].f_02 == 6;
+    return level->blocks[lrr_block_index(blockPos[1] * level->width + blockPos[0], level->width, level->height)].f_02 == 6;
 }
 
 // FUNCTION: LEGORR 0x00432f40
 int terrain_cell_mask18_clear_current(uint32_t bx, uint32_t by)
 {
     if (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1)
-        return !(LEGO_3A_BLOCKS[by * legoGlobs_currLevel->width + bx].flags1 & 0x18);
+        return !(LEGO_3A_BLOCKS[lrr_block_index(by * legoGlobs_currLevel->width + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 0x18);
     return 1;
 }
 
@@ -8068,27 +8069,27 @@ int terrain_cell_mask18_clear_current(uint32_t bx, uint32_t by)
 uint32_t level_cell_flag_4_current(uint32_t bx, uint32_t by)
 {
     if (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1)
-        return LEGO_3A_BLOCKS[by * legoGlobs_currLevel->width + bx].flags1 & 4;
+        return LEGO_3A_BLOCKS[lrr_block_index(by * legoGlobs_currLevel->width + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 4;
     return 0;
 }
 
 // FUNCTION: LEGORR 0x00432fd0
 uint32_t terrain_cell_flag_2000_current(int bx, int by)
 {
-    return LEGO_3A_BLOCKS[legoGlobs_currLevel->width * by + bx].flags1 & 0x2000;
+    return LEGO_3A_BLOCKS[lrr_block_index(legoGlobs_currLevel->width * by + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 0x2000;
 }
 
 // FUNCTION: LEGORR 0x00433000
 uint32_t terrain_cell_flag_80_current(int bx, int by)
 {
-    return LEGO_3A_BLOCKS[legoGlobs_currLevel->width * by + bx].flags1 & 0x80;
+    return LEGO_3A_BLOCKS[lrr_block_index(legoGlobs_currLevel->width * by + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 0x80;
 }
 
 // FUNCTION: LEGORR 0x00433030
 uint32_t terrain_cell_flag_8000_current(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
-    return level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 & 0x8000;
+    return level->blocks[lrr_block_index(level->width * blockPos[1] + blockPos[0], level->width, level->height)].flags1 & 0x8000;
 }
 
 /* MSVC 5 swaps the two base registers (ecx/edx) of this accessor in every
@@ -8107,7 +8108,7 @@ uint32_t terrain_cell_flag_8000_current(const int blockPos[2])
 uint32_t terrain_cell_secondary_bit0_current(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
-    return level->blocks[level->width * blockPos[1] + blockPos[0]].flags2 & 1;
+    return level->blocks[lrr_block_index(level->width * blockPos[1] + blockPos[0], level->width, level->height)].flags2 & 1;
 }
 
 /* MSVC 5 swaps the two base registers (ecx/edx) of this accessor in every
@@ -8135,7 +8136,7 @@ uint32_t level_cell_occupied_at_current(const int blockPos[2])
     int by;
     if (bx >= 0 && (by = blockPos[1]) >= 0 &&
         bx < (int)level->width && by < (int)level->height)
-        return level->blocks[level->width * by + bx].flags1 & 0x20000000;
+        return level->blocks[lrr_block_index(level->width * by + bx, level->width, level->height)].flags1 & 0x20000000;
     return 0;
 }
 
@@ -8157,7 +8158,7 @@ uint32_t level_cell_occupied_at_current(const int blockPos[2])
 int terrain_cell_mask_180000_current(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
-    if (!(level->blocks[blockPos[1] * level->width + blockPos[0]].flags1 & 0x180000))
+    if (!(level->blocks[lrr_block_index(blockPos[1] * level->width + blockPos[0], level->width, level->height)].flags1 & 0x180000))
         return 0;
     return 1;
 }
@@ -8183,10 +8184,10 @@ void terrain_cell_flag_10000000_set_current(const int blockPos[2], int on)
 {
     Lego_Level* level = legoGlobs_currLevel;
     if (on) {
-        level->blocks[blockPos[1] * level->width + blockPos[0]].flags1 |= 0x10000000;
+        level->blocks[lrr_block_index(blockPos[1] * level->width + blockPos[0], level->width, level->height)].flags1 |= 0x10000000;
         return;
     }
-    level->blocks[blockPos[1] * level->width + blockPos[0]].flags1 &= ~0x10000000;
+    level->blocks[lrr_block_index(blockPos[1] * level->width + blockPos[0], level->width, level->height)].flags1 &= ~0x10000000;
 }
 
 /* Shared in the matching build only, as 00432770. */
@@ -8202,13 +8203,13 @@ int entity_cell_type_speed_multiplier_resolve_current(const struct Lego_Object* 
         Lego_Block* block;
         if (liveObj->driveObject != NULL && !(entity_stats_word_get(liveObj) & 0x20000))
             return 0;
-        block = &level->blocks[by * level->width + bx];
+        block = &level->blocks[lrr_block_index(by * level->width + bx, level->width, level->height)];
         if (block->f_02 == 6 && !(block->flags1 & 0x200) && !(entity_state_flags_get(liveObj) & 0x200000)) {
             if (outSpeed != NULL)
                 *outSpeed = speed;
             return 1;
         }
-        if (level->blocks[by * level->width + bx].flags1 & 0x1000) {
+        if (level->blocks[lrr_block_index(by * level->width + bx, level->width, level->height)].flags1 & 0x1000) {
             if (outSpeed != NULL)
                 *outSpeed = entity_indexed_float_lookup_with_minus_one_fallback(
                                 (int)object_type_name_index_find(
@@ -8224,21 +8225,21 @@ int entity_cell_type_speed_multiplier_resolve_current(const struct Lego_Object* 
 // FUNCTION: LEGORR 0x004332c0
 uint32_t terrain_cell_record_byte3_current(int bx, int by)
 {
-    return LEGO_3A_BLOCKS[legoGlobs_currLevel->width * by + bx].f_03;
+    return LEGO_3A_BLOCKS[lrr_block_index(legoGlobs_currLevel->width * by + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].f_03;
 }
 
 // FUNCTION: LEGORR 0x004332f0
 void terrain_cell_work_flag_set_current(uint32_t bx, uint32_t by)
 {
     if (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1)
-        LEGO_3A_BLOCKS[by * legoGlobs_currLevel->width + bx].flags1 |= 4;
+        LEGO_3A_BLOCKS[lrr_block_index(by * legoGlobs_currLevel->width + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 |= 4;
 }
 
 // FUNCTION: LEGORR 0x00433330
 int terrain_cell_type_get_at_current(uint32_t bx, uint32_t by, uint32_t* outType)
 {
     if (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1) {
-        *outType = LEGO_3A_BLOCKS[by * legoGlobs_currLevel->width + bx].f_02;
+        *outType = LEGO_3A_BLOCKS[lrr_block_index(by * legoGlobs_currLevel->width + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].f_02;
         return 1;
     }
     return 0;
@@ -8395,7 +8396,7 @@ void terrain_cell_mutation_progress(struct Lego_Level* levelState,
         Lego_Block* block;
 
         terrain_map_block_vertices_get(map, bx, by, (struct TerrainMapVector3*)vertPos);
-        block = &level->blocks[by * level->width + bx];
+        block = &level->blocks[lrr_block_index(by * level->width + bx, level->width, level->height)];
         if (block->flags1 & 0x8) {
             float drop = level->digDepth + level->roofHeight;
             vertPos[0].z -= drop;
@@ -8405,11 +8406,11 @@ void terrain_cell_mutation_progress(struct Lego_Level* levelState,
         } else if (block->flags1 & 0x10) {
             if (block->f_00 == 1)
                 vertPos[0].z -= level->digDepth + level->roofHeight;
-            if (level->blocks[by * level->width + bx + 1].f_00 == 1)
+            if (level->blocks[lrr_block_index(by * level->width + bx + 1, level->width, level->height)].f_00 == 1)
                 vertPos[1].z -= level->digDepth + level->roofHeight;
-            if (level->blocks[(by + 1) * level->width + bx + 1].f_00 == 1)
+            if (level->blocks[lrr_block_index((by + 1) * level->width + bx + 1, level->width, level->height)].f_00 == 1)
                 vertPos[2].z -= level->digDepth + level->roofHeight;
-            if (level->blocks[(by + 1) * level->width + bx].f_00 == 1)
+            if (level->blocks[lrr_block_index((by + 1) * level->width + bx, level->width, level->height)].f_00 == 1)
                 vertPos[3].z -= level->digDepth + level->roofHeight;
         } else {
             return;
@@ -8660,7 +8661,7 @@ int lego_entity_neighbor_blocked_cell_step_probe(struct Lego_Object* object,
 int lego_grid_cell_entity_eligibility_check(int bx, int by)
 {
     if (!(legoGlobs_currLevel->blocks
-              [legoGlobs_currLevel->width * by + bx].flags1 & 0x100) &&
+              [lrr_block_index(legoGlobs_currLevel->width * by + bx, legoGlobs_currLevel->width, legoGlobs_currLevel->height)].flags1 & 0x100) &&
         terrain_map_block_hidden_get((struct TerrainMap*)level_current_terrain_get(),
                                      bx, by)) {
         return 1;
@@ -8722,7 +8723,7 @@ void lego_terrain_projected_cell_state_refresh(void* cont, void* view,
 
     for (y = startY; y < (unsigned int)endY; y++) {
         for (x = startX; x < (unsigned int)endX; x++) {
-            if (level->blocks[y * level->width + x].flags1 & 0x18) {
+            if (level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].flags1 & 0x18) {
                 terrain_map_block_to_world(map, x, y, &wPos.x, &wPos.y);
                 wPos.z = terrain_map_world_z_get(map, wPos.x, wPos.y);
                 diff.x = wPos.x - camPos.x;
@@ -8774,25 +8775,25 @@ void lego_terrain_projected_cell_state_refresh(void* cont, void* view,
             float uniform = scale * 0.7f + 0.3f;
             if ((legoGlobs_flags1 & 0x20) &&
                 lego_terrain_cell_surface_update_dispatch_level(level, x, y, scale, uniform)) {
-                level->blocks[y * level->width + x].flags1 |= 0x100;
+                level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].flags1 |= 0x100;
                 indexed_surface_entry_hide_and_record(x, y);
                 highCount++;
             } else {
                 terrain_map_visible_add(map, x, y);
                 indexed_surface_entry_hide_and_record(x, y);
-                if (level->blocks[y * level->width + x].flags1 & 0x4000) {
+                if (level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].flags1 & 0x4000) {
                     transient_effect_enable_set((void*)(uintptr_t)
-                        level->blocks[y * level->width + x].f_1c, 0);
+                        level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_1c, 0);
                 }
-                level->blocks[y * level->width + x].flags1 &= ~0x100;
+                level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].flags1 &= ~0x100;
             }
         } else {
-            level->blocks[y * level->width + x].flags1 &= ~0x100;
+            level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].flags1 &= ~0x100;
             terrain_map_visible_add(map, x, y);
             indexed_surface_entry_hide_and_record(x, y);
-            if (level->blocks[y * level->width + x].flags1 & 0x4000) {
+            if (level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].flags1 & 0x4000) {
                 transient_effect_enable_set((void*)(uintptr_t)
-                    level->blocks[y * level->width + x].f_1c, 0);
+                    level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_1c, 0);
             }
         }
     }
@@ -8819,7 +8820,7 @@ int lego_terrain_cell_surface_update_dispatch_level(Lego_Level* level,
                                                     float scale,
                                                     float uniformScale)
 {
-    Lego_Block* block = &level->blocks[by * level->width + bx];
+    Lego_Block* block = &level->blocks[lrr_block_index(by * level->width + bx, level->width, level->height)];
     void* mesh;
     LegoVector3FC vertPos[4];
 
@@ -8830,8 +8831,8 @@ int lego_terrain_cell_surface_update_dispatch_level(Lego_Level* level,
                                        bx, by, (struct TerrainMapVector3*)vertPos);
         scene_cell_visual_channels_apply((struct SceneCellVisualRelayRecord*)mesh,
             &vertPos[0].x,
-            level->blocks[by * level->width + bx].texture,
-            level->blocks[by * level->width + bx].f_03,
+            level->blocks[lrr_block_index(by * level->width + bx, level->width, level->height)].texture,
+            level->blocks[lrr_block_index(by * level->width + bx, level->width, level->height)].f_03,
             scale, uniformScale);
         return 1;
     }
@@ -8999,8 +9000,8 @@ int terrain_cell_drill_work_add_current(int bx, int by, float destroyTime,
     Lego_Level* level = legoGlobs_currLevel;
 
     if (0.0f != destroyTime) {
-        LEGO_BLOCK_DAMAGE(&level->blocks[by * level->width + bx]) += elapsed / destroyTime;
-        if (LEGO_BLOCK_DAMAGE(&level->blocks[by * level->width + bx]) > 1.0f) return 1;
+        LEGO_BLOCK_DAMAGE(&level->blocks[lrr_block_index(by * level->width + bx, level->width, level->height)]) += elapsed / destroyTime;
+        if (LEGO_BLOCK_DAMAGE(&level->blocks[lrr_block_index(by * level->width + bx, level->width, level->height)]) > 1.0f) return 1;
     }
     return 0;
 }
@@ -9443,7 +9444,7 @@ void lego_tutorial_block_icons_update(Lego_Level* level, void* view,
         for (by = 0; by < ((unsigned int*)level->map)[1]; by++) {
             for (bx = 0; bx < ((unsigned int*)level->map)[0]; bx++) {
                 if (!grid_cell_entity_eligibility_check(bx, by)) {
-                    block = &level->blocks[by * level->width + bx];
+                    block = &level->blocks[lrr_block_index(by * level->width + bx, level->width, level->height)];
                     if (block->f_04) {
                         terrain_map_block_to_world(level->map, bx, by,
                                                    &wPos[0], &wPos[1]);
@@ -9455,15 +9456,15 @@ void lego_tutorial_block_icons_update(Lego_Level* level, void* view,
                         image_display_scaled(legoGlobs_TutorialIcon, NULL, (const struct Point2F*)sPos, NULL);
                         if (interfaceGlobs.flashingState) {
                             terrain_map_block_highlight_set(legoGlobs_currLevel->map, bx, by, 5);
-                            level->blocks[by * level->width + bx].f_44 = 1;
+                            level->blocks[lrr_block_index(by * level->width + bx, level->width, level->height)].f_44 = 1;
                         } else {
                             terrain_map_block_highlight_clear(legoGlobs_currLevel->map, bx, by);
-                            level->blocks[by * level->width + bx].f_44 = 1;
+                            level->blocks[lrr_block_index(by * level->width + bx, level->width, level->height)].f_44 = 1;
                         }
                     } else if (block->f_44 == 1) {
                         block->f_44 = 0;
                         if (!(system_state_flags_get_original(NULL) & 2) &&
-                            level->blocks[by * level->width + bx].f_28 &&
+                            level->blocks[lrr_block_index(by * level->width + bx, level->width, level->height)].f_28 &&
                             !interfaceGlobs.currMenuType) {
                             terrain_map_block_highlight_set(legoGlobs_currLevel->map, bx, by, 4);
                         } else {

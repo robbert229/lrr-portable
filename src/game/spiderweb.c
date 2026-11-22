@@ -15,6 +15,7 @@
  * unannotated, and native callers keep calling it. Lego.c (lego_unit.c)
  * calls this unit's functions; natively nothing reaches them (#552). */
 #include <stdlib.h>
+#include "block_grid.h"
 #include <string.h>
 
 #include "crt/vc5names.h"
@@ -33,10 +34,11 @@ extern "C" {
 SpiderWeb_Globs spiderWebGlobs;
 
 #define SPIDERWEB_BLOCK(bx, by) \
-    spiderWebGlobs.webBlocks[spiderWebGlobs.level->width * (by) + (bx)]
+    spiderWebGlobs.webBlocks[lrr_block_index(spiderWebGlobs.level->width * (by) + (bx), spiderWebGlobs.level->width, spiderWebGlobs.level->height)]
 #define SPIDERWEB_LEVEL_BLOCK(bx, by)                                  \
     spiderWebGlobs.level->blocks            \
-        [spiderWebGlobs.level->width * (by) + (bx)]
+        [lrr_block_index(spiderWebGlobs.level->width * (by) + (bx),     \
+                         spiderWebGlobs.level->width, spiderWebGlobs.level->height)]
 
 // FUNCTION: LEGORR 0x004661c0
 void spiderweb_initialise(Lego_Level* level)

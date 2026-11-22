@@ -27,6 +27,7 @@
  * returns zero and has no state. The records below are the original's Win32
  * layout and are read only in the matching build. */
 #include <math.h>
+#include "block_grid.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include "gods98/mem_free.h"
@@ -2370,7 +2371,7 @@ int nerps_set_tutorial_block_clicks_callback(NERPs_BlockPointer* blockPointer,
                                              void* data)
 {
     NERPs_Level* level = NERPS_LEVEL();
-    level->blocks[y * level->width + x].f_28 = *(int*)data;
+    level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_28 = *(int*)data;
     return 1;
 }
 
@@ -2392,7 +2393,7 @@ int nerps_set_tutorial_crystals_callback(NERPs_BlockPointer* blockPointer,
 
     blockPos.x = x;
     blockPos.y = y;
-    level->blocks[y * level->width + x].f_2c = *(int*)data;
+    level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_2c = *(int*)data;
     for (i = 0; i < *(int*)data; i++)
         legoobject_build_placement_command_setup(&blockPos.x, 0, NULL, 1);
     return 1;
@@ -2415,7 +2416,7 @@ int nerps_set_ore_at_icon_positions_callback(NERPs_BlockPointer* blockPointer,
 
     blockPos.x = x;
     blockPos.y = y;
-    level->blocks[y * level->width + x].f_30 = *(int*)data;
+    level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_30 = *(int*)data;
     legoobject_build_placement_alternate_command_setup(&blockPos.x, 0, NULL, 0);
     return 1;
 }
@@ -2588,7 +2589,7 @@ int nerps_add_tutorial_crystals_callback(NERPs_BlockPointer* blockPointer,
                                          void* data)
 {
     NERPs_Level* level = NERPS_LEVEL();
-    *(int*)data += level->blocks[y * level->width + x].f_2c;
+    *(int*)data += level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_2c;
     return 1;
 }
 
@@ -2606,7 +2607,7 @@ int nerps_add_tutorial_block_clicks_callback(NERPs_BlockPointer* blockPointer,
                                              void* data)
 {
     NERPs_Level* level = NERPS_LEVEL();
-    *(int*)data += level->blocks[y * level->width + x].f_28;
+    *(int*)data += level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_28;
     return 1;
 }
 
@@ -4122,14 +4123,14 @@ void nerps_init_block_pointers_table(NERPs_Level* level)
     memset(level->blockPointers, 0, sizeof(level->blockPointers));
     for (x = 0; x < level->width; x++) {
         for (y = 0; y < level->height; y++) {
-            if (level->blocks[y * level->width + x].f_04) {
+            if (level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_04) {
                 NERPs_BlockPointer* blockPointer = (NERPs_BlockPointer*)malloc(sizeof(NERPs_BlockPointer));
-                unsigned int index = level->blocks[y * level->width + x].f_04;
+                unsigned int index = level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_04;
                 blockPointer->x = x;
                 blockPointer->y = y;
                 blockPointer->next = level->blockPointers[index];
                 level->blockPointers[index] = blockPointer;
-                level->blocks[y * level->width + x].f_04 = 0;
+                level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].f_04 = 0;
             }
         }
     }
@@ -4189,7 +4190,7 @@ int nerps_tutorial_action_callback(NERPs_BlockPointer* blockPointer,
     blockPos.y = y;
     switch (search->action) {
     case 1: /* GetTutorialBlockIsGround */
-        search->count += level->blocks[y * level->width + x].flags1 & 8;
+        search->count += level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].flags1 & 8;
         return 1;
     case 2: /* SetTutorialBlockIsGround: Level_DestroyWall */
         lego_terrain_cell_mutate((struct Lego_Level*)level_current_owner_get(), x, y, 0);
@@ -4198,7 +4199,7 @@ int nerps_tutorial_action_callback(NERPs_BlockPointer* blockPointer,
         search->count += level_cell_occupied_at_current(&blockPos.x);
         return 1;
     case 4: /* SetTutorialBlockIsPath */
-        level->blocks[y * level->width + x].flags1 &= ~3;
+        level->blocks[lrr_block_index(y * level->width + x, level->width, level->height)].flags1 &= ~3;
         terrain_cell_state_update_current(&blockPos.x);
         terrain_cell_variant_flag_propagate_current(&blockPos.x);
         return 1;
@@ -4366,7 +4367,7 @@ void nerps_set_tutorial_pointer(unsigned int index, int on)
 
     while (blockPointer != NULL) {
         if (on == 1) {
-            level->blocks[level->width * blockPointer->y + blockPointer->x].f_04 =
+            level->blocks[lrr_block_index(level->width * blockPointer->y + blockPointer->x, level->width, level->height)].f_04 =
                 (unsigned char)index;
             search.index = index;
             search.count = 0;
@@ -4374,7 +4375,7 @@ void nerps_set_tutorial_pointer(unsigned int index, int on)
             nerps_block_pointer_enumerate(index, nerpsTutorialActionCallback, &search);
         }
         if (on == 0)
-            level->blocks[level->width * blockPointer->y + blockPointer->x].f_04 = 0;
+            level->blocks[lrr_block_index(level->width * blockPointer->y + blockPointer->x, level->width, level->height)].f_04 = 0;
         blockPointer = blockPointer->next;
     }
 
