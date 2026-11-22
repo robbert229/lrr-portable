@@ -69,6 +69,12 @@ is_applied() {
     [ "$s" = "$(fingerprint)" ] && [ "$h" = "$(git -C "$SUB" rev-parse HEAD)" ] && ! dirty
 }
 
+# True when HEAD is on an upstream branch, so it holds no local work: the
+# pin of another branch (main pins plain upstream) or a newer upstream commit.
+on_upstream() {
+    [ -n "$(git -C "$SUB" branch -r --contains HEAD 2>/dev/null)" ]
+}
+
 # True when HEAD descends from the pin and each commit since it has the
 # patch id of one of the patch files.
 only_series_commits() {
@@ -105,10 +111,14 @@ cmd_apply() {
         die "$SUB has uncommitted changes; commit them and run '$0 export', or discard them"
     fi
     # HEAD may be the pin (fresh clone, or `git submodule update`), the last
-    # applied series, or any commits that are all in the series (a checkout
-    # of the old fork). Anything else holds commits we would lose.
-    if [ "$head" != "$p" ] && [ "$head" != "$h" ] && ! only_series_commits "$p"; then
-        die "$SUB HEAD $head has commits not in $PATCHES; run '$0 export' first"
+    # applied series, an upstream commit (left by a checkout of another
+    # branch, whose pin differs), or any commits that are all in the series
+    # (a checkout of the old fork). Anything else holds commits we would lose.
+    if [ "$head" != "$p" ] && [ "$head" != "$h" ] && ! on_upstream && ! only_series_commits "$p"; then
+        if git -C "$SUB" merge-base --is-ancestor "$p" HEAD 2>/dev/null; then
+            die "$SUB HEAD $head has commits not in $PATCHES; run '$0 export' to keep them, or discard them with 'git -C $SUB checkout --detach $p'"
+        fi
+        die "$SUB HEAD $head has local commits and does not descend from the pin $p; move them onto the pin and run '$0 export' to keep them, or discard them with 'git -C $SUB checkout --detach $p'"
     fi
     git -C "$SUB" cat-file -e "$p^{commit}" 2>/dev/null || git -C "$SUB" fetch -q --filter=blob:none origin "$p"
     git -C "$SUB" -c advice.detachedHead=false checkout -q --detach "$p"
