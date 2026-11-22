@@ -86,3 +86,6 @@ lrr_unit_test(wad SOURCES ${ENGINE_DIR}/test_wad.cpp LABELS wad)
 
 # Parse a synthetic LightWave triangle and match surface records to the name table.
 lrr_unit_test(lwo SOURCES ${ENGINE_DIR}/test_lwo.cpp LABELS lwo)
+
+# Expand stored and method-2 RNC streams and pin canonical Huffman codes.
+lrr_unit_test(rnc SOURCES ${ENGINE_DIR}/test_rnc.cpp LABELS rnc)
