@@ -45,3 +45,7 @@ lrr_unit_test(radarmap SOURCES ${GAME_DIR}/test_radarmap.cpp LABELS radarmap)
 # Weighted mission scoring, beyond the existing reward record test.
 lrr_unit_test(reward_score SOURCES ${GAME_DIR}/test_reward_score.cpp
   WRAP level_current_owner_get LABELS reward)
+
+# Roof diagonals and normal updates using captured mesh vertices.
+lrr_unit_test(roof SOURCES ${GAME_DIR}/test_roof.cpp
+  WRAP container_mesh_set_vertices lwo_layer_polygon_vertex_data_read LABELS roof)
