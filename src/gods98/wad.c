@@ -10,9 +10,11 @@
  * expanding it when its RNC bit is set; Files.c's WAD streams read the
  * handle's data in memory.
  *
- * The native port does not run this unit: its WAD reader is the port tail,
- * gods98/wad_port.cpp and gods98/resource.cpp, under the port's names
- * (wad.h). */
+ * [library:filesystem] (ADR 0007), as Files.c: the archive is an SDL3
+ * stream on the host path of its Windows path (files_native_host_path), so
+ * it opens wherever SDL serves files (an Android APK's assets, a web build's
+ * file system) and by a name in any case. The table's words are read as
+ * little-endian, as the file stores them. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,7 +32,8 @@
 #define MAX_FILES 100
 #define WAD_ERROR -1
 #define WAD_NAME_MAX 4096 /* wad_load's name buffer */
-#define WAD_HOST_PATH_MAX 1040 /* four host bytes for each of 260 */
+#define WAD_HOST_PATH_MAX 1040 /* as files.c: four host bytes for each of 260 */
+#define WAD_ENTRY_MIN_SIZE (2 + sizeof(WadEntry)) /* two NULs and a record */
 
 /* An entry's record in the archive's table. */
 typedef struct WadEntry {
@@ -144,7 +147,7 @@ int wad_load(const char* fName)
              * does not know it). */
             size = SDL_GetIOSize(f); // [library:filesystem]
             if (wad_get(newWad)->numFiles < 0 ||
-                (size >= 0 && (Sint64)wad_get(newWad)->numFiles * (Sint64)(2 + sizeof(WadEntry)) > size)) {
+                (size >= 0 && (Sint64)wad_get(newWad)->numFiles * (Sint64)WAD_ENTRY_MIN_SIZE > size)) {
                 SDL_CloseIO(f); // [library:filesystem]
                 return WAD_ERROR;
             }
@@ -221,9 +224,9 @@ int wad_load(const char* fName)
                     WadEntry* entry = &wad_get(newWad)->wadEntries[i];
 
                     if (!SDL_ReadU32LE(f, &entry->compression) || // [library:filesystem]
-                        !SDL_ReadU32LE(f, &entry->fileLength) ||
-                        !SDL_ReadU32LE(f, &entry->decompressedLength) ||
-                        !SDL_ReadU32LE(f, &entry->addr))
+                        !SDL_ReadU32LE(f, &entry->fileLength) || // [library:filesystem]
+                        !SDL_ReadU32LE(f, &entry->decompressedLength) || // [library:filesystem]
+                        !SDL_ReadU32LE(f, &entry->addr)) // [library:filesystem]
                         break;
                 }
                 if (i != wad_get(newWad)->numFiles) {
