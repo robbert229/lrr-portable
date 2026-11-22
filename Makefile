@@ -5,9 +5,9 @@ SHELL := /bin/bash
 BUILD_DIR ?= build
 WAD_DIR ?= $(CURDIR)/reference
 CMAKE_TOOLCHAIN_FILE ?=
-# The shipped exe's flags: -best picks a display mode without the
-# mode-selection dialog, which miniwin cannot show.
-RUN_ARGS ?= -best -window
+# The shipped exe's flags. Without -best, the display settings come from
+# LegoRR.ini in place of the original's mode-selection dialog.
+RUN_ARGS ?=
 # The shipped game, run under the A.2 harness (tools/compat/README.md).
 REFERENCE_DIR ?= $(CURDIR)/reference
 PROTON_BIN ?= $(RR_A2_PROTON)

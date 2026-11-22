@@ -65,10 +65,30 @@ writes that file with defaults on first run, in SDL's preference directory:
 ```ini
 [legorr]
 savepath = /home/me/.local/share/lrr-portable/LegoRR/
+full screen = false
+horizontal resolution = 640
+vertical resolution = 480
+3d device =
 ```
 
 Point `savepath` elsewhere to move the saves. Leave it empty to keep the
-original's `Data\Saves`. `--ini <path>` reads another configuration file. Save
+original's `Data\Saves`.
+
+The original asked for the display settings in a "Mode Selection" dialog at
+start-up. The port starts without it and reads them from the same file, as
+isle-portable does for Lego Island's `CONFIG.EXE`:
+
+- `full screen`: `true` for full screen, `false` (the default) for a window.
+- `horizontal resolution` and `vertical resolution`: the game's mode, 640x480.
+  800x600 and 1024x768 work with `-debug`; any other size falls back to
+  640x480.
+- `3d device`: a device as the original's dialog listed it, such as
+  `Miniwin driver (Miniwin Emulation)` or
+  `Miniwin driver (Miniwin Paletted Software)`. Empty picks the default
+  device.
+
+Keys added after the file was written take their defaults. The shipped exe's
+`-best` flag still skips the settings and picks a mode by itself. `--ini <path>` reads another configuration file. Save
 files keep the original's format, so you can copy saves from an install into
 the save directory. The file formats are described in
 [finding 08](docs/findings/08-save-and-checkpoints.md).

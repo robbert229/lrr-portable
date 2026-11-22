@@ -33,6 +33,10 @@
 
 namespace {
 
+constexpr LRR_DisplayConfig kDefaultDisplay = {false, 640, 480, ""};
+
+LRR_DisplayConfig g_display = kDefaultDisplay;
+
 /* The directory that holds the configuration file and, by default, the
  * saves; "" when the host has none. */
 std::string PreferencePath()
@@ -57,6 +61,10 @@ dictionary* DefaultConfig(const std::string& prefPath)
     dictionary* dict = dictionary_new(0);
     iniparser_set(dict, LRR_CONFIG_SECTION, NULL);
     iniparser_set(dict, LRR_CONFIG_SAVEPATH, prefPath.c_str());
+    iniparser_set(dict, LRR_CONFIG_FULLSCREEN, kDefaultDisplay.fullScreen ? "true" : "false");
+    iniparser_set(dict, LRR_CONFIG_XRES, std::to_string(kDefaultDisplay.width).c_str());
+    iniparser_set(dict, LRR_CONFIG_YRES, std::to_string(kDefaultDisplay.height).c_str());
+    iniparser_set(dict, LRR_CONFIG_DEVICE, kDefaultDisplay.device);
 
 #ifdef __3DS__
     N3DS_SetupDefaultConfigOverrides(dict);
@@ -145,10 +153,21 @@ bool LRR_LoadConfig(const char* iniPath)
 #endif
 
     files_native_set_save_path(iniparser_getstring(dict, LRR_CONFIG_SAVEPATH, prefPath.c_str()));
+
+    g_display = kDefaultDisplay;
+    g_display.fullScreen = iniparser_getboolean(dict, LRR_CONFIG_FULLSCREEN, g_display.fullScreen) != 0;
+    g_display.width = iniparser_getint(dict, LRR_CONFIG_XRES, g_display.width);
+    g_display.height = iniparser_getint(dict, LRR_CONFIG_YRES, g_display.height);
+    SDL_strlcpy(g_display.device, iniparser_getstring(dict, LRR_CONFIG_DEVICE, ""), sizeof(g_display.device));
     iniparser_freedict(dict);
 
 #ifdef __EMSCRIPTEN__
     Emscripten_SetupFilesystem();
 #endif
     return true;
+}
+
+const LRR_DisplayConfig* LRR_GetDisplayConfig()
+{
+    return &g_display;
 }
