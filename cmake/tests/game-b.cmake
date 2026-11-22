@@ -53,3 +53,6 @@ lrr_unit_test(roof SOURCES ${GAME_DIR}/test_roof.cpp
 # Scrollbar arrow input, thumb dragging and rounded positions.
 lrr_unit_test(scrollinfo SOURCES ${GAME_DIR}/test_scrollinfo.cpp
   WRAP Image_LoadBMPScaled Image_DisplayScaled LABELS scrollinfo)
+
+# Placement footprint rotation and translation on the block grid.
+lrr_unit_test(selectplace SOURCES ${GAME_DIR}/test_selectplace.cpp LABELS selectplace)
