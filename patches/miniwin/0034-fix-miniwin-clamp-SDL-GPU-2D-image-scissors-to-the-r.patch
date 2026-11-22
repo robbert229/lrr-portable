@@ -1,0 +1,45 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sat, 21 Nov 2026 21:53:42 -0800
+Subject: [PATCH] fix(miniwin): clamp SDL GPU 2D image scissors to the render
+ target
+
+Draw2DImage set its scissor to the destination rectangle unclamped. An
+image partly above or left of the target gave the scissor a negative
+origin, which Metal reads as an unsigned value and Vulkan rejects, so the
+whole image vanished instead of being clipped. Clamp the scissor to the
+target as ToRenderPixels does, and skip images wholly outside it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp b/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp
+index 4c5399f..17bdbaf 100644
+--- a/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp
++++ b/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp
+@@ -1010,11 +1010,21 @@ void Direct3DRMSDL3GPURenderer::Draw2DImage(
+ 	SDL_GPUBufferBinding indexBufferBinding = {m_uiMeshCache.indexBuffer};
+ 	SDL_BindGPUIndexBuffer(m_renderPass, &indexBufferBinding, SDL_GPU_INDEXELEMENTSIZE_16BIT);
+ 
+-	SDL_Rect scissor;
+-	scissor.x = static_cast<int>(std::round(dstRect.x * m_viewportTransform.scale + m_viewportTransform.offsetX));
+-	scissor.y = static_cast<int>(std::round(dstRect.y * m_viewportTransform.scale + m_viewportTransform.offsetY));
+-	scissor.w = static_cast<int>(std::round(dstRect.w * m_viewportTransform.scale));
+-	scissor.h = static_cast<int>(std::round(dstRect.h * m_viewportTransform.scale));
++	// Clamp the scissor to the render target: Metal and Vulkan reject a
++	// scissor with a negative origin, so an image partly above or left of
++	// the screen would otherwise not draw at all.
++	int x1 = static_cast<int>(std::round(dstRect.x * m_viewportTransform.scale + m_viewportTransform.offsetX));
++	int y1 = static_cast<int>(std::round(dstRect.y * m_viewportTransform.scale + m_viewportTransform.offsetY));
++	int x2 = x1 + static_cast<int>(std::round(dstRect.w * m_viewportTransform.scale));
++	int y2 = y1 + static_cast<int>(std::round(dstRect.h * m_viewportTransform.scale));
++	x1 = std::max(0, std::min(x1, m_width));
++	y1 = std::max(0, std::min(y1, m_height));
++	x2 = std::max(x1, std::min(x2, m_width));
++	y2 = std::max(y1, std::min(y2, m_height));
++	if (x2 == x1 || y2 == y1) {
++		return;
++	}
++	SDL_Rect scissor = {x1, y1, x2 - x1, y2 - y1};
+ 	SDL_SetGPUScissor(m_renderPass, &scissor);
+ 
+ 	SDL_DrawGPUIndexedPrimitives(m_renderPass, m_uiMeshCache.indexCount, 1, 0, 0, 0);
