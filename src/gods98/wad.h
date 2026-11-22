@@ -8,9 +8,7 @@
  * them, so files.c's symbol numbering is unchanged; the unit's other
  * functions and its types are private to wad.c.
  *
- * The native port keeps its own WAD reader (gods98/wad_port.cpp and
- * gods98/resource.cpp, the port tail) under the port's names. Nothing
- * native calls these. Shared C++ headers do not include this file. */
+ * Shared C++ headers do not include this file. */
 #ifndef LEGORRR_GODS98_WAD_H
 #define LEGORRR_GODS98_WAD_H
 

@@ -16,15 +16,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <SDL3/SDL_iostream.h>
+
 #include "crt/vc5names.h"
 
 #include "files.h"
+#include "files_native.h"
 #include "wad.h"
 #include "wad_payload.h"
 
 #define MAX_WADS 10
 #define MAX_FILES 100
 #define WAD_ERROR -1
+#define WAD_NAME_MAX 4096 /* wad_load's name buffer */
+#define WAD_HOST_PATH_MAX 1040 /* four host bytes for each of 260 */
 
 /* An entry's record in the archive's table. */
 typedef struct WadEntry {
@@ -41,7 +47,7 @@ typedef struct Wad {
     int active;
     int unused08;
     int unused0c;
-    FILE* fWad;
+    SDL_IOStream* fWad;
     char** fileNames;      /* data-directory names */
     char** wadNames;       /* archive-relative names, searched by name */
     WadEntry* wadEntries;
@@ -56,7 +62,7 @@ typedef struct WadFile {
     int fileNo;
 } WadFile;
 
-int wad_get_file_name(FILE* f, char* buffer);
+int wad_get_file_name(SDL_IOStream* f, char* buffer);
 Wad* wad_get(int wadNo);
 int wad_get_file_length(int wadNo, int fileNo);
 int wad_get_file_compressed_length(int wadNo, int fileNo);
@@ -82,45 +88,64 @@ Wad_Globs wadGlobs;
 #define wads (wadGlobs.wads)
 #define wadFiles (wadGlobs.wadFiles)
 
-/* GetFileName: a NUL-terminated name from the archive's name table. */
+/* GetFileName: a NUL-terminated name from the archive's name table. 0 when
+ * the archive ends, or the name outgrows the buffer, before its NUL. */
 // FUNCTION: LEGORR 0x0048b4a0
-int wad_get_file_name(FILE* f, char* buffer)
+int wad_get_file_name(SDL_IOStream* f, char* buffer)
 {
     char c;
+    int len = 0;
 
-    while ((c = (char)fgetc(f)) != 0) {
-        *buffer++ = c;
+    while (SDL_ReadIO(f, &c, 1) == 1) { // [library:filesystem]
+        if (c == 0) {
+            buffer[len] = 0;
+            return 1;
+        }
+        if (len == WAD_NAME_MAX - 1)
+            break;
+        buffer[len++] = c;
     }
-    *buffer = 0;
-    return 1;
+    return 0;
 }
 
 // FUNCTION: LEGORR 0x0048b4e0
 int wad_load(const char* fName)
 {
-    FILE* f;
+    SDL_IOStream* f;
+    char hostPath[WAD_HOST_PATH_MAX];
     char header[4];
-    char buffer[4096];
+    char buffer[WAD_NAME_MAX];
+    Sint64 size;
     int i = 0;
     int j;
     int newWad = wad_get_free_wad();
 
     if (newWad != WAD_ERROR) {
-        f = fopen(fName, "rb");
+        /* The Windows path's host path, in the diskpath; NULL (one too
+         * long) fails to open. */
+        f = SDL_IOFromFile(files_native_host_path(hostPath, fName, sizeof(hostPath)), "rb"); // [library:filesystem]
         wad_get(newWad)->fWad = f;
         if (f) {
-            wad_get(newWad)->active = 1;
-            if (fread(header, 1, 4, f) != 4) {
-                fclose(f);
+            if (SDL_ReadIO(f, header, 4) != 4) { // [library:filesystem]
+                SDL_CloseIO(f); // [library:filesystem]
                 return WAD_ERROR;
             }
             // STRING: LEGORR 0x004af9ec
             if (memcmp(header, "WWAD", 4)) {
-                fclose(f);
+                SDL_CloseIO(f); // [library:filesystem]
                 return WAD_ERROR;
             }
-            if (fread(&wad_get(newWad)->numFiles, 1, 4, f) != 4) {
-                fclose(f);
+            if (!SDL_ReadU32LE(f, (Uint32*)&wad_get(newWad)->numFiles)) { // [library:filesystem]
+                SDL_CloseIO(f); // [library:filesystem]
+                return WAD_ERROR;
+            }
+            /* Each entry takes two names and a record: a count the archive
+             * cannot hold is a corrupt one (the size is -1 when the stream
+             * does not know it). */
+            size = SDL_GetIOSize(f); // [library:filesystem]
+            if (wad_get(newWad)->numFiles < 0 ||
+                (size >= 0 && (Sint64)wad_get(newWad)->numFiles * (Sint64)(2 + sizeof(WadEntry)) > size)) {
+                SDL_CloseIO(f); // [library:filesystem]
                 return WAD_ERROR;
             }
             wad_get(newWad)->wadNames = (char**)malloc(sizeof(char*) * wad_get(newWad)->numFiles);
@@ -140,7 +165,7 @@ int wad_load(const char* fName)
                         }
                         if (wad_get(newWad)->fileNames)
                             free(wad_get(newWad)->fileNames);
-                        fclose(f);
+                        SDL_CloseIO(f); // [library:filesystem]
                         return WAD_ERROR;
                     }
                     wad_get(newWad)->wadNames[i] = (char*)malloc(strlen(buffer) + 1);
@@ -165,7 +190,7 @@ int wad_load(const char* fName)
                             }
                             free(wad_get(newWad)->fileNames);
                         }
-                        fclose(f);
+                        SDL_CloseIO(f); // [library:filesystem]
                         return WAD_ERROR;
                     }
                     wad_get(newWad)->fileNames[i] = (char*)malloc(strlen(buffer) + 1);
@@ -189,11 +214,19 @@ int wad_load(const char* fName)
                         }
                         free(wad_get(newWad)->fileNames);
                     }
-                    fclose(f);
+                    SDL_CloseIO(f); // [library:filesystem]
                     return WAD_ERROR;
                 }
-                if (fread(wad_get(newWad)->wadEntries, 1, sizeof(WadEntry) * wad_get(newWad)->numFiles, f) !=
-                    sizeof(WadEntry) * wad_get(newWad)->numFiles) {
+                for (i = 0; i < wad_get(newWad)->numFiles; i++) {
+                    WadEntry* entry = &wad_get(newWad)->wadEntries[i];
+
+                    if (!SDL_ReadU32LE(f, &entry->compression) || // [library:filesystem]
+                        !SDL_ReadU32LE(f, &entry->fileLength) ||
+                        !SDL_ReadU32LE(f, &entry->decompressedLength) ||
+                        !SDL_ReadU32LE(f, &entry->addr))
+                        break;
+                }
+                if (i != wad_get(newWad)->numFiles) {
                     if (wad_get(newWad)->fileNames) {
                         for (j = 0; j < wad_get(newWad)->numFiles; j++) {
                             if (wad_get(newWad)->wadNames[j])
@@ -210,12 +243,14 @@ int wad_load(const char* fName)
                     }
                     if (wad_get(newWad)->wadEntries)
                         free(wad_get(newWad)->wadEntries);
-                    fclose(f);
+                    SDL_CloseIO(f); // [library:filesystem]
                     return WAD_ERROR;
                 }
+                /* Mounted only now: a failed load leaves the record free. */
+                wad_get(newWad)->active = 1;
                 return newWad;
             } else {
-                fclose(f);
+                SDL_CloseIO(f); // [library:filesystem]
                 if (wad_get(newWad)->wadNames)
                     free(wad_get(newWad)->wadNames);
                 if (wad_get(newWad)->fileNames)
@@ -316,8 +351,9 @@ int wad_file_open_in_wad(const char* fName, int wadNo)
         return WAD_ERROR;
     if ((data = malloc(wad_get_file_compressed_length(wadNo, fileNo))) == NULL)
         return WAD_ERROR;
-    fseek(wad_get(wadNo)->fWad, wad_get(wadNo)->wadEntries[fileNo].addr, SEEK_SET);
-    if (fread(data, wad_get_file_compressed_length(wadNo, fileNo), 1, wad_get(wadNo)->fWad) != 1) {
+    if (SDL_SeekIO(wad_get(wadNo)->fWad, wad_get(wadNo)->wadEntries[fileNo].addr, SDL_IO_SEEK_SET) < 0 || // [library:filesystem]
+        SDL_ReadIO(wad_get(wadNo)->fWad, data, wad_get_file_compressed_length(wadNo, fileNo)) != // [library:filesystem]
+            (size_t)wad_get_file_compressed_length(wadNo, fileNo)) {
         free(data);
         return WAD_ERROR;
     }
