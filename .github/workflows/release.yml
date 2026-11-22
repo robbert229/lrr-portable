@@ -1,0 +1,238 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+#
+# The release workflow (docs/releasing.md). It builds every package by
+# calling native-hosts and native-packages, checks them (tools/check_package.py:
+# the licence and notices inside, nothing on the allow-list's outside, so no
+# game data), writes SHA256SUMS, and, only when asked, attaches everything to
+# a DRAFT GitHub release with CHANGELOG.md's notes for the version. It never
+# publishes a release, never creates or pushes a tag, and needs no secret
+# beyond the run's own GITHUB_TOKEN. The owner reviews the draft and
+# publishes it by hand.
+#
+# It drafts a release:
+#   - when a v<version> tag is pushed, or
+#   - when it is run by hand from such a tag (Run workflow, "Use workflow
+#     from: Tags / v<version>") with "draft" ticked.
+# Otherwise (a run by hand without "draft", or a pull request that changes
+# the release tooling) it is a dry run: the same builds and checks, with the
+# assets uploaded as the release-assets artifact and no release.
+# A tag must equal v + project(VERSION) in CMakeLists.txt, and CHANGELOG.md
+# must have notes for that version; tools/release.py checks both.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      draft:
+        description: 'Attach the packages to a draft release (run from a v* tag). Unticked: build and check only.'
+        type: boolean
+        default: false
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - tools/release.py
+      - tools/check_package.py
+      - tools/version.cmake
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  prepare:
+    name: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.decide.outputs.version }}
+      tag: ${{ steps.decide.outputs.tag }}
+      draft: ${{ steps.decide.outputs.draft }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Check the version and decide whether to draft
+        id: decide
+        env:
+          EVENT: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          DRAFT_INPUT: ${{ inputs.draft }}
+        run: |
+          set -euo pipefail
+          version="$(python3 tools/release.py version)"
+          if [ "$REF_TYPE" = tag ]; then
+            python3 tools/release.py check-tag "$REF_NAME"
+            tag="$REF_NAME"
+          else
+            tag="v$version"
+          fi
+          draft=false
+          if [ "$EVENT" = push ] && [ "$REF_TYPE" = tag ]; then
+            draft=true
+          elif [ "$EVENT" = workflow_dispatch ] && [ "$DRAFT_INPUT" = true ]; then
+            if [ "$REF_TYPE" != tag ]; then
+              echo "::error::A draft release needs a tag: run the workflow from the v$version tag"
+              exit 1
+            fi
+            draft=true
+          fi
+          python3 tools/release.py notes "$version" > /dev/null
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "draft=$draft" >> "$GITHUB_OUTPUT"
+          echo "Version $version, tag $tag, draft: $draft" >> "$GITHUB_STEP_SUMMARY"
+
+  hosts:
+    name: hosts
+    needs: prepare
+    uses: ./.github/workflows/native-hosts.yml
+
+  packages:
+    name: packages
+    needs: prepare
+    uses: ./.github/workflows/native-packages.yml
+
+  assemble:
+    name: assemble
+    needs: [prepare, hosts, packages]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      # flatpak and ostree list a Flatpak bundle, 7z a disk image, and
+      # libopengl0 lets the Linux build print its version.
+      - name: Install the inspection tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends flatpak ostree 7zip libopengl0
+
+      - name: Download the packages
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      # The release ships these, and only these: the MSVC ZIPs (the MinGW64
+      # one duplicates x64), the DMGs, the Linux TGZ and AppImage, and both
+      # Flatpaks, renamed to carry the version. FreeBSD has no package, and
+      # the web build is not shipped (docs/releasing.md).
+      - name: Collect the release assets
+        run: |
+          set -euo pipefail
+          mkdir release
+          take() { # take <artifact path> <release name>
+            test -f "artifacts/$1" || { echo "::error::missing artifacts/$1"; exit 1; }
+            cp "artifacts/$1" "release/$2"
+          }
+          for arch in x64 x86 arm64; do
+            take "windows-msvc-$arch/lrr-portable-$VERSION-Windows-$arch.zip" \
+                 "lrr-portable-$VERSION-Windows-$arch.zip"
+          done
+          take "macos-arm64/lrr-portable-$VERSION-Darwin-arm64.dmg" "lrr-portable-$VERSION-Darwin-arm64.dmg"
+          take "macos-intel/lrr-portable-$VERSION-Darwin-x86_64.dmg" "lrr-portable-$VERSION-Darwin-x86_64.dmg"
+          take "linux-x86_64/lrr-portable-$VERSION-Linux-x86_64.tar.gz" "lrr-portable-$VERSION-Linux-x86_64.tar.gz"
+          take "linux-x86_64/lrr-portable-$VERSION-Linux-x86_64.AppImage" "lrr-portable-$VERSION-Linux-x86_64.AppImage"
+          for arch in x86_64 aarch64; do
+            bundle="$(find artifacts -type f -name "lrr-portable-Linux-$arch.flatpak" | head -n 1)"
+            take "${bundle#artifacts/}" "lrr-portable-$VERSION-Linux-$arch.flatpak"
+          done
+          chmod +x release/*.AppImage
+          ls -l release
+
+      - name: Check the packages' contents
+        run: |
+          python3 tools/check_package.py release/*
+          python3 tools/check_package.py --require 'vcruntime140.dll' --require 'msvcp140.dll' \
+            release/*-Windows-*.zip
+
+      - name: Check the version the game reports
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/tgz"
+          tar -C "$RUNNER_TEMP/tgz" -xzf "release/lrr-portable-$VERSION-Linux-x86_64.tar.gz"
+          reported="$("$RUNNER_TEMP/tgz/lrr-portable-$VERSION-Linux-x86_64/bin/LegoRR" --version)"
+          echo "LegoRR --version: $reported" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$REF_TYPE" = tag ]; then
+            test "$reported" = "lrr-portable $VERSION" || {
+              echo "::error::the tagged build reports '$reported', not 'lrr-portable $VERSION'"
+              exit 1
+            }
+          else
+            case "$reported" in
+              "lrr-portable $VERSION"*) ;;
+              *) echo "::error::the build reports '$reported'"; exit 1 ;;
+            esac
+          fi
+
+      - name: Write the checksums and the notes
+        run: |
+          set -euo pipefail
+          (cd release && sha256sum -- * > SHA256SUMS)
+          cat release/SHA256SUMS
+          python3 tools/release.py notes "$VERSION" > release-notes.md
+
+      - name: Upload the release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: |
+            release/
+            release-notes.md
+          if-no-files-found: error
+
+  draft:
+    name: draft
+    needs: [prepare, assemble]
+    if: needs.prepare.outputs.draft == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # The only job that may write: it creates or updates a draft release.
+    permissions:
+      contents: write
+    steps:
+      - name: Download the release assets
+        uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: assets
+
+      # --verify-tag: never create a tag, only use the one pushed. A draft
+      # left by an earlier run of this tag is updated in place; a published
+      # release is never touched.
+      - name: Create or update the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          if state="$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null)"; then
+            if [ "$state" != true ]; then
+              echo "::error::release $TAG is already published; this workflow only drafts"
+              exit 1
+            fi
+            gh release edit "$TAG" --draft --title "lrr-portable $VERSION" \
+              --notes-file assets/release-notes.md
+            gh release upload "$TAG" assets/release/* --clobber
+          else
+            gh release create "$TAG" assets/release/* --draft --verify-tag \
+              --title "lrr-portable $VERSION" --notes-file assets/release-notes.md
+          fi
+          echo "Draft release $TAG is ready for review: $(gh release view "$TAG" --json url --jq .url)" \
+            >> "$GITHUB_STEP_SUMMARY"

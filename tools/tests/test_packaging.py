@@ -32,6 +32,7 @@ def configure(text):
         "LRR_APP_URL": cmake_variable("LRR_APP_URL"),
         "LRR_SEMANTIC_VERSION": "0.1.0",
         "LRR_BUILD_DATE": "2026-11-21",
+        "LRR_RELEASE_TYPE": "stable",
     }
     return re.sub(r"@(\w+)@", lambda m: values[m.group(1)], text)
 

@@ -375,6 +375,28 @@ endif()
 set_target_properties(program PROPERTIES OUTPUT_NAME "LegoRR")
 target_link_libraries(program PRIVATE units)
 
+# The version the game reports (--version and the log; docs/releasing.md).
+# project(VERSION) above is the one place the version is set, and a release
+# is tagged v<version>. tools/version.cmake writes lrr_version.h at every
+# build: the plain version at the release tag, <version>-dev+g<commit>
+# elsewhere in a git checkout, and the plain version without git.
+# LRR_VERSION_OVERRIDE, when set, is reported instead.
+set(LRR_VERSION_OVERRIDE "" CACHE STRING
+  "Version string the game reports, in place of the one tools/version.cmake derives")
+set(LRR_VERSION_HEADER "${CMAKE_CURRENT_BINARY_DIR}/generated/lrr_version.h")
+add_custom_target(lrr_version
+  COMMAND "${CMAKE_COMMAND}"
+    "-DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}"
+    "-DVERSION=${PROJECT_VERSION}"
+    "-DOVERRIDE=${LRR_VERSION_OVERRIDE}"
+    "-DOUTPUT=${LRR_VERSION_HEADER}"
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/tools/version.cmake"
+  BYPRODUCTS "${LRR_VERSION_HEADER}"
+  COMMENT "Writing the version header"
+  VERBATIM)
+add_dependencies(program lrr_version)
+target_include_directories(program PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+
 # Lint: compiler warnings this repository's own code is kept free of, as
 # errors, so the native-build check fails on a new one. Third-party code
 # (miniwin, miniaudio, SDL) is not covered. Add a warning here only once the

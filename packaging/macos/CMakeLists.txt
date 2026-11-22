@@ -27,12 +27,15 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/Info.plist.in"
   "${CMAKE_CURRENT_BINARY_DIR}/Info.plist" @ONLY)
 
 set(_lrr_icon_file "${CMAKE_CURRENT_SOURCE_DIR}/${_lrr_icon}.icns")
+# The icon, the licence and the third-party notices are bundle resources, so
+# that the ad-hoc signature covers them and they stay with a copied app.
 # Source file properties are per directory, and LegoRR is defined in the
 # top-level one.
-set_source_files_properties("${_lrr_icon_file}"
+set(_lrr_resources "${_lrr_icon_file}" ${LRR_NOTICE_FILES})
+set_source_files_properties(${_lrr_resources}
   TARGET_DIRECTORY program
   PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-target_sources(program PRIVATE "${_lrr_icon_file}")
+target_sources(program PRIVATE ${_lrr_resources})
 set_target_properties(program PROPERTIES
   MACOSX_BUNDLE TRUE
   MACOSX_BUNDLE_ICON_FILE "${_lrr_icon}.icns"

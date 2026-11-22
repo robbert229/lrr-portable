@@ -9,6 +9,9 @@ unit conversion and the search tools) remains on the `decomp` branch (ADR 0007).
 | `setup-miniwin.sh` | Fetches only `miniwin/` of the `3rdparty/isle-portable` submodule and applies `patches/miniwin`; `make setup` runs it |
 | `miniwin-patches.sh` | Applies, checks, exports and rebases the miniwin patch series in `patches/miniwin` (ADR 0009); `check` also fails when two patches share a number, so the second of two PRs that each add a patch re-exports |
 | `miniwin-shaders/` | Regenerates miniwin's SDL GPU shader headers on Linux (`regenerate.sh`; see [Build and run](../docs/building.md#tests)) |
+| `release.py` | Release checks: prints the version, checks a tag against it, prints `CHANGELOG.md`'s notes for it ([Releasing](../docs/releasing.md)) |
+| `check_package.py` | Checks a package's contents: the licence and notices inside, nothing off its allow-list (no game data) |
+| `version.cmake` | Writes the version header the game reports (`--version`); the build runs it |
 | `rrwad.py` | Unpacks, packs and verifies `.wad` archives (below) |
 | `unwad.py` | The earlier extract-only `.wad` script |
 | `rrlwo.py` | Converts `.lwo` models to glTF 2.0 (below) |
