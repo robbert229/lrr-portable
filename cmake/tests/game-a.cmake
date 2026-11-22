@@ -79,3 +79,8 @@ lrr_unit_test(steering_arrival SOURCES ${GAME_DIR}/test_steering_arrival.cpp
 
 # Frontend rectangle bounds, menu item types and dynamic menu growth.
 lrr_unit_test(frontend_unit SOURCES ${GAME_DIR}/test_frontend_unit.cpp LABELS frontend_unit)
+
+# Help eligibility, tutorial gating, and recognition of button release.
+lrr_unit_test(helpwindow SOURCES ${GAME_DIR}/test_helpwindow.cpp
+  WRAP text_buffer_reset_target nerpfunc_get_tutorial_flags
+  LABELS helpwindow)
