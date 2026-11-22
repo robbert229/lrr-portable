@@ -41,3 +41,9 @@ lrr_unit_test(entity_cell_effects SOURCES ${GAME_DIR}/test_entity_cell_effects.c
 lrr_unit_test(screen_effect_quads SOURCES ${GAME_DIR}/test_screen_effect_quads.cpp
   WRAP scene_render_lock_toggle entity_state_flags_get
   LABELS screen_effect_quads)
+
+# Dependency level thresholds, enable toggle, and sticky prerequisites.
+lrr_unit_test(dependencies SOURCES ${GAME_DIR}/test_dependencies.cpp
+  WRAP block_subgroup lego_entity_type_pair_lookup building_upgrade_admission_check
+    legoobject_run_through_lists_skip_upgrade_parts legoobject_task_kind_filtered_search
+  LABELS dependencies)
