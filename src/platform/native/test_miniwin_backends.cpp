@@ -478,8 +478,10 @@ static SetUpResult Render(const char* deviceName, const char* title, std::vector
 {
     SDL_Window* window = SDL_CreateWindow(title, kSize, kSize, 0);
     if (!window) {
+        // The video driver cannot open a window here (macOS runners have no
+        // offscreen GL for SDL's offscreen driver).
         fprintf(stderr, "SDL_CreateWindow: %s\n", SDL_GetError());
-        return SetUpResult::Failed;
+        return SetUpResult::Missing;
     }
     SetUpResult result = SetUp(window, deviceName);
     if (result == SetUpResult::Ok) {
@@ -540,7 +542,13 @@ int main()
     }
 
     std::vector<RGB> reference, gpu;
-    if (Render("Miniwin Emulation", "miniwin_backends software", reference) != SetUpResult::Ok) {
+    SetUpResult software = Render("Miniwin Emulation", "miniwin_backends software", reference);
+    if (software == SetUpResult::Missing) {
+        fprintf(stderr, "no window on this video driver: skipped\n");
+        SDL_Quit();
+        return kMiniwinTestSkip;
+    }
+    if (software != SetUpResult::Ok) {
         fprintf(stderr, "software set-up failed\n");
         return 1;
     }

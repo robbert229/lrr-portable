@@ -26,8 +26,28 @@ inline const char* MiniwinTestVideoDriver()
     return driver && *driver ? driver : "dummy";
 }
 
-// Set when enumeration did not offer MiniwinTestDevice().
+inline bool MiniwinTestDefaultDevice()
+{
+    return SDL_strcmp(MiniwinTestDevice(), "Miniwin Emulation") == 0;
+}
+
+// Set when this machine cannot host MiniwinTestDevice(): enumeration did not
+// offer it, or offered it but it could not be created (a GPU that cannot
+// present on the chosen video driver).
 inline bool g_miniwinTestDeviceMissing = false;
+
+// The exit code for a test whose window or device could not be created:
+// another device is skipped where the machine cannot host it, as on CI;
+// the default device fails.
+inline int MiniwinTestUnavailable(const char* what)
+{
+    fprintf(stderr, "%s failed: %s\n", what, SDL_GetError());
+    if (MiniwinTestDefaultDevice()) {
+        return 1;
+    }
+    fprintf(stderr, "device \"%s\" cannot run here: skipped\n", MiniwinTestDevice());
+    return kMiniwinTestSkip;
+}
 
 // Whether the enumerated guid is still zero, that is, the device is missing.
 inline bool MiniwinTestDeviceMissing(const GUID& guid)
@@ -45,7 +65,7 @@ inline bool MiniwinTestDeviceMissing(const GUID& guid)
 // backend has them; other backends draw immediate mode only.
 inline bool MiniwinTestRetainedAdditions(const char* check)
 {
-    if (SDL_strcmp(MiniwinTestDevice(), "Miniwin Emulation") == 0) {
+    if (MiniwinTestDefaultDevice()) {
         return true;
     }
     fprintf(stderr, "%s: retained mode, software backend only: skipped\n", check);

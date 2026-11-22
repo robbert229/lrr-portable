@@ -201,6 +201,7 @@ static bool SetUp(SDL_Window* window)
     IDirectDrawSurface* back1 = nullptr;
     g_back->QueryInterface(IID_IDirectDrawSurface, (void**) &back1);
     if (!g_d3drm || !back1 || g_d3drm->CreateDeviceFromSurface(&device, dd1, back1, 0, &g_device) != DD_OK) {
+        g_miniwinTestDeviceMissing = !MiniwinTestDefaultDevice();
         return false;
     }
     back1->Release();
@@ -304,7 +305,10 @@ int main()
         return 1;
     }
     SDL_Window* window = SDL_CreateWindow("miniwin_viewports", kSize, kSize, 0);
-    if (!window || !SetUp(window)) {
+    if (!window) {
+        return MiniwinTestUnavailable("SDL_CreateWindow");
+    }
+    if (!SetUp(window)) {
         if (g_miniwinTestDeviceMissing) {
             return kMiniwinTestSkip;
         }
