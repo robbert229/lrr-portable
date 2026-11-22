@@ -9,3 +9,9 @@ lrr_unit_test(advisor SOURCES ${GAME_DIR}/test_advisor.cpp
 
 # AI priority registration, task matching and timer updates.
 lrr_unit_test(aitask SOURCES ${GAME_DIR}/test_aitask.cpp LABELS aitask)
+
+# Animation activity changes invalidate cached attachments and update timing.
+lrr_unit_test(animation_object_activity SOURCES ${GAME_DIR}/test_animation_object_activity.cpp
+  WRAP scene_action_name_set ddiscene_frame_update_and_callbacks
+    ddiscene_advance_by_time_target ddiscene_object_frame_position_get
+  LABELS animation_object)
