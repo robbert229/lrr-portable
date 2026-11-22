@@ -50,3 +50,8 @@ lrr_unit_test(dependencies SOURCES ${GAME_DIR}/test_dependencies.cpp
 
 # Terrain detail mesh transform and packed texture selection.
 lrr_unit_test(detail SOURCES ${GAME_DIR}/test_detail.cpp LABELS detail)
+
+# Rockfall style names and the fallback loader for miscellaneous effects.
+lrr_unit_test(rock_fall_styles SOURCES ${GAME_DIR}/test_rock_fall_styles.cpp
+  WRAP container_load scene_render_lock_toggle
+  LABELS rock_fall_styles)
