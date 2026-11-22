@@ -16,6 +16,8 @@
 
 #include "game/block_grid.h"
 #include "game/lego_level_record.h"
+#include "game/legoobject_record.h"
+#include "game/roof.h"
 #include "game/spiderweb.h"
 #include "game/terrain_cell_objects.h"
 #include "game/terrain_map.h"
@@ -25,6 +27,31 @@
 extern "C" {
 uint32_t terrain_cell_occupied_or_flag_current(int bx, int by, int checkFlags2);
 uint32_t terrain_cell_flag_800_bounded_current(uint32_t bx, uint32_t by);
+uint32_t terrain_cell_record_byte3_current(int x, int y);
+void legoobject_energy_low_target_route_command_tick(Lego_Object* obj, float elapsed);
+}
+
+/* The test's stand-ins (--wrap, CMakeLists.txt): a container at a NaN
+ * world position, and the scene calls the grids' users make. */
+static float s_position[3];
+static int s_hidden_group = -1;
+static int s_coloured_group = -1;
+
+extern "C" void __wrap_ddiscene_object_position_get(void*, void*, float* pos)
+{
+    pos[0] = s_position[0];
+    pos[1] = s_position[1];
+    pos[2] = s_position[2];
+}
+extern "C" unsigned int __wrap_entity_state_flags_get(const Lego_Object*) { return 0; }
+extern "C" void __wrap_container_mesh_hide_group(void*, unsigned long group, int)
+{
+    s_hidden_group = (int)group;
+}
+extern "C" void __wrap_scene_mesh_color_and_alpha_set(void*, unsigned long group, float, float,
+                                                      float, float)
+{
+    s_coloured_group = (int)group;
 }
 
 static int s_failures = 0;
@@ -121,6 +148,7 @@ static void test_matches_original(void)
  * (block[-1], block[1]) reach from block 0. */
 enum { W = 4, H = 3 };
 static Lego_Block s_storage[W * H + 2];
+static TerrainMapBlock s_map_blocks[W * H];
 static Lego_Level s_level;
 static TerrainMap s_map;
 
@@ -129,6 +157,8 @@ static void fixture_reset(void)
     memset(s_storage, 0, sizeof(s_storage));
     memset(&s_level, 0, sizeof(s_level));
     memset(&s_map, 0, sizeof(s_map));
+    memset(s_map_blocks, 0, sizeof(s_map_blocks));
+    s_map.blocks = s_map_blocks;
     s_map.gridWidth = W - 1;
     s_map.gridHeight = H - 1;
     s_map.blockWidth = W;
@@ -208,6 +238,90 @@ static void test_spiderweb(void)
     spiderweb_shutdown();
 }
 
+/* LEGO_3A_BLOCKS, lego_unit.c's other name for the level's blocks
+ * (004332c0): a NaN position and its east neighbour. */
+static void test_level_alias(void)
+{
+    fixture_reset();
+    s_level.blocks[0].f_03 = 0x5a;
+    s_level.blocks[1].f_03 = 0xa5;
+    CHECK(terrain_cell_record_byte3_current(INT32_MIN, INT32_MIN) == 0x5a,
+          "alias: a NaN position reads block 0");
+    CHECK(terrain_cell_record_byte3_current(INT32_MIN + 1, INT32_MIN) == 0xa5,
+          "alias: its east neighbour reads block 1, as the original");
+    CHECK(terrain_cell_record_byte3_current(1, 0) == 0xa5, "alias: (1, 0) reads block 1");
+}
+
+/* Map3D's own grid (0044f4e0): the highlight read and write. */
+static void test_map_blocks(void)
+{
+    fixture_reset();
+    s_map_blocks[0].highlight = 3;
+    CHECK(terrain_map_block_highlight_set(&s_map, INT32_MIN, INT32_MIN, 1) == 3,
+          "map: a NaN position reads block 0's highlight");
+    CHECK(s_map_blocks[0].highlight == 1, "map: and writes block 0's");
+    s_map_blocks[W + 2].highlight = 2;
+    CHECK(terrain_map_block_highlight_set(&s_map, 2, 1, 0) == 2, "map: (2, 1) is its block");
+    CHECK(s_map_blocks[W + 2].highlight == 0, "map: and turning it off clears it");
+}
+
+/* The roof's grid (004634f0), indexed with unsigned coordinates. */
+static void test_roof_grid(void)
+{
+    RoofBlock grid[W * H];
+    unsigned int i;
+
+    memset(&roofGlobs, 0, sizeof(roofGlobs));
+    for (i = 0; i < W * H; i++) grid[i].groupID = 100 + i;
+    roofGlobs.grid = grid;
+    roofGlobs.width = W;
+    roofGlobs.height = H;
+    roof_hide_block((unsigned int)INT32_MIN, (unsigned int)INT32_MIN);
+    CHECK(roofGlobs.hiddenCount == 1 && roofGlobs.hiddenList[0] == &grid[0] && s_hidden_group == 100,
+          "roof: a NaN position hides block 0");
+    roof_hide_block(3, 2);
+    CHECK(roofGlobs.hiddenCount == 2 && roofGlobs.hiddenList[1] == &grid[11] && s_hidden_group == 111,
+          "roof: (3, 2) hides its block");
+    memset(&roofGlobs, 0, sizeof(roofGlobs));
+}
+
+/* The crash: a power crystal (type 6) whose container is at a NaN world
+ * position, in its per-frame update (0043f7d0). Its block resolves to
+ * block 0, so on lava there it melts, as in the original; elsewhere it is
+ * left alone. */
+static void test_nan_crystal(void)
+{
+    Lego_Object* crystal = (Lego_Object*)calloc(1, sizeof(Lego_Object));
+
+    fixture_reset();
+    s_position[0] = s_position[1] = s_position[2] = NAN;
+    crystal->type = 6;
+    crystal->health = 100.0f;
+    crystal->energy = 100.0f;
+    crystal->flags3 = 0x80000000u; /* no drain: the stats tables are not loaded */
+
+    s_level.blocks[0].f_02 = 1;
+    legoobject_energy_low_target_route_command_tick(crystal, 1.0f);
+    CHECK(crystal->health == 100.0f, "crystal: a NaN position off lava survives the update");
+
+    s_level.blocks[0].f_02 = 6;
+    legoobject_energy_low_target_route_command_tick(crystal, 1.0f);
+    CHECK(crystal->health == -1.0f && (crystal->flags3 & 0x800000) != 0,
+          "crystal: a NaN position with lava at block 0 melts, as the original");
+    CHECK(s_level.f_09c == 1, "crystal: and counts as lost");
+
+    s_position[0] = 60.0f;
+    s_position[1] = -50.0f;
+    s_position[2] = 0.0f;
+    crystal->health = 100.0f;
+    crystal->flags3 = 0x80000000u;
+    s_level.blocks[0].f_02 = 1;
+    s_level.blocks[W + 1].f_02 = 6;
+    legoobject_energy_low_target_route_command_tick(crystal, 1.0f);
+    CHECK(crystal->health == -1.0f, "crystal: a real position reads its own block, (1, 1)");
+    free(crystal);
+}
+
 int main(void)
 {
     test_index();
@@ -216,6 +330,10 @@ int main(void)
     test_level_blocks();
     test_fence_grid();
     test_spiderweb();
+    test_level_alias();
+    test_map_blocks();
+    test_roof_grid();
+    test_nan_crystal();
 
     if (s_failures != 0) {
         printf("block_grid_test: %d failure(s)\n", s_failures);

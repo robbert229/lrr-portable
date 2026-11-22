@@ -270,6 +270,11 @@ if(BUILD_TESTING)
   # coordinates resolve to block 0, as the original's 32-bit arithmetic.
   add_executable(block_grid_test ${GAME_DIR}/test_block_grid.cpp)
   target_link_libraries(block_grid_test PRIVATE units)
+  target_link_options(block_grid_test PRIVATE
+    "LINKER:--wrap=ddiscene_object_position_get"
+    "LINKER:--wrap=entity_state_flags_get"
+    "LINKER:--wrap=container_mesh_hide_group"
+    "LINKER:--wrap=scene_mesh_color_and_alpha_set")
   add_test(NAME block_grid COMMAND block_grid_test)
   set_tests_properties(block_grid PROPERTIES LABELS block_grid)
   add_executable(config_test ${PLATFORM_DIR}/native/test_config.cpp)
