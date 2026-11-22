@@ -6,6 +6,7 @@
 # The bundle is neither Developer ID signed nor notarized; Gatekeeper asks
 # the first time (docs/building.md).
 set(_lrr_icon AppIcon)
+set(MACOSX_BUNDLE_ICON_FILE "${_lrr_icon}.icns")
 set(MACOSX_BUNDLE_GUI_IDENTIFIER "${LRR_APP_ID}")
 set(MACOSX_BUNDLE_COPYRIGHT "${LRR_APP_SPDX}")
 set(MACOSX_BUNDLE_NAME "${LRR_APP_NAME}")
