@@ -449,6 +449,18 @@ if(BUILD_TESTING)
       "LINKER:--wrap=scene_mesh_color_and_alpha_set")
     add_test(NAME block_grid COMMAND block_grid_test)
     set_tests_properties(block_grid PROPERTIES LABELS block_grid)
+    # Lws.c holds a scene's last key instead of blending toward the slot
+    # after it: the unit's file reads come from memory, and its allocations
+    # are padded and filled with all-ones bytes.
+    add_executable(lws_test ${ENGINE_DIR}/test_lws.cpp)
+    target_link_libraries(lws_test PRIVATE units)
+    target_link_options(lws_test PRIVATE
+      "LINKER:--wrap=malloc"
+      "LINKER:--wrap=game_file_open_dispatch"
+      "LINKER:--wrap=game_file_read_crlf_line"
+      "LINKER:--wrap=game_file_close")
+    add_test(NAME lws COMMAND lws_test)
+    set_tests_properties(lws PROPERTIES LABELS lws)
   endif()
   add_executable(config_test ${PLATFORM_DIR}/native/test_config.cpp)
   target_link_libraries(config_test PRIVATE units)
