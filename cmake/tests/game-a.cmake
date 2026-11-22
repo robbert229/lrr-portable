@@ -55,3 +55,8 @@ lrr_unit_test(detail SOURCES ${GAME_DIR}/test_detail.cpp LABELS detail)
 lrr_unit_test(rock_fall_styles SOURCES ${GAME_DIR}/test_rock_fall_styles.cpp
   WRAP container_load scene_render_lock_toggle
   LABELS rock_fall_styles)
+
+# Fence registration, node reuse and stud placement across a gap.
+lrr_unit_test(terrain_cell_objects SOURCES ${GAME_DIR}/test_terrain_cell_objects.cpp
+  WRAP lego_cell_init_pass terrain_cell_occupied_or_flag_current
+  LABELS terrain_cell_objects)
