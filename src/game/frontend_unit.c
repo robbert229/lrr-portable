@@ -45,7 +45,12 @@
  * +0x5d4) and the level select's (+0x5d8), two views of one layout. */
 typedef struct Front_SaveTextWindow {
     void* textWindow;               /* +0x000 */
-    int field_4[9];                 /* +0x004 */
+    /* Front_LevelTextWindow's head, so the text lands at the same offset
+     * on 64-bit, where panelImage is 8 bytes. */
+    struct Image* panelImage;       /* +0x004 */
+    float window[4];                /* +0x008 */
+    float panelPos[2];              /* +0x018 */
+    float panelSize[2];             /* +0x020 */
     char loadText[256];             /* +0x028 "Load" */
     char saveText[256];             /* +0x128 "Save" */
     char slotText[256];             /* +0x228 "Slot" */
@@ -66,6 +71,12 @@ typedef struct Front_LevelTextWindow {
     char levelText[256];            /* +0x528 "Level" */
     char tutorialText[256];         /* +0x628 "Tutorial" */
 } Front_LevelTextWindow;
+
+static_assert(offsetof(Front_SaveTextWindow, loadText) ==
+                  offsetof(Front_LevelTextWindow, loadText) &&
+              offsetof(Front_SaveTextWindow, slotNumberText) ==
+                  offsetof(Front_LevelTextWindow, loadSelText),
+              "the two menu text window views share one layout");
 
 /* The original's FrontEnd.c .bss (004d78c8-004db8e8), in the original's
  * order. Zero-initialised externals, as MSVC 5.0 emits those in definition
@@ -2451,12 +2462,15 @@ void front_run_screen_menu(Front_Menu* menu)
     front_menu_free_slot_images();
     if (nextMenu == frontGlobs_saveMenuSet->menus[0] && s_saveSlotToWrite >= 0) {
         if (reward_current_level_get() != NULL &&
-            *(void**)((char*)(level = reward_current_level_get()) + 4) != NULL) {
+            /* RewardLevel.saveHasCapture (+0x04), an int: as a void* read
+             * it took in the first half of saveCapture on 64-bit. */
+            *(int*)((char*)(level = reward_current_level_get()) + 4) != 0) {
             sprintf(buff, "%s\\%d.dat",
                     block_get_str_copy(legoGlobs_config,
                                        string_path_join(s_engine_config_root, s_menuSaveImage,
                                                         "Path", NULL)),
                     s_saveSlotToWrite);
+            /* RewardLevel.saveCapture (+0x08), an Image. */
             front_image_save_bmp_adapter((char*)level + 8, buff);
         }
     }
@@ -2928,6 +2942,7 @@ void front_callback_slider_sound_volume(int volume)
  * counter at every part-1 function is the one part 1 was matched with
  * (finding 538, rule B). The original declared them all in FrontEnd.h. */
 #include "gods98/files.h"
+#include "gods98/files_native.h"
 #include "gods98/movie_unit.h"
 
 /* Front_Save_GetSaveDataAtIndex, Front_Save_GetCurrentSaveData and
@@ -4630,6 +4645,7 @@ int front_save_write_save_file(unsigned int saveIndex, Front_SaveData* saveData)
                 // STRING: LEGORR 0x004a2788
                 sprintf(buffer, "%s\\%i.osf", "Saves", saveIndex);
                 front_object_recall_save_adapter(buffer);
+                files_native_save_slot_written((int)saveIndex); // [library:filesystem]
                 return 1;
             }
         } else {
@@ -4654,6 +4670,7 @@ int front_save_write_save_file(unsigned int saveIndex, Front_SaveData* saveData)
                     file_write(&newReward, sizeof(Front_SaveReward), 1, file);
                 }
                 file_close(file);
+                files_native_save_state_changed(); // [library:filesystem]
                 return 1;
             }
         }

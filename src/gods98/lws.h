@@ -34,11 +34,12 @@ typedef struct LwsNode LwsNode;
 struct IDirect3DRMFrame3; /* miniwin's <miniwin/d3drm.h> */
 
 /* Lws_Initialise's callbacks: find a sample by name, play a sample on a
- * frame, and whether sound is on. */
-typedef int (*LwsFindSFXIDFunc)(const char* name, unsigned long* sfxID);
-typedef unsigned long (*LwsPlaySample3DFunc)(void* frame, unsigned long type,
-                                             int loop, int onCont,
-                                             void* wPos);
+ * frame, and whether sound is on. The IDs are the game's 32-bit ints
+ * (SFX_GetType, SFX_Random_PlaySound3DOnFrame): as unsigned long, the
+ * callee wrote 4 of the 8 bytes on LP64. */
+typedef int (*LwsFindSFXIDFunc)(const char* name, int* sfxID);
+typedef int (*LwsPlaySample3DFunc)(void* frame, int type, int loop, int onCont,
+                                   const float* wPos);
 typedef int (*LwsSoundEnabledFunc)(void);
 
 /* The six functions with port contracts. lws.c defines them with the

@@ -31,8 +31,8 @@ unsigned long animated_texture_frame_count(const void* texture);              /*
  * tile_variants_port.cpp. */
 void* detail_container_load_texture2_adapter(const char* fname,
                                              int immediate,
-                                             unsigned int* width,
-                                             unsigned int* height); /* 004744f0 */
+                                             unsigned long* width,
+                                             unsigned long* height); /* 004744f0 */
 void detail_container_free_texture_adapter(void* texture);          /* 00474710 */
 
 #ifdef __cplusplus

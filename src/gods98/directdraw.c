@@ -13,6 +13,7 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <miniwin/windows.h>
 
@@ -334,6 +335,13 @@ int directdraw_save_bmp(IDirectDrawSurface4* surface, const char* fname)
         memset(&desc, 0, sizeof(desc));
         desc.dwSize = sizeof(desc);
         if (surface->Lock(NULL, &desc, DDLOCK_WAIT, NULL) == DD_OK) {
+            /* The row offsets below are y * pitch with an unsigned y: a negative
+             * (bottom-up) pitch wrapped to the right row on Win32 but lands ~4 GB
+             * away on 64-bit. miniwin's pitch is always positive; stop if not. */
+            if (desc.lPitch < 0) {
+                fprintf(stderr, "DirectDraw_SaveBMP: negative surface pitch %d\n", (int)desc.lPitch);
+                abort();
+            }
             lineSize = desc.dwWidth * 3;
             lineSize = (lineSize / 4) * 4 + ((lineSize % 4) ? 4 : 0);
             size = lineSize * desc.dwHeight;

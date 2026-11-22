@@ -985,7 +985,7 @@ char* Container_FormatPartName(Container* cont, const char* partname,
 
     if (anim_clone_is_lws(Container_Frame_GetAnimClone(frame))) {
         if (instance) {
-            sprintf(containerPartName, "%s_%0.2i", partname, *instance);
+            sprintf(containerPartName, "%s_%0.2i", partname, (int)*instance);
         } else {
             // STRING: LEGORR 0x004aab64
             sprintf(containerPartName, "%s_??", partname);
@@ -998,7 +998,7 @@ char* Container_FormatPartName(Container* cont, const char* partname,
         }
         if (instance) {
             // STRING: LEGORR 0x004aab44
-            sprintf(containerPartName, "xf_????????_%s_%s_%0.2d_DDc_00", partname, t, *instance);
+            sprintf(containerPartName, "xf_????????_%s_%s_%0.2d_DDc_00", partname, t, (int)*instance);
         } else {
             // STRING: LEGORR 0x004aab28
             sprintf(containerPartName, "xf_????????_%s_%s_??_DDc_00", partname, t);

@@ -1,11 +1,17 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* The VC5 LIBC directory routines and the two KERNEL32 calls outside
- * miniwin's scope that gods98/files.c makes. Each name maps to a
- * files_native_* function in platform/native/seam_stubs.cpp, so these
- * declarations cannot clash with a host declaration of the same name, until
- * the filesystem substitution of ADR 0007 replaces the calls in files.c.
- * files.c includes this file, and the video units (movie_unit.cpp,
- * avi_player.cpp) for the host-path calls. */
+/* The filesystem substitution (ADR 0007, [library:filesystem]): the VC5
+ * LIBC directory routines and KERNEL32 calls outside miniwin's scope that
+ * the units make, the one place a unit's Windows path becomes a host path,
+ * and the save directory. platform/native/files_native.cpp defines them.
+ *
+ * Each LIBC and KERNEL32 name maps to a files_native_* function, so these
+ * declarations cannot clash with a host declaration of the same name.
+ * files.c includes this file, and the units that open files outside the
+ * file layer (the video and sound units) for the host-path calls.
+ *
+ * Path handling follows isle-portable's MxString::MapPathToFilesystem: a
+ * unit builds Windows paths ('\\' separators, names whose case need not
+ * match the files on disk), and every file call maps the path first. */
 #ifndef LEGORRR_GODS98_FILES_NATIVE_H
 #define LEGORRR_GODS98_FILES_NATIVE_H
 
@@ -26,6 +32,8 @@ struct files_native_finddata {
 };
 #define _finddata_t files_native_finddata
 #define _A_SUBDIR 0x10
+/* Working: the entries of one directory that match a Windows wildcard
+ * ("Data\\*.*"), through SDL_GlobDirectory. */
 long files_native_findfirst(const char* filespec,
                             struct files_native_finddata* fileinfo);
 int files_native_findnext(long handle, struct files_native_finddata* fileinfo);
@@ -45,15 +53,34 @@ char* files_native_fullpath(char* absPath, const char* relPath,
 #define _mkdir files_native_mkdir
 #define _fullpath files_native_fullpath
 
-/* [library:filesystem]: fopen of a Windows path ("Data\\Avi\\x.flh", or
- * an absolute path from _fullpath) on the host: the separators become the
- * host's, and a component missing as spelled is matched without regard to
- * case, as on the original's file system. Needs <stdio.h>. */
-FILE* files_native_fopen(const char* path, const char* mode);
-/* [library:filesystem]: the same host path, for a library that opens the
- * file itself (the video library). NULL when it does not fit. */
+/* [library:filesystem]: the host path of a Windows path ("Data\\Avi\\x.flh",
+ * or an absolute path from _fullpath): the separators become the host's,
+ * and a component missing as spelled takes the spelling of an entry that
+ * matches it without regard to case, as on the original's file system.
+ * NULL when `path` is NULL or the result does not fit. */
 char* files_native_host_path(char* hostPath, const char* path,
                              unsigned int maxLength);
+/* [library:filesystem]: fopen of the host path of a Windows path, for the
+ * units that open files outside the file layer. Needs <stdio.h>. */
+FILE* files_native_fopen(const char* path, const char* mode);
+
+/* [library:filesystem]: the save directory. The original keeps its saves in
+ * the data directory's "Saves" (FrontEnd.c's "Saves\\%i.sav" and
+ * "Saves\\%i.osf", Menu::SaveImage::Path's "%s\\%d.dat"). As in
+ * isle-portable, the port can keep them elsewhere, in the directory the
+ * configuration's savepath names (platform/native/config.cpp); files.c
+ * maps a name under "Saves" there. NULL or "" keeps the original's
+ * Data\\Saves. */
+void files_native_set_save_path(const char* path);
+const char* files_native_save_path(void);
+
+/* [library:filesystem]: the host shell's save notifications, as
+ * isle-portable's e_saveSlotWritten and e_saveStateChanged game events: a
+ * slot's progress was written, or the set of slots changed (a slot was
+ * created or reset). The web build forwards them to the page; elsewhere
+ * they only log. */
+void files_native_save_slot_written(int slot);
+void files_native_save_state_changed(void);
 
 /* KERNEL32 */
 #define DRIVE_CDROM 5

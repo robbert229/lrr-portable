@@ -128,9 +128,12 @@ struct Mesh_Viewport {
     int rendering;          /* +0x18 */
 };
 
-/* Container.c's Container: its flags at +0x14. */
+/* Container.c's Container (container_record.h): its flags at +0x14. The
+ * head is four pointers and the type, so flags lands where Container's
+ * does at any pointer and long width. */
 typedef struct Mesh_Container {
-    unsigned long fields_00[5];
+    void* fields_00[4];
+    int type;               /* +0x10 */
     unsigned long flags;    /* +0x14 */
 } Mesh_Container;
 
@@ -806,7 +809,7 @@ void mesh_get_next_in_sequence(const char* baseName, char* nextTextName,
     unsigned long loop;
 
     strcpy(nextTextName, baseName);
-    sprintf(tempName, "%d", *texNum);
+    sprintf(tempName, "%d", (int)*texNum);
     loop = tnumlen - strlen(tempName);
     while (loop >= 1) {
         // STRING: LEGORR 0x004ab108
