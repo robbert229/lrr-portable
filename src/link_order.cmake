@@ -2,7 +2,7 @@
 #
 # The source list: every source of the native build (ADR 0007). The order
 # of entries does not matter to the build; it keeps the original's unit
-# order (ADR 0006 on main) so the units can be read in the order the
+# order (ADR 0006 on the decomp branch) so the units can be read in the order the
 # original linked them.
 #
 # One entry per source:
