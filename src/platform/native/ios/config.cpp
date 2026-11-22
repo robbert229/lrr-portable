@@ -18,4 +18,6 @@ void IOS_SetupDefaultConfigOverrides(dictionary* p_dictionary)
     // The Documents folder: the user can reach it through the Files app and
     // file sharing, and it is backed up with the device.
     iniparser_set(p_dictionary, LRR_CONFIG_SAVEPATH, SDL_GetUserFolder(SDL_FOLDER_DOCUMENTS));
+    // The game data, which the user copies there the same way.
+    iniparser_set(p_dictionary, LRR_CONFIG_DISKPATH, SDL_GetUserFolder(SDL_FOLDER_DOCUMENTS));
 }

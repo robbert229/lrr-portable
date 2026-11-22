@@ -112,6 +112,18 @@ static const char* files_save_name(const char* name)
     return NULL;
 }
 
+/* [library:config] _getcwd, or the data directory the configuration's
+ * diskpath names (files_native_disk_path): File_Initialise's install. A
+ * diskpath too long for the buffer keeps the working directory. */
+static char* files_disk_dir(char* buffer, int maxlen)
+{
+    const char* disk = files_native_disk_path();
+
+    if (disk == NULL || (int)strlen(disk) + 1 > maxlen) return _getcwd(buffer, maxlen);
+    strcpy(buffer, disk);
+    return buffer;
+}
+
 typedef struct File_Globs {
     char basePath[1024];               /* 005339a0 File_SetBaseSearchPath */
     char wadName[1024];                /* 00533da0 _File_GetWadName */
@@ -149,7 +161,7 @@ void file_initialise(const char* programName, int insistOnCD,
     int failed = 0;
     SDL_IOStream* fp;
 
-    _getcwd(cwd, FILE_MAXPATH);
+    files_disk_dir(cwd, FILE_MAXPATH); // [library:config]
     if (cwd[strlen(cwd) - 1] == '\\') cwd[strlen(cwd) - 1] = '\0';
     // STRING: LEGORR 0x004a1cbc
     sprintf(fileGlobs.dataDir, "%s\\%s", cwd,
@@ -160,10 +172,13 @@ void file_initialise(const char* programName, int insistOnCD,
         char wadFile[FILE_MAXPATH];
         // STRING: LEGORR 0x004aaf50
         sprintf(wadFile, "%s%i.wad", programName, i);
+        /* The WAD in the diskpath, by its host path: Wad.c opens it with
+         * the C library's fopen. */
+        files_native_host_path(wadFile, wadFile, FILE_MAXPATH); // [library:config]
         if (file_load_wad(wadFile) != -1) foundWad = 1;
     }
 
-    _getcwd(dirBuf, FILE_MAXPATH);
+    files_disk_dir(dirBuf, FILE_MAXPATH); // [library:config]
     // STRING: LEGORR 0x004aaf48
     strcat(dirBuf, "\\Data");
     file_set_base_search_path(dirBuf);

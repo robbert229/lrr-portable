@@ -13,4 +13,5 @@ void NX_SetupDefaultConfigOverrides(dictionary* p_dictionary)
     SDL_Log("Overriding default config for Switch");
 
     iniparser_set(p_dictionary, LRR_CONFIG_SAVEPATH, "sdmc:/switch/LegoRR/");
+    iniparser_set(p_dictionary, LRR_CONFIG_DISKPATH, "sdmc:/switch/LegoRR/");
 }

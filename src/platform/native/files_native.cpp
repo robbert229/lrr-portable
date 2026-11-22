@@ -20,6 +20,84 @@
 
 namespace {
 
+std::string g_savePath;
+std::string g_diskPath;
+
+/* A directory as configured, without the trailing separator that would
+ * double up once a name is added. */
+std::string TrimDirectory(const char* path)
+{
+    std::string dir = path != NULL ? path : "";
+    while (dir.size() > 1 && (dir.back() == '/' || dir.back() == '\\')) {
+        dir.pop_back();
+    }
+    return dir;
+}
+
+/* '\\' separators become '/'. */
+void ToHostSeparators(std::string& path)
+{
+    for (char& c : path) {
+        if (c == '\\') c = '/';
+    }
+}
+
+/* Whether a path with host separators is absolute: rooted ("/..."), or
+ * with a drive or scheme as its first component ("C:/...", the 3DS and
+ * Switch "sdmc:/..."). */
+bool IsAbsolute(const std::string& path)
+{
+    if (!path.empty() && path[0] == '/') return true;
+    size_t colon = path.find(':');
+    return colon != std::string::npos && colon > 0 && colon < path.find('/');
+}
+
+/* `path` taken from the working directory when relative, with its "." and
+ * ".." components resolved, so it can prefix a relative path once. */
+std::string AbsoluteDirectory(const std::string& path)
+{
+    std::string text = path;
+    ToHostSeparators(text);
+    if (!IsAbsolute(text)) {
+        char* cwd = SDL_GetCurrentDirectory();
+        if (cwd != NULL) {
+            std::string base = cwd;
+            SDL_free(cwd);
+            ToHostSeparators(base);
+            if (!base.empty() && base.back() != '/') base += '/';
+            text = base + text;
+        }
+    }
+    /* The root: "/", or a drive or scheme with its separator ("sdmc:/"). */
+    std::string root;
+    size_t start = 0;
+    if (text[0] == '/') {
+        root = "/";
+        start = 1;
+    }
+    else if (IsAbsolute(text)) {
+        size_t slash = text.find('/');
+        start = slash == std::string::npos ? text.size() : slash + 1;
+        root = text.substr(0, start);
+    }
+    std::vector<std::string> parts;
+    while (start < text.size()) {
+        size_t end = text.find('/', start);
+        if (end == std::string::npos) end = text.size();
+        std::string part = text.substr(start, end - start);
+        start = end + 1;
+        if (part.empty() || part == ".") continue;
+        if (part == ".." && !parts.empty() && parts.back() != "..") parts.pop_back();
+        else if (part != ".." || root.empty()) parts.push_back(part);
+    }
+    std::string result = root;
+    for (size_t i = 0; i < parts.size(); i++) {
+        if (i > 0) result += '/';
+        result += parts[i];
+    }
+    return result.empty() ? "." : result;
+}
+
 struct CaseMatch {
     const char* want;
     std::string found;
@@ -42,14 +120,17 @@ SDL_EnumerationResult SDLCALL MatchEntryCase(void* userdata, const char* dirname
 std::string HostPath(const char* path)
 {
     std::string text(path);
-    for (char& c : text) {
-        if (c == '\\') c = '/';
-    }
+    ToHostSeparators(text);
     std::string resolved;
     size_t start = 0;
     if (!text.empty() && text[0] == '/') {
         resolved = "/";
         start = 1;
+    }
+    else if (!g_diskPath.empty() && !IsAbsolute(text)) {
+        /* [library:config] A relative path is taken from the diskpath, as
+         * the original takes it from the working directory. */
+        resolved = g_diskPath;
     }
     while (start <= text.size()) {
         size_t end = text.find('/', start);
@@ -103,8 +184,6 @@ void FillFindData(const FindSearch& search, const std::string& name,
     }
 }
 
-std::string g_savePath;
-
 } // namespace
 
 extern "C" {
@@ -131,12 +210,7 @@ FILE* files_native_fopen(const char* path, const char* mode)
 
 void files_native_set_save_path(const char* path)
 {
-    g_savePath = path != NULL ? path : "";
-    /* A trailing separator would double up once files.c adds "\\name". */
-    while (g_savePath.size() > 1 &&
-           (g_savePath.back() == '/' || g_savePath.back() == '\\')) {
-        g_savePath.pop_back();
-    }
+    g_savePath = TrimDirectory(path);
     if (!g_savePath.empty()) {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Saving games in \"%s\"", g_savePath.c_str());
     }
@@ -145,6 +219,24 @@ void files_native_set_save_path(const char* path)
 const char* files_native_save_path(void)
 {
     return g_savePath.empty() ? NULL : g_savePath.c_str();
+}
+
+/* --- the data directory ----------------------------------------------- */
+
+void files_native_set_disk_path(const char* path)
+{
+    g_diskPath = TrimDirectory(path);
+    /* Absolute, so File_Initialise's paths, which start with it, are not
+     * taken from it a second time. */
+    if (!g_diskPath.empty()) g_diskPath = AbsoluteDirectory(g_diskPath);
+    if (!g_diskPath.empty()) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Reading game data from \"%s\"", g_diskPath.c_str());
+    }
+}
+
+const char* files_native_disk_path(void)
+{
+    return g_diskPath.empty() ? NULL : g_diskPath.c_str();
 }
 
 void files_native_save_slot_written(int slot)
@@ -182,7 +274,9 @@ long files_native_findfirst(const char* filespec,
     if (pattern == "*.*") pattern = "*";
 
     FindSearch search;
-    search.dir = dir == "." || dir == "/" ? dir : HostPath(dir.c_str());
+    /* [library:config] The working directory's listing is the diskpath's. */
+    if (dir == "." && !g_diskPath.empty()) search.dir = HostPath(".");
+    else search.dir = dir == "." || dir == "/" ? dir : HostPath(dir.c_str());
     search.next = 0;
     int count = 0;
     char** names = SDL_GlobDirectory(search.dir.c_str(), pattern.c_str(),

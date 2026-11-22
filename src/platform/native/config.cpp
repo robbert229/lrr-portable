@@ -61,6 +61,8 @@ dictionary* DefaultConfig(const std::string& prefPath)
     dictionary* dict = dictionary_new(0);
     iniparser_set(dict, LRR_CONFIG_SECTION, NULL);
     iniparser_set(dict, LRR_CONFIG_SAVEPATH, prefPath.c_str());
+    /* The working directory, as the original; a host overrides it below. */
+    iniparser_set(dict, LRR_CONFIG_DISKPATH, "");
     iniparser_set(dict, LRR_CONFIG_FULLSCREEN, kDefaultDisplay.fullScreen ? "true" : "false");
     iniparser_set(dict, LRR_CONFIG_XRES, std::to_string(kDefaultDisplay.width).c_str());
     iniparser_set(dict, LRR_CONFIG_YRES, std::to_string(kDefaultDisplay.height).c_str());
@@ -153,6 +155,7 @@ bool LRR_LoadConfig(const char* iniPath)
 #endif
 
     files_native_set_save_path(iniparser_getstring(dict, LRR_CONFIG_SAVEPATH, prefPath.c_str()));
+    files_native_set_disk_path(iniparser_getstring(dict, LRR_CONFIG_DISKPATH, ""));
 
     g_display = kDefaultDisplay;
     g_display.fullScreen = iniparser_getboolean(dict, LRR_CONFIG_FULLSCREEN, g_display.fullScreen) != 0;
