@@ -47,8 +47,8 @@ extern "C" {
 typedef struct ToolTip {
     float timer;                     /* +0x000 */
     char textBuffer[512];            /* +0x004 */
-    unsigned int textWidth;          /* +0x204 */
-    unsigned int textLineCount;      /* +0x208 */
+    uint32_t textWidth;              /* +0x204 */
+    uint32_t textLineCount;          /* +0x208 */
     Image* iconList[TOOLTIP_MAXICONS]; /* +0x20c */
     unsigned int iconCount;          /* +0x25c */
     int iconRowHeight;               /* +0x260 */

@@ -109,6 +109,27 @@ static void test_mapping(void)
     CHECK(fixture_is_directory("Data/Made/Deep"), "map: _mkdir makes Data/Made/Deep");
 }
 
+/* _fullpath keeps an absolute path, including a console's device prefix
+ * (sdmc: on 3DS and Switch, ux0: on Vita), and puts a relative one under
+ * the working directory. */
+static void test_fullpath(void)
+{
+    char full[512];
+
+    CHECK(_fullpath(full, "sdmc:/3ds/LegoRR\\Data\\Lego.cfg", sizeof(full)) != NULL &&
+              strcmp(full, "sdmc:/3ds/LegoRR\\Data\\Lego.cfg") == 0,
+          "fullpath: a device prefix (sdmc:) is absolute");
+    CHECK(_fullpath(full, "ux0:data\\LegoRR", sizeof(full)) != NULL && strcmp(full, "ux0:data\\LegoRR") == 0,
+          "fullpath: a device prefix (ux0:) is absolute");
+    CHECK(_fullpath(full, "C:\\Games\\LegoRR", sizeof(full)) != NULL && strcmp(full, "C:\\Games\\LegoRR") == 0,
+          "fullpath: a drive letter is absolute");
+    CHECK(_fullpath(full, "/srv/LegoRR", sizeof(full)) != NULL && strcmp(full, "/srv/LegoRR") == 0,
+          "fullpath: a rooted path is absolute");
+    CHECK(_fullpath(full, "Data\\a:b", sizeof(full)) != NULL && strcmp(full, "Data\\a:b") != 0,
+          "fullpath: a colon after a separator is no device prefix");
+    CHECK(_fullpath(full, "sdmc:/3ds/LegoRR", 8) == NULL, "fullpath: a result that does not fit is NULL");
+}
+
 /* _findfirst/_findnext over one directory, with Windows wildcards. */
 static void test_find(void)
 {
@@ -283,6 +304,7 @@ int main(void)
     CHECK(!fixture_exists("Data/delme.dat"), "init: delme.dat is removed");
 
     test_mapping();
+    test_fullpath();
     test_find();
     test_streams();
     test_wad();

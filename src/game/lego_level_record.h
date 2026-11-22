@@ -55,7 +55,7 @@ typedef struct Lego_Level {
     uint32_t f_0a4;                 /* +0x0a4 */
     int f_0a8;                      /* +0x0a8 NERPs: ore picked up */
     int ore;                        /* +0x0ac */
-    uint32_t f_0b0;                 /* +0x0b0 */
+    unsigned int f_0b0;             /* +0x0b0 */
     char* nextLevel;                /* +0x0b4 */
     Lego_Block* blocks;             /* +0x0b8 width * height */
     Objective_Data objective;       /* +0x0bc */
@@ -73,7 +73,7 @@ typedef struct Lego_Level {
     float trainTime;                /* +0x260 */
     float emergeTimeOut;            /* +0x264 */
     float f_268;                    /* +0x268 */
-    uint32_t f_26c;                 /* +0x26c */
+    unsigned int f_26c;             /* +0x26c */
     char* fullName;                 /* +0x270 */
     uint32_t f_274;                 /* +0x274 BoulderAnimation */
     uint32_t f_278;                 /* +0x278 */

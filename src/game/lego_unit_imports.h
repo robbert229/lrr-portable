@@ -600,7 +600,7 @@ void transient_effect_instances_tick(float delta);         /* 00465b00 */
 uint32_t building_upgrade_admission_check(int type, int row); /* 00469f40 */
 void advisor_text_animation_update(int slot, int force, int selected); /* 0046ac60 */
 void advisor_text_display_worker(float delta);             /* 0046ad00 */
-void timed_effect_runtime_update(uint32_t render_x, uint32_t render_y,
+void timed_effect_runtime_update(unsigned int render_x, unsigned int render_y,
                                  float delta);             /* 0046b7c0 */
 /* GAME-026 terrain map (terrain_map.h). */
 void terrain_map_update(struct TerrainMap* map, float elapsed); /* 0044eff0 */

@@ -115,22 +115,114 @@ SDL_EnumerationResult SDLCALL MatchEntryCase(void* userdata, const char* dirname
     return SDL_ENUM_CONTINUE;
 }
 
+/* Whether `path` is components joined by single separators, none of them
+ * "." or "..": the walk below would spell it the same. */
+bool IsPlainRelative(const std::string& path)
+{
+    size_t start = 0;
+    if (path.empty()) return false;
+    while (start <= path.size()) {
+        size_t end = path.find('/', start);
+        if (end == std::string::npos) end = path.size();
+        const size_t length = end - start;
+        if (length == 0 || (length == 1 && path[start] == '.') ||
+            (length == 2 && path[start] == '.' && path[start + 1] == '.')) {
+            return false;
+        }
+        start = end + 1;
+    }
+    return true;
+}
+
+/* Whether HostPath matches case from listings it keeps, one per directory
+ * read once, rather than asking the disk for every component of every
+ * path. The 3DS reads its SD card through FS:USER, where each lookup is a
+ * slow service call, and the game probes the disk for many files that only
+ * its WADs hold: matching their case on the disk made the start-up take
+ * minutes. A listing is not read again, so a file made after it keeps the
+ * spelling asked for, which the 3DS's FAT card opens in any case. */
+#if defined(__3DS__)
+constexpr bool kKeepListings = true;
+#else
+constexpr bool kKeepListings = false;
+#endif
+
+std::map<std::string, std::vector<std::string> > g_listings;
+
+SDL_EnumerationResult SDLCALL CollectEntry(void* userdata, const char* dirname, const char* fname)
+{
+    (void)dirname;
+    static_cast<std::vector<std::string>*>(userdata)->push_back(fname);
+    return SDL_ENUM_CONTINUE;
+}
+
+/* The spelling of `part` in `dir`: as spelled when it is there, else the
+ * entry that matches it without case, else as spelled. */
+std::string MatchCase(const std::string& dir, const std::string& part, const std::string& candidate)
+{
+    if (kKeepListings) {
+        auto listing = g_listings.find(dir);
+        if (listing == g_listings.end()) {
+            listing = g_listings.emplace(dir, std::vector<std::string>()).first;
+            SDL_EnumerateDirectory(dir.c_str(), CollectEntry, &listing->second);
+        }
+        const std::string* folded = NULL;
+        for (const std::string& name : listing->second) {
+            if (name == part) return part;
+            if (folded == NULL && SDL_strcasecmp(name.c_str(), part.c_str()) == 0) folded = &name;
+        }
+        return folded != NULL ? *folded : part;
+    }
+    SDL_PathInfo info;
+    if (SDL_GetPathInfo(candidate.c_str(), &info)) return part;
+    CaseMatch match = { part.c_str(), std::string() };
+    SDL_EnumerateDirectory(dir.c_str(), MatchEntryCase, &match);
+    return match.found.empty() ? part : match.found;
+}
+
+/* `part` under `base` ("" for the working directory; "/" or "sdmc:/" for
+ * a root). */
+std::string JoinPath(const std::string& base, const std::string& part)
+{
+    if (base.empty()) return part;
+    return base.back() == '/' ? base + part : base + "/" + part;
+}
+
 /* The host path for a Windows one: each component that does not exist as
- * spelled takes the spelling of an entry that matches it without case. */
+ * spelled takes the spelling of an entry that matches it without case.
+ * Each lookup is a filesystem call, so a path that exists as spelled is
+ * taken at once, and the diskpath, which exists, is not walked again. */
 std::string HostPath(const char* path)
 {
     std::string text(path);
     ToHostSeparators(text);
     std::string resolved;
     size_t start = 0;
-    if (!text.empty() && text[0] == '/') {
+    if (!g_diskPath.empty() && text.compare(0, g_diskPath.size(), g_diskPath) == 0 &&
+        text.size() > g_diskPath.size() && text[g_diskPath.size()] == '/') {
+        /* Inside the diskpath, as File_Initialise's paths are: it exists. */
+        resolved = g_diskPath;
+        start = g_diskPath.size() + 1;
+    }
+    else if (!text.empty() && text[0] == '/') {
         resolved = "/";
         start = 1;
     }
-    else if (!g_diskPath.empty() && !IsAbsolute(text)) {
+    else if (IsAbsolute(text)) {
+        /* A drive or device root, "C:/" or "sdmc:/". */
+        start = text.find('/');
+        start = start == std::string::npos ? text.size() : start + 1;
+        resolved = text.substr(0, start);
+    }
+    else if (!g_diskPath.empty()) {
         /* [library:config] A relative path is taken from the diskpath, as
          * the original takes it from the working directory. */
         resolved = g_diskPath;
+    }
+    if (!kKeepListings && IsPlainRelative(text.substr(start))) {
+        SDL_PathInfo info;
+        const std::string whole = JoinPath(resolved, text.substr(start));
+        if (SDL_GetPathInfo(whole.c_str(), &info)) return whole;
     }
     while (start <= text.size()) {
         size_t end = text.find('/', start);
@@ -138,19 +230,9 @@ std::string HostPath(const char* path)
         std::string part = text.substr(start, end - start);
         start = end + 1;
         if (part.empty() || part == ".") continue;
-        std::string dir = resolved.empty() ? "." : resolved;
-        std::string candidate = resolved.empty() ? part :
-            (resolved == "/" ? "/" + part : resolved + "/" + part);
-        SDL_PathInfo info;
-        if (part != ".." && !SDL_GetPathInfo(candidate.c_str(), &info)) {
-            CaseMatch match = { part.c_str(), std::string() };
-            SDL_EnumerateDirectory(dir.c_str(), MatchEntryCase, &match);
-            if (!match.found.empty()) {
-                candidate = resolved.empty() ? match.found :
-                    (resolved == "/" ? "/" + match.found : resolved + "/" + match.found);
-            }
-        }
-        resolved = candidate;
+        const std::string dir = resolved.empty() ? "." : resolved;
+        if (part != "..") part = MatchCase(dir, part, JoinPath(resolved, part));
+        resolved = JoinPath(resolved, part);
     }
     return resolved;
 }
@@ -227,8 +309,13 @@ void files_native_set_disk_path(const char* path)
 {
     g_diskPath = TrimDirectory(path);
     /* Absolute, so File_Initialise's paths, which start with it, are not
-     * taken from it a second time. */
-    if (!g_diskPath.empty()) g_diskPath = AbsoluteDirectory(g_diskPath);
+     * taken from it a second time, and spelled as on the disk, so that
+     * HostPath need not match its case again for every file. */
+    if (!g_diskPath.empty()) {
+        const std::string absolute = AbsoluteDirectory(g_diskPath);
+        g_diskPath.clear();
+        g_diskPath = HostPath(absolute.c_str());
+    }
     if (!g_diskPath.empty()) {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Reading game data from \"%s\"", g_diskPath.c_str());
     }
@@ -342,13 +429,16 @@ int files_native_mkdir(const char* path)
     return SDL_CreateDirectory(HostPath(path).c_str()) ? 0 : -1;
 }
 
-/* Working: a relative path is taken from the working directory. */
+/* Working: a relative path is taken from the working directory. A path
+ * is absolute when it starts with a separator or with a drive or device
+ * prefix: a name and a colon before any separator, as C: on Windows and
+ * the consoles' sdmc: (3DS, Switch) and ux0: (Vita). */
 char* files_native_fullpath(char* absPath, const char* relPath,
                             unsigned int maxLength)
 {
     char cwd[1024];
-    if (relPath[0] == '/' || relPath[0] == '\\' ||
-        (relPath[0] != '\0' && relPath[1] == ':')) {
+    const size_t prefix = strcspn(relPath, ":/\\");
+    if (relPath[0] == '/' || relPath[0] == '\\' || (prefix > 0 && relPath[prefix] == ':')) {
         if (strlen(relPath) + 1 > maxLength) return NULL;
         strcpy(absPath, relPath);
         return absPath;

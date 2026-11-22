@@ -37,10 +37,10 @@
 
 /* An entry's record in the archive's table. */
 typedef struct WadEntry {
-    unsigned int compression;        /* bit 1: RNC-packed */
-    unsigned int fileLength;         /* bytes in the archive */
-    unsigned int decompressedLength;
-    unsigned int addr;               /* file offset */
+    uint32_t compression;            /* bit 1: RNC-packed */
+    uint32_t fileLength;             /* bytes in the archive */
+    uint32_t decompressedLength;
+    uint32_t addr;                   /* file offset */
 } WadEntry;
 
 /* A mounted archive. 0x24 bytes in the original; the three words that

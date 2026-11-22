@@ -94,9 +94,12 @@ struct accepts_index : std::false_type {};
 template <class T>
 struct accepts_index<T, decltype((void)lrr_block_index(std::declval<T>(), 0u, 0u))> : std::true_type {};
 static_assert(accepts_index<uint32_t>::value, "an unsigned index is accepted");
+static_assert(accepts_index<unsigned int>::value,
+              "an unsigned int index is accepted, where it is not uint32_t too (newlib ARM)");
 static_assert(!accepts_index<int>::value, "an int index is rejected");
 static_assert(!accepts_index<long>::value, "a long index is rejected");
 static_assert(!accepts_index<long long>::value, "a long long index is rejected");
+static_assert(!accepts_index<unsigned long long>::value, "an index wider than 32 bits is rejected");
 
 static void test_index(void)
 {

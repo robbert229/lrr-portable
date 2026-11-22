@@ -33,13 +33,19 @@ static inline uint32_t lrr_block_index(uint32_t index, uint32_t width, uint32_t 
 }
 
 #ifdef __cplusplus
+#include <type_traits>
+
 /* Compute the index in unsigned 32-bit arithmetic, as the original's
  * wrapped. A signed index overflows into undefined behaviour where the
  * original wrapped (INT_MIN * width already does), so a signed index does
- * not compile. */
-uint32_t lrr_block_index(int index, uint32_t width, uint32_t height) = delete;
-uint32_t lrr_block_index(long index, uint32_t width, uint32_t height) = delete;
-uint32_t lrr_block_index(long long index, uint32_t width, uint32_t height) = delete;
+ * not compile, nor does one wider than 32 bits. Any unsigned 32-bit type
+ * converts: unsigned int is not uint32_t on every target (newlib's ARM
+ * uint32_t is unsigned long). */
+template <typename T,
+          typename std::enable_if<std::is_integral<T>::value &&
+                                      (std::is_signed<T>::value || sizeof(T) > sizeof(uint32_t)),
+                                  int>::type = 0>
+uint32_t lrr_block_index(T index, uint32_t width, uint32_t height) = delete;
 #endif
 
 #endif /* LRR_GAME_BLOCK_GRID_H */

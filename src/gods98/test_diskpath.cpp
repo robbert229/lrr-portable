@@ -114,6 +114,18 @@ int main(void)
               strcmp(host, "sdmc:/3ds/LegoRR/Data/Lego.cfg") == 0,
           "map: a relative path goes under a scheme diskpath");
 
+    /* A diskpath in another case takes the disk's spelling when it is set,
+     * on a disk that tells cases apart, so that file paths inside it need
+     * not be matched again. */
+    if (!fixture_exists(root + "/INSTALL")) {
+        files_native_set_disk_path((root + "/INSTALL").c_str());
+        CHECK(files_native_disk_path() != NULL && install == files_native_disk_path(),
+              "diskpath: the directory takes the disk's spelling");
+        CHECK(files_native_host_path(host, (install + "\\DATA\\loose.TXT").c_str(), sizeof(host)) != NULL &&
+                  install + "/Data/Loose.txt" == host,
+              "map: a path inside the diskpath still takes the disk's spelling");
+    }
+
     /* A relative diskpath is taken from the working directory once, when
      * it is set: the start-up below runs from Run with "../Install". */
     files_native_set_disk_path("../Install");

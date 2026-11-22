@@ -468,12 +468,16 @@ void directdraw_adjust_texture_usage(unsigned int* textureUsage)
 int directdraw_get_avail_texture_mem(unsigned int* total, unsigned int* avail)
 {
     DDSCAPS2 ddsc;
+    DWORD totalMem = 0;
+    DWORD availMem = 0;
+    HRESULT result;
 
     memset(&ddsc, 0, sizeof(ddsc));
     ddsc.dwCaps = DDSCAPS_TEXTURE;
-    *total = 0;
-    *avail = 0;
-    return directDrawGlobs.lpDirectDraw->GetAvailableVidMem(&ddsc, total, avail) == DD_OK;
+    result = directDrawGlobs.lpDirectDraw->GetAvailableVidMem(&ddsc, &totalMem, &availMem);
+    *total = totalMem;
+    *avail = availMem;
+    return result == DD_OK;
 }
 
 // FUNCTION: LEGORR 0x0047ce20

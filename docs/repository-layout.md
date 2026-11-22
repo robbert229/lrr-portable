@@ -21,7 +21,8 @@ unpacked/           (gitignored) 5,845 assets extracted from the .wad archives
 CMakeLists.txt      The CMake build (native, SDL3 + miniwin)
 packaging/          CPack packages, the Linux desktop entry and AppStream
                     metadata, the AppImage and Flatpak recipes, the macOS
-                    bundle and the app icon (see building.md#packages)
+                    bundle, the Nintendo 3DS .3dsx and .cia and the app
+                    icon (see building.md#packages)
 src/link_order.cmake
                     The source list: every game, gods98, platform and
                     program source, in the original's unit order, with its

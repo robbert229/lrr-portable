@@ -331,7 +331,8 @@ int electric_fence_building_spark_callback(ElectricFenceObject* object,
     float elapsedGame = *elapsed;
     TerrainMapPoint2 dir;
     TerrainMapPoint2I blockPos;
-    unsigned int direction, count, i;
+    unsigned int direction, i;
+    uint32_t count;
     TerrainMapPoint2I* shape;
     TerrainMapPoint2I* next;
 

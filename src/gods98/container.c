@@ -2627,7 +2627,11 @@ struct AnimClone* Container_LoadAnimSet(const char* fname,
                 scene, frame, *frameCount);
         }
     } else {
-        if ((buffer.lpMemory = file_load_binary(fname, &buffer.dSize)) != NULL) {
+        unsigned int size = 0;
+
+        buffer.lpMemory = file_load_binary(fname, &size);
+        buffer.dSize = size;
+        if (buffer.lpMemory != NULL) {
             if (lpD3DRM()->CreateFrame(frame,
                                        &animFrame) == D3DRM_OK) {
                 if (lpD3DRM()->CreateAnimationSet(&animSet) == D3DRM_OK) {
@@ -2677,8 +2681,11 @@ int Container_FrameLoad(const char* fname, LPDIRECT3DRMFRAME3 frame)
     D3DRMLOADMEMORY buffer;
     Container_TextureData textureData;
     int result = 0;
+    unsigned int size = 0;
 
-    if ((buffer.lpMemory = file_load_binary(fname, &buffer.dSize)) != NULL) {
+    buffer.lpMemory = file_load_binary(fname, &size);
+    buffer.dSize = size;
+    if (buffer.lpMemory != NULL) {
         textureData.xFileName = fname;
         textureData.flags = 0;
         if (frame->Load(&buffer, NULL, D3DRMLOAD_FROMMEMORY,
