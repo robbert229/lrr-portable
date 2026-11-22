@@ -8,13 +8,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include <string>
 
 #include "gods98/files.h"
 #include "gods98/files_native.h"
+#include "platform/native/test_fixture.h"
 
 static const char* FIX = "diskpath_fixture";
 static int s_failures = 0;
@@ -33,7 +32,7 @@ static void exit_guard(void)
     if (!s_finished) {
         printf("FAIL: the test exited early (Files.c start-up found no data in diskpath?)\n");
         fflush(stdout);
-        _exit(1);
+        _Exit(1);
     }
 }
 
@@ -73,32 +72,27 @@ static void write_wad(const std::string& path, const char* name, const char* tex
 
 int main(void)
 {
-    char cwd[1024];
-    char cmd[128];
     char buf[64];
     File* f;
 
     atexit(exit_guard);
-    snprintf(cmd, sizeof(cmd), "rm -rf %s", FIX);
-    if (system(cmd) != 0) return 1;
-    mkdir(FIX, 0755);
-    if (chdir(FIX) != 0 || getcwd(cwd, sizeof(cwd)) == NULL) {
+    if (!fixture_enter(FIX)) {
         printf("FAIL: chdir %s\n", FIX);
         s_finished = 1;
         return 1;
     }
-    const std::string root = cwd;
+    const std::string root = fixture_cwd();
     const std::string install = root + "/Install";
 
     /* The install: a Data directory and a WAD, neither in the working
      * directory (Run), which holds nothing. */
-    mkdir(install.c_str(), 0755);
-    mkdir((install + "/Data").c_str(), 0755);
-    mkdir((root + "/Run").c_str(), 0755);
+    fixture_mkdir(install);
+    fixture_mkdir(install + "/Data");
+    fixture_mkdir(root + "/Run");
     write_text(install + "/Data/Loose.txt", "loose");
     write_text(install + "/Data/delme.dat", "");
     write_wad(install + "/diskpath_test0.wad", "Packed.txt", "packed");
-    if (chdir("Run") != 0) {
+    if (!fixture_chdir("Run")) {
         printf("FAIL: chdir Run\n");
         s_finished = 1;
         return 1;
@@ -127,9 +121,9 @@ int main(void)
           "diskpath: a relative directory is made absolute");
 
     file_initialise("diskpath_test", 0, "");
-    CHECK(access((install + "/Data/delme.dat").c_str(), F_OK) != 0,
+    CHECK(!fixture_exists(install + "/Data/delme.dat"),
           "init: delme.dat is removed from the diskpath's Data");
-    CHECK(access("Data", F_OK) != 0, "init: no Data directory is made in the working directory");
+    CHECK(!fixture_exists("Data"), "init: no Data directory is made in the working directory");
 
     f = file_open("Loose.txt", "r");
     CHECK(f != NULL && file_get_system(f) == FileSystem_Std,
@@ -152,7 +146,7 @@ int main(void)
     /* A unit's own relative Windows path ("Data\\..."; Images.c, the CD
      * key check) maps into the diskpath too; on a disk that ignores case
      * the units' spelling stays (test_files). */
-    const std::string loose = access((install + "/DATA/LOOSE.TXT").c_str(), F_OK) == 0 ?
+    const std::string loose = fixture_exists(install + "/DATA/LOOSE.TXT") ?
         install + "/DATA/LOOSE.TXT" : install + "/Data/Loose.txt";
     CHECK(files_native_host_path(host, "DATA\\LOOSE.TXT", sizeof(host)) != NULL &&
               loose == host,

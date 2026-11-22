@@ -7,18 +7,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include <set>
 #include <string>
 
 #include "gods98/files.h"
 #include "gods98/files_native.h"
+#include "platform/native/test_fixture.h"
 
-/* Files.c's File_CheckRedundantFiles list (common symbols). */
-extern "C" char fileRedundantList[2000][1024];
-extern "C" unsigned int fileRedundantListCount;
+/* Files.c's File_CheckRedundantFiles list (common symbols; files.c builds
+ * as C++, so they have C++ linkage). */
+extern char fileRedundantList[2000][1024];
+extern unsigned int fileRedundantListCount;
 
 static const char* FIX = "files_fixture";
 static int s_failures = 0;
@@ -37,7 +37,7 @@ static void exit_guard(void)
     if (!s_finished) {
         printf("FAIL: the test exited early (Files.c start-up found no Data directory?)\n");
         fflush(stdout);
-        _exit(1);
+        _Exit(1);
     }
 }
 
@@ -53,12 +53,12 @@ static void test_mapping(void)
 {
     char host[512];
 
-    mkdir("Data/Levels", 0755);
+    fixture_mkdir("Data/Levels");
     write_text("Data/Levels/Map.txt", "x");
     /* A path that exists as spelled is kept, so on a disk that ignores case
      * (macOS's default) the units' spelling stays. */
     const char* expected =
-        access("DATA/LEVELS/MAP.TXT", F_OK) == 0 ? "DATA/LEVELS/MAP.TXT" : "Data/Levels/Map.txt";
+        fixture_exists("DATA/LEVELS/MAP.TXT") ? "DATA/LEVELS/MAP.TXT" : "Data/Levels/Map.txt";
     CHECK(files_native_host_path(host, "DATA\\LEVELS\\MAP.TXT", sizeof(host)) != NULL &&
               strcmp(host, expected) == 0,
           "map: separators and case follow the disk");
@@ -71,8 +71,7 @@ static void test_mapping(void)
 
     /* _mkdir maps too, and makes missing parents. */
     CHECK(files_native_mkdir("Data\\Made\\Deep") == 0, "map: _mkdir succeeds");
-    struct stat st;
-    CHECK(stat("Data/Made/Deep", &st) == 0 && S_ISDIR(st.st_mode), "map: _mkdir makes Data/Made/Deep");
+    CHECK(fixture_is_directory("Data/Made/Deep"), "map: _mkdir makes Data/Made/Deep");
 }
 
 /* _findfirst/_findnext over one directory, with Windows wildcards. */
@@ -83,8 +82,8 @@ static void test_find(void)
     int dirs = 0;
     long handle;
 
-    mkdir("Data/Find", 0755);
-    mkdir("Data/Find/Sub", 0755);
+    fixture_mkdir("Data/Find");
+    fixture_mkdir("Data/Find/Sub");
     write_text("Data/Find/a.txt", "12345");
     write_text("Data/Find/B.TXT", "1");
     write_text("Data/Find/c.dat", "");
@@ -177,23 +176,18 @@ static void test_streams(void)
 
 int main(void)
 {
-    char cmd[128];
-
     atexit(exit_guard);
-    snprintf(cmd, sizeof(cmd), "rm -rf %s", FIX);
-    if (system(cmd) != 0) return 1;
-    mkdir(FIX, 0755);
-    if (chdir(FIX) != 0) {
+    if (!fixture_enter(FIX)) {
         printf("FAIL: chdir %s\n", FIX);
         s_finished = 1;
         return 1;
     }
-    mkdir("Data", 0755);
+    fixture_mkdir("Data");
     /* No WAD: the start-up finds the install by its Data directory
      * (_findfirst), then removes a stale delme.dat. */
     write_text("Data/delme.dat", "");
     file_initialise("files_test", 0, "");
-    CHECK(access("Data/delme.dat", F_OK) != 0, "init: delme.dat is removed");
+    CHECK(!fixture_exists("Data/delme.dat"), "init: delme.dat is removed");
 
     test_mapping();
     test_find();

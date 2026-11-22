@@ -185,14 +185,22 @@ typedef struct tMIXERCONTROLDETAILS {
 extern "C" {
 #endif
 
-/* KERNEL32. */
-HANDLE CreateMutexA(void* attributes, BOOL initialOwner, LPCSTR name);
-DWORD GetLastError(void);
-LPSTR GetCommandLineA(void);
+/* KERNEL32 and USER32, in the seam (platform/native/seam_stubs.cpp) under
+ * names of their own, so that on Windows they do not collide with the
+ * system's, which SDL and the C library link. */
+HANDLE seam_create_mutex(void* attributes, BOOL initialOwner, LPCSTR name);
+DWORD seam_get_last_error(void);
+LPSTR seam_get_command_line(void);
 
-HGLOBAL GlobalAlloc(UINT flags, size_t bytes);
-HGLOBAL GlobalFree(HGLOBAL memory);
-int wsprintfA(LPSTR output, LPCSTR format, ...);
+HGLOBAL seam_global_alloc(UINT flags, size_t bytes);
+HGLOBAL seam_global_free(HGLOBAL memory);
+int seam_wsprintf(LPSTR output, LPCSTR format, ...);
+#define CreateMutexA seam_create_mutex
+#define GetLastError seam_get_last_error
+#define GetCommandLineA seam_get_command_line
+#define GlobalAlloc seam_global_alloc
+#define GlobalFree seam_global_free
+#define wsprintfA seam_wsprintf
 
 #ifdef __cplusplus
 }

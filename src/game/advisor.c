@@ -66,9 +66,10 @@
  * COMDAT, with the same code as a plain definition, so the unoptimised
  * camera unit's copies (camera_maths.h) are discarded rather than
  * multiply defined (finding 692). Other units call them out of line, so
- * the port marks them used: an optimising C++ compile would otherwise
- * inline every use here and emit no copy for the others to link. */
-#define MATHS_INLINE inline __attribute__((used))
+ * the port takes their addresses (advisorMathsEmitted, after
+ * vec_normalize): an optimising C++ compile would otherwise inline every
+ * use here and emit no copy for the others to link. */
+#define MATHS_INLINE inline
 
 /* The game camera (camera_control.h's LegoCamera): Advisor_Initialise
  * reads its camera container. */
@@ -403,6 +404,22 @@ MATHS_INLINE void vec_normalize(float* v)
 {
     advisor_vector3d_scale(v, v, 1.0f / advisor_vector3d_modulus(v));
 }
+
+/* The maths functions' addresses, so that every compiler emits an
+ * out-of-line copy of each for the other units (MATHS_INLINE). */
+struct AdvisorMathsEmitted {
+    float (*len)(const float*);
+    float (*dist)(const float*, const float*);
+    float* (*add)(float*, const float*, const float*);
+    float* (*sub)(float*, const float*, const float*);
+    float (*dot)(const float*, const float*);
+    float* (*scale)(float*, const float*, float);
+    void (*normalize)(float*);
+};
+extern const AdvisorMathsEmitted advisorMathsEmitted;
+const AdvisorMathsEmitted advisorMathsEmitted = {
+    vec_len, vec_dist, vec_add, vec_sub, vec_dot, vec_scale, vec_normalize
+};
 
 // FUNCTION: LEGORR 0x004017b0
 void advisor_position_record_initialize(int advisorType, int animType,

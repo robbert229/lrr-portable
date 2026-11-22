@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sat, 21 Nov 2026 19:26:54 -0800
+Subject: [PATCH] fix(miniwin): name MSG's struct tagMSG, as SDL declares it on
+ Windows
+
+SDL_system.h declares typedef struct tagMSG MSG on Windows hosts for its
+message hook, which conflicted with miniwin's struct MSG.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/include/miniwin/windows.h b/miniwin/include/miniwin/windows.h
+index 1c29d26..2fa659b 100644
+--- a/miniwin/include/miniwin/windows.h
++++ b/miniwin/include/miniwin/windows.h
+@@ -270,14 +270,16 @@ struct WNDCLASSA {
+ 	LPCSTR lpszClassName;
+ };
+ 
+-struct MSG {
++// Named tagMSG, as Windows names it: SDL_system.h declares
++// `typedef struct tagMSG MSG` on Windows hosts.
++typedef struct tagMSG {
+ 	HWND hwnd;
+ 	UINT message;
+ 	WPARAM wParam;
+ 	LPARAM lParam;
+ 	DWORD time;
+ 	tagPOINT pt;
+-};
++} MSG;
+ typedef MSG* LPMSG;
+ 
+ struct WINDOWPOS {

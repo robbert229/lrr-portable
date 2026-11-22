@@ -19,7 +19,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
+
+#include <SDL3/SDL_stdinc.h>
 
 #include <cmath>
 #include <cstdio>
@@ -87,12 +88,13 @@ inline char* crt_strlwr(char* s)
 #define strlwr crt_strlwr
 #define _strlwr crt_strlwr
 
-/* _strcmpi, _stricmp and _strnicmp. */
-#define stricmp strcasecmp
-#define _stricmp strcasecmp
-#define _strcmpi strcasecmp
-#define strnicmp(a, b, count) strncasecmp((a), (b), (size_t)(count))
-#define _strnicmp(a, b, count) strncasecmp((a), (b), (size_t)(count))
+/* _strcmpi, _stricmp and _strnicmp, through SDL's (ASCII case, as the C
+ * locale's). */
+#define stricmp SDL_strcasecmp
+#define _stricmp SDL_strcasecmp
+#define _strcmpi SDL_strcasecmp
+#define strnicmp(a, b, count) SDL_strncasecmp((a), (b), (size_t)(count))
+#define _strnicmp(a, b, count) SDL_strncasecmp((a), (b), (size_t)(count))
 
 /* _finite. */
 inline int crt_finite(double value)

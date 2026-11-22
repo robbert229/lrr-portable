@@ -8,8 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include <string>
 
@@ -17,6 +15,7 @@
 
 #include "gods98/files_native.h"
 #include "platform/native/config.h"
+#include "platform/native/test_fixture.h"
 
 static const char* FIX = "config_fixture";
 static int s_failures = 0;
@@ -63,24 +62,18 @@ static std::string disk_path(void)
 
 int main(void)
 {
-    char cwd[1024];
-    char cmd[128];
-
-    snprintf(cmd, sizeof(cmd), "rm -rf %s", FIX);
-    if (system(cmd) != 0) return 1;
-    mkdir(FIX, 0755);
-    if (chdir(FIX) != 0 || getcwd(cwd, sizeof(cwd)) == NULL) {
+    if (!fixture_enter(FIX)) {
         printf("FAIL: chdir %s\n", FIX);
         return 1;
     }
-    const std::string root = cwd;
+    const std::string root = fixture_cwd();
     /* The preference directory, inside the fixture: XDG_DATA_HOME on
      * Linux and the BSDs, CoreFoundation's home override on macOS. A host
-     * that keeps it elsewhere is skipped, so a run never touches the
-     * user's own LegoRR.ini. */
-    setenv("XDG_DATA_HOME", (root + "/xdg").c_str(), 1);
-    setenv("CFFIXED_USER_HOME", (root + "/home").c_str(), 1);
-    mkdir((root + "/home").c_str(), 0755);
+     * that keeps it elsewhere (Windows: the user's AppData) is skipped, so
+     * a run never touches the user's own LegoRR.ini. */
+    fixture_setenv("XDG_DATA_HOME", root + "/xdg");
+    fixture_setenv("CFFIXED_USER_HOME", root + "/home");
+    fixture_mkdir(root + "/home");
     char* pref = SDL_GetPrefPath(LRR_CONFIG_ORG, LRR_CONFIG_APP);
     std::string prefDir = pref != NULL ? pref : "";
     SDL_free(pref);

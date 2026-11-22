@@ -420,7 +420,7 @@ static void CheckFrames()
     CHECK(child->GetPosition(nullptr, &position) == DD_OK && NearVector(position, 10, 5, 0));
 
     // Rotation about y by 90 degrees takes +z to +x (D3DRM's convention).
-    CHECK(parent->AddRotation(D3DRMCOMBINE_BEFORE, 0, 1, 0, (float) M_PI / 2) == DD_OK);
+    CHECK(parent->AddRotation(D3DRMCOMBINE_BEFORE, 0, 1, 0, (float) SDL_PI_D / 2) == DD_OK);
     D3DVECTOR in = {0, 0, 1}, out = {};
     CHECK(parent->Transform(&out, &in) == DD_OK && NearVector(out, 11, 0, 0));
     D3DVECTOR back = {};

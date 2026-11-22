@@ -16,6 +16,9 @@
 #define LEGORRR_GODS98_FILES_NATIVE_H
 
 #include <stdio.h>
+/* Before the macros below: a Windows C library declares _fullpath here,
+ * and a later include must not see it renamed. */
+#include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {
