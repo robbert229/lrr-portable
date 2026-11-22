@@ -2,14 +2,18 @@
 /* test_files — Files.c's C library streams on SDL3 ([library:filesystem],
  * as isle-portable's LegoFile) and the path mapping every file call goes
  * through (files_native_host_path, isle-portable's
- * MxString::MapPathToFilesystem), on a fixture data directory. */
+ * MxString::MapPathToFilesystem), on a fixture data directory; and Wad.c's
+ * archives, read through the same streams and mapping. */
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include <filesystem>
 #include <set>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "gods98/files.h"
 #include "gods98/files_native.h"
@@ -45,6 +49,37 @@ static void write_text(const char* path, const char* text)
 {
     FILE* fp = fopen(path, "wb");
     fputs(text, fp);
+    fclose(fp);
+}
+
+static void put32(FILE* fp, uint32_t v)
+{
+    unsigned char b[4] = { (unsigned char)v, (unsigned char)(v >> 8),
+                           (unsigned char)(v >> 16), (unsigned char)(v >> 24) };
+    fwrite(b, 1, 4, fp);
+}
+
+/* A WAD of stored (uncompressed) entries, name -> text. */
+static void write_wad(const char* path, const std::vector<std::pair<std::string, std::string> >& entries)
+{
+    FILE* fp = fopen(path, "wb");
+    uint32_t addr = 4 + 4 + 16 * (uint32_t)entries.size();
+    size_t i;
+
+    for (i = 0; i < entries.size(); i++) addr += 2 * (uint32_t)(entries[i].first.size() + 1);
+    fwrite("WWAD", 1, 4, fp);
+    put32(fp, (uint32_t)entries.size());
+    for (i = 0; i < entries.size(); i++) fwrite(entries[i].first.c_str(), 1, entries[i].first.size() + 1, fp);
+    for (i = 0; i < entries.size(); i++) fwrite(entries[i].first.c_str(), 1, entries[i].first.size() + 1, fp);
+    for (i = 0; i < entries.size(); i++) {
+        uint32_t len = (uint32_t)entries[i].second.size();
+        put32(fp, 0); /* compression: stored */
+        put32(fp, len);
+        put32(fp, len);
+        put32(fp, addr);
+        addr += len;
+    }
+    for (i = 0; i < entries.size(); i++) fwrite(entries[i].second.data(), 1, entries[i].second.size(), fp);
     fclose(fp);
 }
 
@@ -173,6 +208,64 @@ static void test_streams(void)
     for (i = 0; i < 3; i++) fileRedundantList[i][0] = '\0';
 }
 
+/* Wad.c reads its archives through SDL3 streams on the host path: a name in
+ * another case than the file's mounts, a corrupt archive is refused without
+ * taking a record, and the entries read back from their offsets. */
+static void test_wad(void)
+{
+    typedef std::vector<std::pair<std::string, std::string> > Entries;
+    char buf[32];
+    File* f;
+    FILE* fp;
+    unsigned int size = 0;
+
+    /* Refused: no such file, not a WAD, too short, a count the file cannot
+     * hold, names that end with the archive, a table cut short. */
+    CHECK(file_load_wad("wad_missing0.wad") == -1, "wad: a missing archive is refused");
+    write_text("wad_magic0.wad", "NOPEnope");
+    CHECK(file_load_wad("wad_magic0.wad") == -1, "wad: a bad magic is refused");
+    write_text("wad_short0.wad", "WWA");
+    CHECK(file_load_wad("wad_short0.wad") == -1, "wad: a short header is refused");
+    fp = fopen("wad_count0.wad", "wb");
+    fwrite("WWAD", 1, 4, fp);
+    put32(fp, 0x7fffffffu);
+    fclose(fp);
+    CHECK(file_load_wad("wad_count0.wad") == -1, "wad: an impossible entry count is refused");
+    fp = fopen("wad_names0.wad", "wb");
+    fwrite("WWAD", 1, 4, fp);
+    put32(fp, 1);
+    fputs("Packed.txt", fp); /* no NUL, nothing after */
+    fclose(fp);
+    CHECK(file_load_wad("wad_names0.wad") == -1, "wad: a name cut off by the end is refused");
+    write_wad("wad_table0.wad", Entries(1, std::make_pair(std::string("Cut.txt"), std::string("cut"))));
+    {
+        std::error_code ec; /* cut the data and part of the record */
+        std::filesystem::resize_file("wad_table0.wad", 4 + 4 + 8 * 2 + 8, ec);
+        CHECK(!ec, "wad: the table's fixture is cut");
+    }
+    CHECK(file_load_wad("wad_table0.wad") == -1, "wad: a record cut short is refused");
+
+    /* A refused archive takes no record: the good one mounts, by a name in
+     * another case than the file's. */
+    Entries entries;
+    entries.push_back(std::make_pair(std::string("Wadded.txt"), std::string("wadded")));
+    entries.push_back(std::make_pair(std::string("Sub\\Deep.txt"), std::string("deep down")));
+    write_wad("WadCase0.WAD", entries);
+    CHECK(file_load_wad("wadcase0.wad") != -1, "wad: the archive mounts by a name in another case");
+
+    f = file_open("Wadded.txt", "r");
+    CHECK(f != NULL && file_get_system(f) == FileSystem_Wad, "wad: the first entry opens from the archive");
+    if (f != NULL) {
+        memset(buf, 0, sizeof(buf));
+        CHECK(file_read(buf, 1, 6, f) == 6 && strcmp(buf, "wadded") == 0, "wad: the first entry's bytes");
+        file_close(f);
+    }
+    char* data = (char*)file_load("Sub\\Deep.txt", &size, 1);
+    CHECK(data != NULL && size == 9 && memcmp(data, "deep down", 9) == 0,
+          "wad: the second entry's bytes, from its offset");
+    free(data);
+    CHECK(file_open("Nothing.txt", "r") == NULL, "wad: a name no archive holds is not found");
+}
 
 int main(void)
 {
@@ -192,6 +285,7 @@ int main(void)
     test_mapping();
     test_find();
     test_streams();
+    test_wad();
 
     s_finished = 1;
     if (s_failures != 0) {

@@ -1,0 +1,51 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
+<!-- The web build's page (LegoRR.html): one canvas, which SDL fills with
+     each frame the game's worker thread presents. CSS sizes the canvas at
+     the game's 4:3, and SDL takes the window's size from it (external
+     sizing) and scales the game's display to it. The game data is mounted
+     at /LegoRR; this page brings none (issues #907, #908). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lego Rock Raiders</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: #000; color: #ccc;
+    font: 14px system-ui, sans-serif; }
+  body { display: flex; flex-direction: column; align-items: center;
+    justify-content: center; }
+  #canvas { display: block; width: min(100vw, calc(100vh * 4 / 3));
+    aspect-ratio: 4 / 3; background: #000; outline: none; }
+  #status { position: fixed; bottom: 8px; left: 0; right: 0;
+    text-align: center; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
+<div id="status">Loading…</div>
+<script>
+  var statusElement = document.getElementById('status');
+  var Module = {
+    canvas: document.getElementById('canvas'),
+    print: function (text) { console.log(text); },
+    printErr: function (text) { console.error(text); },
+    setStatus: function (text) {
+      statusElement.textContent = text;
+      statusElement.hidden = !text;
+    },
+    onAbort: function (what) {
+      Module.setStatus('The game stopped: ' + what);
+    },
+  };
+  if (!self.crossOriginIsolated) {
+    Module.setStatus('This page needs cross-origin isolation (the ' +
+      'Cross-Origin-Opener-Policy and Cross-Origin-Embedder-Policy headers) ' +
+      'for its threads.');
+  }
+</script>
+{{{ SCRIPT }}}
+</body>
+</html>

@@ -630,7 +630,7 @@ int lego_game_config_init(void)
     scene_resource_slots_initialize();
     ai_activity_name_table_initialize();
     renderer_record_table_initialize();
-    flic_opcode27_fallback_noop();
+    flic_opcode27_fallback_noop(NULL);
     screen_coord_normalize_init();
     ui_panel_name_tables_init();
     cmd_registry_init_target();
@@ -2216,7 +2216,7 @@ void lego_engine_shutdown(void)
         loader_profile_entries_release_adapter(NULL);
     }
 
-    flic_opcode27_fallback_noop();
+    flic_opcode27_fallback_noop(NULL);
     scene_object_registry_teardown();
     lws_shutdown();
     audio_active_shutdown();
@@ -6711,7 +6711,7 @@ void map_cell_tracking_flags_clear_and_refresh_current(const int cell_xy[2])
     LEGO_2F_BLOCK(legoGlobs_currLevel, cell_xy[0], cell_xy[1]).flags1 &= ~0x40000000;
     entity_activity_scene_state_update_retail();
     coordinate_pair_callback_dispatch(cell_xy);
-    ((void (*)(const int*))flic_opcode27_fallback_noop)(cell_xy);
+    flic_opcode27_fallback_noop((void*)cell_xy);
 }
 
 /* Clears a block's pending work once nothing occupies or reserves it, and

@@ -91,6 +91,55 @@ symbolic links, so that nothing the program writes lands in your reference
 data. The front end ignores close requests, so stop a headless run with
 `timeout`.
 
+## Web build (Emscripten)
+
+The web build (issue #926) needs [emsdk](https://emscripten.org/docs/getting_started/downloads.html)
+6.0.10, the release isle-portable builds with, and gives `LegoRR.html`,
+`LegoRR.js` and `LegoRR.wasm`. The tests are native programs, so configure
+without them:
+
+```sh
+tools/setup-miniwin.sh
+emcmake cmake -S . -B build-web -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+cmake --build build-web --target program
+```
+
+`-sPROXY_TO_PTHREAD` runs `main`, and so `WinMain`'s loop and the front
+end's nested modal loops, on a worker thread, where blocking is allowed; the
+browser's main thread stays free. A canvas drawn with WebGL shows a frame
+only when its thread returns to the browser, which `WinMain` never does, so
+the web build draws with miniwin's software renderer through SDL's software
+render driver (`entry.cpp`), which puts each frame on the page's canvas from
+the main browser thread. miniwin's OpenGL ES backends are left out
+(`ISLE_RENDERER_OPENGLES`), as enumerating them would take the canvas for
+WebGL; #925 brings WebGL 2 back. SDL's DOM event handlers queue each mouse
+and key event for the worker, and miniwin's `PeekMessageA` runs that queue
+once per message pump (`patches/miniwin`). The page,
+`src/platform/native/emscripten/shell.html`, sizes the canvas with CSS at
+4:3; the game keeps its 640x480 display and SDL scales it to the canvas.
+wasm-ld's warnings are errors in this build: a unit that declares another
+unit's function with other parameters would otherwise link to a trap.
+
+The page needs cross-origin isolation (for `SharedArrayBuffer`), which
+`tools/serve_web.py` gives it:
+
+```sh
+tools/serve_web.py build-web        # http://127.0.0.1:8000/LegoRR.html
+```
+
+The game reads its data from `/LegoRR` (`legorr:diskpath`), and its
+configuration and saves live in the browser's Origin Private File System
+(`src/platform/native/emscripten/`). Nothing brings the game data to the page
+yet (issues #907 and #908). For a local run, preload a game directory into
+the build; the result holds the licensed data, so keep it to yourself:
+
+```sh
+emcmake cmake -S . -B build-web-data -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
+  "-DCMAKE_EXE_LINKER_FLAGS=--preload-file /path/to/game@/LegoRR --exclude-file *.avi --exclude-file *.exe"
+cmake --build build-web-data --target program
+tools/serve_web.py build-web-data
+```
+
 ## Tests
 
 ```sh
@@ -137,6 +186,11 @@ the repository without submodules, runs `tools/setup-miniwin.sh` to fetch only
 `miniwin/` and apply `patches/miniwin`, and then runs the native commands from [Tests](#tests). It also
 lints the units (no `LEGORRR_BACKEND_*`, `MINIWIN`, `_MSC_VER`, `_M_IX86` or
 `_WIN32` guards and no `lpVtbl` in `src/`) and runs the Python tool tests in `tools/tests`.
+The build itself treats the compiler warnings in `LRR_LINT_WARNINGS`
+(`CMakeLists.txt`) as errors in the units, `seam_stubs` and `program`, so a
+change that adds one fails the check. Today that is `-Wparentheses` (MSVC
+C4706): an assignment used as a condition. Add a warning to the list only
+once the code builds cleanly with it.
 
 SDL3 comes from a pinned source build of release-3.4.18 (commit `829a65d7`),
 configured headless with `SDL_UNIX_CONSOLE_BUILD` and without X11 or Wayland.
@@ -177,6 +231,11 @@ inside a developer environment (`ilammy/msvc-dev-cmd`), because Git Bash's
 `link` would shadow MSVC's linker. MinGW links its C and C++ runtimes
 statically, and a build against a shared SDL3 copies `SDL3.dll` beside
 `LegoRR.exe` (and the tests).
+
+The same workflow's `web-emscripten` job, also not required, sets up emsdk
+6.0.10 (`emscripten-core/setup-emsdk`), builds the web target as in
+[Web build](#web-build-emscripten) and uploads `LegoRR.html`, `.js` and
+`.wasm` as the `LegoRR-web` artifact.
 
 
 ## Packages

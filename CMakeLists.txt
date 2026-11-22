@@ -19,6 +19,30 @@ elseif(MSVC)
   add_compile_options(/fp:precise)
 endif()
 
+# The web build (issue #926), with isle-portable's Emscripten flags (its
+# CMakeLists.txt, LGPL-3.0) less OffscreenCanvas. -sPROXY_TO_PTHREAD runs
+# main, and so WinMain's blocking loop and the units' nested modal loops,
+# on a worker thread, where blocking is allowed. The canvas stays on the
+# page: a WebGL canvas, the page's or one transferred to the worker, shows
+# a frame only when its thread returns to the browser, which WinMain never
+# does. So the web build draws with miniwin's software renderer through
+# SDL's software render driver (entry.cpp), which presents each frame on
+# the page's canvas from the main browser thread, and leaves out miniwin's
+# OpenGL ES backends, whose device enumeration would claim the canvas for
+# WebGL (#925 brings WebGL 2 back). SDL's DOM event handlers run on the main
+# browser thread and queue the events for the worker. Every object compiles
+# with -pthread, since the threads share one wasm memory. WASMFS and
+# FORCE_FILESYSTEM back the OPFS saves (emscripten/filesystem.cpp).
+if(EMSCRIPTEN)
+  add_compile_options(-pthread)
+  add_link_options(-pthread -sPROXY_TO_PTHREAD=1 -sPTHREAD_POOL_SIZE_STRICT=0
+    -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=128mb -sMAXIMUM_MEMORY=2gb
+    -sFORCE_FILESYSTEM=1 -sWASMFS=1 -sEXIT_RUNTIME=1
+    -sABORT_ON_WASM_EXCEPTIONS=1)
+  set(SDL_PTHREADS ON CACHE BOOL "Enable SDL pthreads" FORCE)
+  set(ISLE_RENDERER_OPENGLES OFF CACHE BOOL "Build miniwin's OpenGL ES backends" FORCE)
+endif()
+
 # MinGW links its C and C++ runtimes and winpthread statically, as
 # isle-portable does, so LegoRR.exe runs outside the msys2 shell.
 if(MINGW)
@@ -306,6 +330,20 @@ target_link_libraries(units PUBLIC seam_stubs)
 add_executable(program ${LRR_ENTRY_SOURCE})
 set_target_properties(program PROPERTIES OUTPUT_NAME "LegoRR")
 target_link_libraries(program PRIVATE units)
+
+# Lint: compiler warnings this repository's own code is kept free of, as
+# errors, so the native-build check fails on a new one. Third-party code
+# (miniwin, miniaudio, SDL) is not covered. Add a warning here only once the
+# code builds cleanly with it.
+#   parentheses / C4706: an assignment used as a condition, as in
+#     if (x = f()). Assign on its own line and compare: x = f(); if (x != NULL).
+#     In a loop condition, write while ((x = next(x)) != NULL).
+set(LRR_LINT_WARNINGS
+  $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Werror=parentheses>
+  $<$<CXX_COMPILER_ID:MSVC>:/we4706>)
+foreach(_target IN ITEMS units seam_stubs program)
+  target_compile_options(${_target} PRIVATE ${LRR_LINT_WARNINGS})
+endforeach()
 if(WIN32)
   set_target_properties(program PROPERTIES WIN32_EXECUTABLE TRUE)
   # A shared SDL3 (an installed package; the fetched one is static) goes
@@ -314,6 +352,17 @@ if(WIN32)
   add_custom_command(TARGET program POST_BUILD
     COMMAND "$<$<BOOL:$<TARGET_RUNTIME_DLLS:program>>:${CMAKE_COMMAND};-E;copy_if_different;$<TARGET_RUNTIME_DLLS:program>;$<TARGET_FILE_DIR:program>>"
     COMMAND_EXPAND_LISTS)
+endif()
+if(EMSCRIPTEN)
+  # LegoRR.html, beside LegoRR.js and LegoRR.wasm, from the port's page.
+  set(LRR_EMSCRIPTEN_SHELL "${LRR_SRC_ROOT_ABS}/platform/native/emscripten/shell.html")
+  set_target_properties(program PROPERTIES SUFFIX ".html"
+    LINK_DEPENDS "${LRR_EMSCRIPTEN_SHELL}")
+  target_link_options(program PRIVATE "--shell-file=${LRR_EMSCRIPTEN_SHELL}")
+  # WebAssembly checks each call's signature, so a unit that declares
+  # another's function with other parameters links to a trap; wasm-ld only
+  # warns ("function signature mismatch"). Make that an error.
+  target_link_options(program PRIVATE "LINKER:--fatal-warnings")
 endif()
 
 include(CTest)
@@ -439,6 +488,18 @@ if(BUILD_TESTING)
       "LINKER:--wrap=scene_mesh_color_and_alpha_set")
     add_test(NAME block_grid COMMAND block_grid_test)
     set_tests_properties(block_grid PROPERTIES LABELS block_grid)
+    # Lws.c holds a scene's last key instead of blending toward the slot
+    # after it: the unit's file reads come from memory, and its allocations
+    # are padded and filled with all-ones bytes.
+    add_executable(lws_test ${ENGINE_DIR}/test_lws.cpp)
+    target_link_libraries(lws_test PRIVATE units)
+    target_link_options(lws_test PRIVATE
+      "LINKER:--wrap=malloc"
+      "LINKER:--wrap=game_file_open_dispatch"
+      "LINKER:--wrap=game_file_read_crlf_line"
+      "LINKER:--wrap=game_file_close")
+    add_test(NAME lws COMMAND lws_test)
+    set_tests_properties(lws PROPERTIES LABELS lws)
   endif()
   add_executable(config_test ${PLATFORM_DIR}/native/test_config.cpp)
   target_link_libraries(config_test PRIVATE units)

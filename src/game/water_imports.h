@@ -30,11 +30,12 @@ void render_object_set_packed_rgba_from_float_channels(
 #endif
 
 /* Water_ChangeViewMode's callee is an empty function that the linker
- * folded to 00484c90 (flic_opcode27_fallback_noop, flic.hpp); the original
- * passes the pool's mesh and three colour channels. */
-extern "C" void flic_opcode27_fallback_noop(void);
+ * folded to 00484c90 (flic_opcode27_fallback_noop, flic_unit.c's
+ * Flic_Nothing); the original passes the pool's mesh and three colour
+ * channels. */
+extern "C" void flic_opcode27_fallback_noop(void* fsp);
 #define water_set_emissive(mesh, red, green, blue) \
     ((void)(mesh), (void)(red), (void)(green), (void)(blue), \
-     flic_opcode27_fallback_noop())
+     flic_opcode27_fallback_noop(NULL))
 
 #endif /* LEGORRR_GAME_WATER_IMPORTS_H */

@@ -50,24 +50,27 @@ int roof_initialise(void* contRoot, unsigned int width, unsigned int height)
 {
     unsigned int loop, count;
 
-    if (roofGlobs.contMesh = container_make_mesh2(contRoot, ROOF_MESH_TYPE)) {
-        roofGlobs.texture = NULL;
-        roofGlobs.hidden = 0;
-        count = width * height;
-        if (roofGlobs.grid = (RoofBlock*)malloc(sizeof(RoofBlock) * count)) {
-            for (loop = 0; loop < count; loop++) {
-                roofGlobs.grid[loop].groupID = 0;
-                roofGlobs.grid[loop].flags = ROOF_FLAG_NOGROUP;
-            }
-            roofGlobs.needUpdate = 1;
-            roofGlobs.width = width;
-            roofGlobs.height = height;
-            roofGlobs.hiddenCount = 0;
-            return 1;
-        }
+    roofGlobs.contMesh = container_make_mesh2(contRoot, ROOF_MESH_TYPE);
+    if (roofGlobs.contMesh == NULL) return 0;
+
+    roofGlobs.texture = NULL;
+    roofGlobs.hidden = 0;
+    count = width * height;
+    roofGlobs.grid = (RoofBlock*)malloc(sizeof(RoofBlock) * count);
+    if (roofGlobs.grid == NULL) {
         ledger_stub_00472a40_DDiSceneObjectDestroy(roofGlobs.contMesh);
+        return 0;
     }
-    return 0;
+
+    for (loop = 0; loop < count; loop++) {
+        roofGlobs.grid[loop].groupID = 0;
+        roofGlobs.grid[loop].flags = ROOF_FLAG_NOGROUP;
+    }
+    roofGlobs.needUpdate = 1;
+    roofGlobs.width = width;
+    roofGlobs.height = height;
+    roofGlobs.hiddenCount = 0;
+    return 1;
 }
 
 // FUNCTION: LEGORR 0x00462e60
@@ -76,14 +79,14 @@ int roof_set_texture(const char* filename)
     unsigned int loop, count;
 
     if (roofGlobs.texture) detail_container_free_texture_adapter(roofGlobs.texture);
-    if (roofGlobs.texture = detail_container_load_texture2_adapter(filename, 1, NULL, NULL)) {
-        count = animated_texture_frame_count(roofGlobs.contMesh);
-        for (loop = 0; loop < count; loop++) {
-            animated_texture_frame_set(roofGlobs.contMesh, loop, roofGlobs.texture);
-        }
-        return 1;
+    roofGlobs.texture = detail_container_load_texture2_adapter(filename, 1, NULL, NULL);
+    if (roofGlobs.texture == NULL) return 0;
+
+    count = animated_texture_frame_count(roofGlobs.contMesh);
+    for (loop = 0; loop < count; loop++) {
+        animated_texture_frame_set(roofGlobs.contMesh, loop, roofGlobs.texture);
     }
-    return 0;
+    return 1;
 }
 
 // FUNCTION: LEGORR 0x00462ed0

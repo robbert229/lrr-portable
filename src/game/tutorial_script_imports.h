@@ -137,8 +137,9 @@ void camera_project_point_to_screen(
 void ddiscene_object_position_get(void* object, void* reference,
                                  float* position);          /* 004754c0 */
 
-/* G98 Flic.c (flic_unit.cpp): the NERPs function table's "True" row. */
-uint32_t flic_opcode25_success_stub(void);                  /* 00484b90 */
+/* G98 Flic.c (flic_unit.c, Flic_Unsupported): the NERPs function table's
+ * "True" row, declared with the definition's one parameter. */
+uint32_t flic_opcode25_success_stub(void* fsp);             /* 00484b90 */
 
 /* The callees of the table's remaining rows (finding 673). Each has C
  * linkage under this name in both builds; in the matching build the macros
