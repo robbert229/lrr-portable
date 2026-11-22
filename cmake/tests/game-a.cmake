@@ -15,3 +15,8 @@ lrr_unit_test(animation_object_activity SOURCES ${GAME_DIR}/test_animation_objec
   WRAP scene_action_name_set ddiscene_frame_update_and_callbacks
     ddiscene_advance_by_time_target ddiscene_object_frame_position_get
   LABELS animation_object)
+
+# Bubble names, the visibility setting and priority between status and task icons.
+lrr_unit_test(bubbles SOURCES ${GAME_DIR}/test_bubbles.cpp
+  WRAP block_subgroup Image_LoadBMPScaled Image_SetupTrans
+  LABELS bubbles)
