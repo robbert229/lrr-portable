@@ -13,6 +13,9 @@ REFERENCE_DIR ?= $(CURDIR)/reference
 PROTON_BIN ?= $(RR_A2_PROTON)
 COMPATDATA ?= $(if $(RR_A2_HOME),$(RR_A2_HOME),$(HOME)/.local/share/rock-raider-a2)/compatdata
 
+# The packaged build on macOS is an app bundle (packaging/macos).
+LEGORR = $(if $(wildcard $(abspath $(BUILD_DIR))/LegoRR.app/Contents/MacOS/LegoRR),$(abspath $(BUILD_DIR))/LegoRR.app/Contents/MacOS/LegoRR,$(abspath $(BUILD_DIR))/LegoRR)
+
 .PHONY: all setup build run test clean reference-run
 
 all: build
@@ -31,7 +34,7 @@ test: setup
 	ctest --test-dir "$(BUILD_DIR)" --output-on-failure
 
 run: build
-	cd "$(WAD_DIR)" && "$(abspath $(BUILD_DIR))/LegoRR" $(RUN_ARGS)
+	cd "$(WAD_DIR)" && "$(LEGORR)" $(RUN_ARGS)
 
 clean:
 	cmake --build "$(BUILD_DIR)" --target clean

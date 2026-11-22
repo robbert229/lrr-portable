@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
+<!-- Freedesktop AppStream metadata (https://www.freedesktop.org/software/appstream/docs).
+     Adapted from isle-portable's packaging/linux/isledecomp.metainfo.xml.in. -->
+<component type="desktop-application">
+  <id>@LRR_APP_ID@</id>
+
+  <name>@LRR_APP_NAME@</name>
+  <summary>@LRR_APP_SUMMARY@</summary>
+
+  <launchable type="desktop-id">@LRR_APP_ID@.desktop</launchable>
+  <provides>
+    <binary>LegoRR</binary>
+  </provides>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#7bf2d8</color>
+    <color type="primary" scheme_preference="dark">#0c8f78</color>
+  </branding>
+
+  <developer id="io.github.robbert229">
+    <name>lrr-portable contributors</name>
+  </developer>
+
+  <url type="homepage">@LRR_APP_URL@</url>
+  <url type="vcs-browser">@LRR_APP_URL@</url>
+  <url type="bugtracker">@LRR_APP_URL@/issues</url>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>@LRR_APP_SPDX@</project_license>
+
+  <requires>
+    <display_length side="longest" compare="ge">640</display_length>
+    <internet>offline-only</internet>
+  </requires>
+
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+
+  <description>
+    <p>
+      A native port of Lego Rock Raiders (1999), built from a reconstruction
+      of the original game's code and running on SDL3 instead of Windows and
+      DirectX.
+    </p>
+    <p>
+      This package contains no game data. You need your own copy of the game:
+      set diskpath in LegoRR.ini to the directory that holds its Data folder
+      and LegoRR0.wad and LegoRR1.wad. The project is not affiliated with or
+      endorsed by the LEGO Group.
+    </p>
+  </description>
+
+  <content_rating type="oars-1.1">
+    <content_attribute id="violence-cartoon">mild</content_attribute>
+  </content_rating>
+
+  <categories>
+    <category>Game</category>
+    <category>StrategyGame</category>
+  </categories>
+
+  <keywords>
+    <keyword translate="no">LEGO</keyword>
+    <keyword>Rock Raiders</keyword>
+  </keywords>
+
+  <releases>
+    <release version="@LRR_SEMANTIC_VERSION@" type="development" date="@LRR_BUILD_DATE@" />
+  </releases>
+</component>

@@ -6,7 +6,9 @@
 # job configures, builds and runs ctest as native-build does, with SDL3
 # fetched by CMake at the pinned commit (CMakeLists.txt, LRR_SDL3_GIT_TAG);
 # the web job builds LegoRR.html, .js and .wasm and uploads them. The Python
-# tool tests and the unit lint run in native-build only.
+# tool tests and the unit lint run in native-build only. The macOS and
+# Windows jobs also build the CPack package (packaging/) and upload it as an
+# artifact; the Linux packages are in native-packages.
 name: native-hosts
 
 on:
@@ -55,6 +57,20 @@ jobs:
             -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
           cmake --build build
           ctest --test-dir build --output-on-failure
+
+      # LegoRR.app in a disk image (packaging/macos): ad-hoc signed, not
+      # notarized. verify.sh mounts the image and checks the bundle.
+      - name: Package (DMG)
+        run: |
+          cmake --build build --target package
+          packaging/macos/verify.sh build/dist/lrr-portable-*-Darwin-*.dmg
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: build/dist/lrr-portable-*.dmg
+          if-no-files-found: error
 
   freebsd:
     name: freebsd
@@ -125,6 +141,16 @@ jobs:
           cmake --build build
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           ctest --test-dir build --output-on-failure
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cmake --build build --target package
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: build/dist/lrr-portable-*.zip
+          if-no-files-found: error
 
   windows-mingw64:
     name: windows-mingw64
@@ -165,6 +191,14 @@ jobs:
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
           cmake --build build
           ctest --test-dir build --output-on-failure
+          cmake --build build --target package
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-mingw64
+          path: build/dist/lrr-portable-*.zip
+          if-no-files-found: error
 
   web:
     name: web-emscripten

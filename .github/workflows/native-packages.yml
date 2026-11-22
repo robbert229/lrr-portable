@@ -1,0 +1,162 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+#
+# The Linux packages (issue #922): a TGZ and an AppImage on x86_64, and a
+# Flatpak on x86_64 and aarch64. Each is uploaded as a workflow artifact; a
+# continuous release is the owner's decision and is not made here. The macOS
+# and Windows packages are built by the native-hosts workflow. These jobs are
+# not required checks: native-build is the only one. packaging/ holds the
+# recipes, and docs/building.md describes the packages.
+name: native-packages
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-packages-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  linux:
+    name: linux-x86_64
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      # SDL3 is fetched and built from source (no ubuntu-24.04 package). It
+      # loads X11, Wayland, PulseAudio and the rest at run time, but builds
+      # their backends only when their development files are here.
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build pkg-config desktop-file-utils appstream \
+            libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev \
+            libudev-dev libusb-1.0-0-dev libdrm-dev libgbm-dev \
+            libegl1-mesa-dev libgl1-mesa-dev libgles2-mesa-dev libvulkan-dev \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev \
+            libxi-dev libxss-dev libxtst-dev libxkbcommon-dev \
+            libwayland-dev wayland-protocols libdecor-0-dev
+
+      - name: Bootstrap sparse miniwin
+        run: tools/setup-miniwin.sh
+
+      - name: Configure and build
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: "4"
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_DISABLE_FIND_PACKAGE_SDL3=ON -DBUILD_TESTING=OFF
+          cmake --build build --target program
+
+      - name: Package (TGZ)
+        run: cmake --build build --target package
+
+      - name: Check the desktop entry and AppStream metadata
+        run: |
+          cmake --install build --prefix "$RUNNER_TEMP/prefix"
+          desktop-file-validate "$RUNNER_TEMP"/prefix/share/applications/*.desktop
+          appstreamcli validate --no-net "$RUNNER_TEMP"/prefix/share/metainfo/*.metainfo.xml
+
+      # build.sh installs into build/AppDir, deploys with linuxdeploy, runs
+      # check.sh (no glibc newer than 2.39, no CPU above baseline x86-64), and
+      # packs with appimagetool.
+      - name: Package (AppImage)
+        run: packaging/linux/appimage/build.sh build
+
+      # The image starts, runs LegoRR and writes its default LegoRR.ini; it
+      # holds no game data, so the game stops at once.
+      - name: Smoke-test the AppImage
+        run: |
+          export HOME="$RUNNER_TEMP/home"
+          mkdir -p "$HOME"
+          cd "$RUNNER_TEMP"
+          APPIMAGE_EXTRACT_AND_RUN=1 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
+            timeout 60 "$GITHUB_WORKSPACE"/build/dist/lrr-portable-*-Linux-x86_64.AppImage -nosound \
+            || echo "LegoRR exited with status $?"
+          test -f "$HOME/.local/share/lrr-portable/LegoRR/LegoRR.ini"
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-x86_64
+          path: |
+            build/dist/lrr-portable-*.tar.gz
+            build/dist/lrr-portable-*.AppImage
+          if-no-files-found: error
+
+  # The Flatpak builds a patched copy of miniwin, which tools/setup-miniwin.sh
+  # makes with git; this job does that once for both architectures.
+  miniwin:
+    name: miniwin
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Bootstrap sparse miniwin
+        run: tools/setup-miniwin.sh
+
+      - name: Archive miniwin
+        run: tar -C 3rdparty/isle-portable -czf "$RUNNER_TEMP/miniwin.tar.gz" miniwin
+
+      - name: Upload miniwin
+        uses: actions/upload-artifact@v4
+        with:
+          name: miniwin-sources
+          path: ${{ runner.temp }}/miniwin.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+
+  flatpak:
+    name: flatpak-${{ matrix.arch }}
+    needs: miniwin
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, os: ubuntu-24.04 }
+          - { arch: aarch64, os: ubuntu-24.04-arm }
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-24.08
+      options: --privileged
+      volumes:
+        - /var/lib/flatpak
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Download miniwin
+        uses: actions/download-artifact@v4
+        with:
+          name: miniwin-sources
+
+      - name: Place miniwin
+        run: |
+          mkdir -p 3rdparty/isle-portable
+          tar -C 3rdparty/isle-portable -xzf miniwin.tar.gz
+          rm miniwin.tar.gz
+          test -f 3rdparty/isle-portable/miniwin/include/miniwin/windows.h
+
+      - name: Build the Flatpak
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: lrr-portable-Linux-${{ matrix.arch }}.flatpak
+          manifest-path: packaging/linux/flatpak/io.github.robbert229.LegoRR.yml
+          arch: ${{ matrix.arch }}
+          cache-key: flatpak-builder-${{ matrix.arch }}-${{ github.sha }}
