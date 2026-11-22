@@ -26,3 +26,6 @@ lrr_unit_test(maths SOURCES ${ENGINE_DIR}/test_maths.cpp LABELS maths)
 
 # Measure variable-width glyphs, tabs and line breaks without a font texture.
 lrr_unit_test(font SOURCES ${ENGINE_DIR}/test_font.cpp LABELS font)
+
+# Pin sound-bank volume limits and disabled-audio return values.
+lrr_unit_test(sound3d SOURCES ${ENGINE_DIR}/test_sound3d.cpp LABELS sound3d)
