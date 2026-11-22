@@ -54,7 +54,9 @@ be kept in step with every open PR.
 - **The build checks the series.** CMake refuses to configure, and every
   build fails, unless `tools/miniwin-patches.sh check` finds the series
   applied and the checkout clean. So `git submodule update`, which checks
-  out the bare pin, cannot build unpatched sources silently.
+  out the bare pin, cannot build unpatched sources silently. `check` also
+  fails when two patch files share a number, which happens when two PRs each
+  add a patch; the second to merge re-exports.
 - **`.gitmodules` sets `ignore = all`.** The submodule's HEAD (pin plus
   series) differs from the gitlink by design, and `git status` and
   `git add -A` must not offer that as a change. A repin is staged on purpose,
