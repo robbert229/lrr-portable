@@ -106,3 +106,8 @@ lrr_unit_test(legoobject_unit SOURCES ${GAME_DIR}/test_legoobject_unit.cpp LABEL
 lrr_unit_test(lighteffects SOURCES ${GAME_DIR}/test_lighteffects.cpp
   WRAP render_object_set_packed_rgba_from_float_channels ddiscene_object_position_get
   LABELS lighteffects)
+
+# Loader profile round-trip and progress bar geometry with synthetic files.
+lrr_unit_test(loader SOURCES ${GAME_DIR}/test_loader.cpp
+  WRAP Image_LoadBMPScaled Image_DisplayScaled Image_Remove main_loop_frame_pump
+  LABELS loader)
