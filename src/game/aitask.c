@@ -2230,7 +2230,7 @@ void aitask_cmd_validated_record_queue(AITask* source)
             task->flags |= 0x100;
         }
         task->flags |= 0x10;
-        task->field_38 = (void*)(long)group;
+        task->field_38 = (void*)(intptr_t)group;
         task->ref = source;
         source->ref = task;
         aitask_cmd_link_head(task, source->priority);

@@ -150,13 +150,25 @@ the directory, to pick up a new one.
 
 The `native-hosts` workflow (`.github/workflows/native-hosts.yml`) runs on the
 same events and builds the port on macOS arm64 (`macos-latest`), macOS Intel
-(`macos-15-intel`), both with `CMAKE_OSX_DEPLOYMENT_TARGET=12.0`, and FreeBSD
-15.1 in a VM. Its jobs are not required checks. Each runs
-`tools/setup-miniwin.sh`, then the commands from [Tests](#tests) with Ninja and
-a Release build; SDL3 is the static build configure fetches at
-`LRR_SDL3_GIT_TAG`, with SDL's default drivers. The `--wrap` tests need GNU ld
-options and are not built on macOS. The build turns off fused multiply-add
-(`-ffp-contract=off`), which Clang otherwise uses on arm64.
+(`macos-15-intel`), both with `CMAKE_OSX_DEPLOYMENT_TARGET=12.0`, FreeBSD
+15.1 in a VM, and Windows: MSVC x86 and x64 (`windows-2025`, x86 running
+under WOW64), MSVC arm64 (`windows-11-arm`), and msys2 MinGW64. Its jobs are
+not required checks. Each runs `tools/setup-miniwin.sh`, then the commands
+from [Tests](#tests) with Ninja and a Release build; SDL3 is the static build
+configure fetches at `LRR_SDL3_GIT_TAG`, with SDL's default drivers, except on
+MinGW64, which uses msys2's `mingw-w64-x86_64-sdl3` package. The `--wrap`
+tests need GNU ld options and are not built on macOS or Windows. The build
+turns off fused multiply-add (`-ffp-contract=off`), which Clang otherwise uses
+on arm64; MSVC builds with `/fp:precise`, which does not contract.
+
+On Windows, `config` skips: SDL keeps the preference directory in the user's
+AppData, which the test cannot move into its fixture. The MSVC jobs set the
+checkout's `core.autocrlf` to false, so `patches/miniwin` applies, and run
+CMake from PowerShell with `-DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl`
+inside a developer environment (`ilammy/msvc-dev-cmd`), because Git Bash's
+`link` would shadow MSVC's linker. MinGW links its C and C++ runtimes
+statically, and a build against a shared SDL3 copies `SDL3.dll` beside
+`LegoRR.exe` (and the tests).
 
 
 ## Sources

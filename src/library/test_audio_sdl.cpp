@@ -24,6 +24,7 @@
 #include "gods98/sound3d.h"
 #include "gods98/soundsys.h"
 #include "library/audio_sdl.h"
+#include "platform/native/test_fixture.h"
 #include <miniwin/d3drm.h>
 
 #include <algorithm>
@@ -33,8 +34,6 @@
 #include <cstring>
 #include <string>
 #include <vector>
-
-#include <unistd.h>
 
 extern "C" {
 int sound_streamed_wave_play(const char* fName, int loop, int volume);
@@ -122,7 +121,7 @@ std::vector<char> SineS16(unsigned rate, double seconds, int channels = 2)
     std::vector<char> samples;
     size_t frames = (size_t)(rate * seconds);
     for (size_t i = 0; i < frames; i++) {
-        int value = (int)lround(0.5 * 32767.0 * sin(2.0 * M_PI * 440.0 * i / rate));
+        int value = (int)lround(0.5 * 32767.0 * sin(2.0 * SDL_PI_D * 440.0 * i / rate));
         for (int c = 0; c < channels; c++) PutLe16(samples, (unsigned)(value & 0xffff));
     }
     return samples;
@@ -141,11 +140,19 @@ bool WriteFile(const std::string& path, const std::vector<char>& bytes)
     return fclose(file) == 0 && ok;
 }
 
+/* A new directory in the host's temporary directory. */
 std::string MakeTempDir()
 {
-    char pattern[] = "/tmp/lrr-audio-test-XXXXXX";
-    const char* dir = mkdtemp(pattern);
-    return dir ? std::string(dir) : std::string();
+    std::error_code ec;
+    const std::filesystem::path base = std::filesystem::temp_directory_path(ec);
+    if (ec) return std::string();
+    for (int attempt = 0; attempt < 100; attempt++) {
+        char name[64];
+        SDL_snprintf(name, sizeof(name), "lrr-audio-test-%08x", (unsigned)SDL_rand_bits());
+        const std::filesystem::path dir = base / name;
+        if (std::filesystem::create_directory(dir, ec)) return dir.generic_string();
+    }
+    return std::string();
 }
 
 /* Waits up to timeoutMs for done(). */
@@ -442,7 +449,7 @@ void TestBuffers()
 void TestCdAudio(const std::string& dir)
 {
     char result[200];
-    CHECK(chdir(dir.c_str()) == 0);
+    CHECK(fixture_chdir(dir));
 
     /* No track files: no disc, and the unit's play fails quietly. */
     CHECK(audio_mci_send_string("open cdaudio", result, sizeof(result), NULL) != 0);
@@ -480,11 +487,11 @@ void TestCdAudio(const std::string& dir)
 
 void TestSamplePlayback(const std::string& dir)
 {
-    char cwd[4096];
-    CHECK(getcwd(cwd, sizeof(cwd)) != NULL);
+    const std::string cwd = fixture_cwd();
+    CHECK(!cwd.empty());
     CHECK(SDL_CreateDirectory((dir + "/Data").c_str()));
     CHECK(WriteFile(dir + "/Data/sample.wav", MakeWave(1, 11025, 8, SquareU8(11025, 0.1))));
-    CHECK(chdir(dir.c_str()) == 0);
+    CHECK(fixture_chdir(dir));
     /* An empty WAD: the mount needs one, as the test cannot list a Data
      * directory. */
     CHECK(WriteFile("AudioTest0.wad", { 'W', 'W', 'A', 'D', 0, 0, 0, 0 }));
@@ -514,7 +521,7 @@ void TestSamplePlayback(const std::string& dir)
     scene->Release();
     rm3->Release();
     rm->Release();
-    CHECK(chdir(cwd) == 0);
+    CHECK(fixture_chdir(cwd));
 }
 
 int RunDummy()
@@ -602,7 +609,7 @@ int RunDisk()
         fprintf(stderr, "skip: no disk audio driver: %s\n", SDL_GetError());
         return 77;
     }
-    CHECK(chdir(dir.c_str()) == 0);
+    CHECK(fixture_chdir(dir));
     CHECK(media_cd_audio_device_state_update(0) == 1);
     /* The overlays' streamed sample plays at the primary buffer's volume,
      * which Sound3D_Initialise lowers to -300; play it at full volume. */

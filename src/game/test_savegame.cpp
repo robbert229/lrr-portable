@@ -6,19 +6,19 @@
  * The test calls the unit's save functions (frontend_unit.c, 00417a90-
  * 00417fc0) on a fixture data directory, and checks the port's save
  * directory (files_native_save_path, as isle-portable's savepath) and the
- * .osf reader's assert. If Files.c's start-up cannot find the fixture's
+ * .osf reader's assert, which a second run of this program reads (the
+ * --load-osf mode). If Files.c's start-up cannot find the fixture's
  * Data directory it calls exit(0), which the atexit guard reports as a
  * failure. */
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <signal.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include <unistd.h>
 
+#include <filesystem>
 #include <string>
+
+#include <SDL3/SDL.h>
 
 #include "game/frontend_unit.h"
 #include "game/objectrecall.h"
@@ -26,6 +26,7 @@
 #include "gods98/files.h"
 #include "gods98/files_native.h"
 #include "gods98/main_globs.h"
+#include "platform/native/test_fixture.h"
 
 /* The unit's functions under the names they link as natively
  * (frontend_unit_link_names.h). */
@@ -66,7 +67,7 @@ static void exit_guard(void)
     if (!s_finished) {
         printf("FAIL: the test exited early (Files.c start-up found no Data directory?)\n");
         fflush(stdout);
-        _exit(1);
+        _Exit(1);
     }
 }
 
@@ -109,9 +110,8 @@ static unsigned char* read_file(int slot, const char* ext, size_t* size)
 static int file_exists_on_disk(int slot, const char* ext)
 {
     char path[64];
-    struct stat st;
     slot_path(path, sizeof(path), slot, ext);
-    return stat(path, &st) == 0;
+    return fixture_exists(path);
 }
 
 static void remove_slot(int slot)
@@ -617,27 +617,25 @@ static void test_read_save_files(void)
 
 static int is_directory(const char* path)
 {
-    struct stat st;
-    return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
+    return fixture_is_directory(path);
 }
 
 static long file_size_at(const std::string& path)
 {
-    struct stat st;
-    return stat(path.c_str(), &st) == 0 ? (long)st.st_size : -1;
+    return fixture_file_size(path);
 }
 
 /* file_make_dir builds "Data\\Saves"; the substitution maps it, so the
  * directory is Saves inside Data, not one named with a backslash. */
 static void test_make_dir(void)
 {
-    char cmd[64];
-    snprintf(cmd, sizeof(cmd), "rm -rf Data/Saves");
-    if (system(cmd) != 0) return;
+    fixture_remove_all("Data/Saves");
     files_native_set_save_path(NULL);
     file_make_dir("Saves");
     CHECK(is_directory("Data/Saves"), "mkdir: Data\\Saves is Data/Saves");
-    CHECK(access("Data\\Saves", F_OK) != 0, "mkdir: no directory named with a backslash");
+    /* On Windows "Data\\Saves" is the same directory. */
+    CHECK(fixture_backslash_separates() || !fixture_exists("Data\\Saves"),
+          "mkdir: no directory named with a backslash");
 }
 
 /* The save directory (files_native_save_path, isle-portable's savepath):
@@ -645,16 +643,16 @@ static void test_make_dir(void)
  * names stay in the data directory. */
 static void test_save_directory(void)
 {
-    char cwd[1024];
     std::string root, saves;
     Front_SaveData* slot = &frontGlobs.saveData[1];
     File* file;
 
-    if (getcwd(cwd, sizeof(cwd)) == NULL) {
+    root = fixture_cwd();
+    if (root.empty()) {
         CHECK(0, "savedir: getcwd");
         return;
     }
-    root = std::string(cwd) + "/profile";
+    root += "/profile";
     saves = root + "/saves";
     files_native_set_save_path((saves + "/").c_str()); /* a trailing '/' is trimmed */
     CHECK(files_native_save_path() != NULL && saves == files_native_save_path(),
@@ -705,20 +703,36 @@ static void test_save_directory(void)
 
     /* Other names stay in the data directory. */
     if ((file = file_open("Savesx.txt", "wb")) != NULL) file_close(file);
-    CHECK(access("Data/Savesx.txt", F_OK) == 0, "savedir: a name that only starts with Saves stays");
+    CHECK(fixture_exists("Data/Savesx.txt"), "savedir: a name that only starts with Saves stays");
 
     files_native_set_save_path("");
     CHECK(files_native_save_path() == NULL, "savedir: an empty path restores Data\\Saves");
 }
 
+/* This program's path, for the .osf child. */
+static std::string s_self;
+
+/* The child: Files.c's start-up in the fixture, then the load. A start-up
+ * that exits early fails the child through the atexit guard. */
+static int load_osf_child(void)
+{
+    file_initialise("savegame_test", 0, "");
+    s_finished = 1;
+    files_native_set_save_path(NULL);
+    object_recall_load_rrosfile("Saves\\assert.osf");
+    return 0;
+}
+
 /* ObjectRecall_LoadRROSFile (00459470) asserts the sidecar's 'RRSO' magic,
  * as isle-portable asserts its save version; a release build loads nothing
- * from it instead. Each load runs in a child so the abort is observable. */
+ * from it instead. Each load runs in a child process (this program again,
+ * in the fixture) so the abort is observable: the child's exit code, which
+ * is not 0 after an abort (SDL reports -SIGABRT on POSIX hosts, Windows
+ * exits with 3). -1 when the child does not run. */
 static int load_osf_in_child(const unsigned char* bytes, size_t size)
 {
     FILE* fp = fopen("Data/Saves/assert.osf", "wb");
-    pid_t pid;
-    int status = 0;
+    int exitcode = -1;
 
     if (fp == NULL) {
         CHECK(0, "fixture: cannot write the .osf (no Data/Saves?)");
@@ -727,12 +741,15 @@ static int load_osf_in_child(const unsigned char* bytes, size_t size)
     fwrite(bytes, 1, size, fp);
     fclose(fp);
     fflush(stdout);
-    if ((pid = fork()) == 0) {
-        object_recall_load_rrosfile("Saves\\assert.osf");
-        _exit(0);
+    const char* args[] = { s_self.c_str(), "--load-osf", NULL };
+    SDL_Process* child = SDL_CreateProcess(args, false);
+    if (child == NULL) {
+        CHECK(0, "fixture: cannot run the .osf child");
+        return -1;
     }
-    waitpid(pid, &status, 0);
-    return status;
+    if (!SDL_WaitProcess(child, true, &exitcode)) exitcode = -1;
+    SDL_DestroyProcess(child);
+    return exitcode;
 }
 
 static void test_osf_assert(void)
@@ -742,16 +759,14 @@ static void test_osf_assert(void)
     int status;
 
     files_native_set_save_path(NULL);
-    mkdir("Data/Saves", 0755);
+    fixture_mkdir("Data/Saves");
     status = load_osf_in_child(good, sizeof(good));
-    CHECK(WIFEXITED(status) && WEXITSTATUS(status) == 0, "osf: a valid sidecar loads");
+    CHECK(status == 0, "osf: a valid sidecar loads");
     status = load_osf_in_child(bad, sizeof(bad));
 #ifndef NDEBUG
-    CHECK(WIFSIGNALED(status) && WTERMSIG(status) == SIGABRT,
-          "osf: a debug build asserts on a wrong magic");
+    CHECK(status != 0 && status != -1, "osf: a debug build asserts on a wrong magic");
 #else
-    CHECK(WIFEXITED(status) && WEXITSTATUS(status) == 0,
-          "osf: a release build loads nothing from a wrong magic");
+    CHECK(status == 0, "osf: a release build loads nothing from a wrong magic");
 #endif
     remove("Data/Saves/assert.osf");
 }
@@ -820,7 +835,7 @@ static void test_osf_round_trip(void)
     size_t size;
 
     files_native_set_save_path(NULL);
-    mkdir("Data/Saves", 0755);
+    fixture_mkdir("Data/Saves");
     write_disk_file("Data/Saves/in.osf", OSF_TWO, sizeof(OSF_TWO));
     CHECK(object_recall_load_rrosfile("Saves\\in.osf") == 1, "osf round trip: the load succeeds");
     CHECK(object_recall_save("Saves\\out.osf") == 1, "osf round trip: the save succeeds");
@@ -863,20 +878,18 @@ static void test_osf_round_trip(void)
     remove("Data/Saves/out.osf");
 }
 
-int main(void)
+int main(int argc, char** argv)
 {
-    char cmd[128];
-
     atexit(exit_guard);
-    snprintf(cmd, sizeof(cmd), "rm -rf %s", FIX);
-    if (system(cmd) != 0) return 1;
-    mkdir(FIX, 0755);
-    if (chdir(FIX) != 0) {
+    if (argc > 1 && strcmp(argv[1], "--load-osf") == 0) return load_osf_child();
+    std::error_code ec;
+    s_self = std::filesystem::absolute(argv[0], ec).string();
+    if (!fixture_enter(FIX)) {
         printf("FAIL: chdir %s\n", FIX);
         s_finished = 1;
         return 1;
     }
-    mkdir("Data", 0755);
+    fixture_mkdir("Data");
     file_initialise("savegame_test", 0, "");
     /* The saves stay in Data\\Saves unless a test configures a directory. */
     files_native_set_save_path(NULL);

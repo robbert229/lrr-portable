@@ -10,9 +10,19 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # No fused multiply-add: the original's x87 code rounds every product, and
 # miniwin's rasterizer needs a shared edge to evaluate to exactly opposite
 # values from its two triangles. Clang contracts a * b + c by default where
-# the target has FMA (arm64), and GCC can too.
+# the target has FMA (arm64), and GCC can too. MSVC's /fp:precise (its
+# default, stated here) does not contract since Visual Studio 2022;
+# /fp:contract would.
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   add_compile_options(-ffp-contract=off)
+elseif(MSVC)
+  add_compile_options(/fp:precise)
+endif()
+
+# MinGW links its C and C++ runtimes and winpthread statically, as
+# isle-portable does, so LegoRR.exe runs outside the msys2 shell.
+if(MINGW)
+  add_link_options(-static -static-libgcc -static-libstdc++)
 endif()
 
 set(SRC_ROOT "src" CACHE PATH "Directory containing the reconstruction source tree")
@@ -294,6 +304,12 @@ set_target_properties(program PROPERTIES OUTPUT_NAME "LegoRR")
 target_link_libraries(program PRIVATE units)
 if(WIN32)
   set_target_properties(program PROPERTIES WIN32_EXECUTABLE TRUE)
+  # A shared SDL3 (an installed package; the fetched one is static) goes
+  # beside LegoRR.exe, as isle-portable copies its runtime DLLs. The tests
+  # build into the same directory and find it there too.
+  add_custom_command(TARGET program POST_BUILD
+    COMMAND "$<$<BOOL:$<TARGET_RUNTIME_DLLS:program>>:${CMAKE_COMMAND};-E;copy_if_different;$<TARGET_RUNTIME_DLLS:program>;$<TARGET_FILE_DIR:program>>"
+    COMMAND_EXPAND_LISTS)
 endif()
 
 include(CTest)
@@ -308,6 +324,8 @@ if(BUILD_TESTING)
   # The units' vsprintf prints "%b" as VC5 LIBC does, on every host.
   add_executable(vc5_vsprintf_test src/crt/test_vc5_vsprintf.cpp)
   target_include_directories(vc5_vsprintf_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+  # vc5names.h compares without case through SDL.
+  target_link_libraries(vc5_vsprintf_test PRIVATE SDL3::SDL3)
   add_test(NAME vc5_vsprintf COMMAND vc5_vsprintf_test)
   set_tests_properties(vc5_vsprintf PROPERTIES LABELS crt)
   # FrontEnd.c's random menu overlay roll on a simulated clock: the unit's

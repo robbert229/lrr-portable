@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 #
-# The native port on macOS (arm64 and Intel) and FreeBSD. These jobs are not
+# The native port on macOS (arm64 and Intel), FreeBSD, and Windows (MSVC x86,
+# x64 and arm64, and msys2 MinGW64). These jobs are not
 # required checks: native-build is the only one. Each configures, builds and
 # runs ctest as native-build does, with SDL3 fetched by CMake at the pinned
 # commit (CMakeLists.txt, LRR_SDL3_GIT_TAG). The Python tool tests and the
@@ -78,3 +79,88 @@ jobs:
             cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
             cmake --build build
             ctest --test-dir build --output-on-failure
+
+  windows-msvc:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # x86 runs on the x64 runner under WOW64; arm64 on the arm64 runner.
+          - { name: 'windows-msvc-x86', os: 'windows-2025', msvc-arch: 'amd64_x86' }
+          - { name: 'windows-msvc-x64', os: 'windows-2025', msvc-arch: 'amd64' }
+          - { name: 'windows-msvc-arm64', os: 'windows-11-arm', msvc-arch: 'arm64' }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Keep line endings as committed
+        shell: pwsh
+        run: git config --global core.autocrlf false
+
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.msvc-arch }}
+
+      - name: Bootstrap sparse miniwin
+        run: tools/setup-miniwin.sh
+
+      - name: Configure, build, and test
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: "4"
+        # pwsh: Git Bash's /usr/bin/link would shadow MSVC's link.exe.
+        shell: pwsh
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          cmake --build build
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          ctest --test-dir build --output-on-failure
+
+  windows-mingw64:
+    name: windows-mingw64
+    runs-on: windows-2025
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Keep line endings as committed
+        shell: pwsh
+        run: git config --global core.autocrlf false
+
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Set up msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            git
+            mingw-w64-x86_64-cc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-sdl3
+
+      - name: Bootstrap sparse miniwin
+        run: tools/setup-miniwin.sh
+
+      - name: Configure, build, and test
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: "4"
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+          ctest --test-dir build --output-on-failure

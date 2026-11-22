@@ -4597,6 +4597,11 @@ int front_save_read_save_file(uint32_t saveIndex, void* outData, int readOnly)
                                                front_level_link_callback_inc_count, &tutorialsCount);
             front_levels_reset_visited();
             if (((Front_SaveData*)outData)->missionsCount != missionsCount && !readOnly) {
+                /* The original leaves the read open here and rewrites the
+                 * file through a second handle, which Windows refuses
+                 * under SDL's sharing mode; closing it first rewrites the
+                 * slot on every host (and no longer leaks the handle). */
+                file_close(file);
                 front_save_write_save_file(saveIndex, NULL);
                 memset(outData, 0, sizeof(Front_SaveData));
                 return 0;
