@@ -60,3 +60,9 @@ lrr_unit_test(rock_fall_styles SOURCES ${GAME_DIR}/test_rock_fall_styles.cpp
 lrr_unit_test(terrain_cell_objects SOURCES ${GAME_DIR}/test_terrain_cell_objects.cpp
   WRAP lego_cell_init_pass terrain_cell_occupied_or_flag_current
   LABELS terrain_cell_objects)
+
+# Encyclopedia selection, one-shot text, and marker cleanup.
+lrr_unit_test(encyclopedia SOURCES ${GAME_DIR}/test_encyclopedia.cpp
+  WRAP ui_text_output_object_release_target panel_text_window_print_f
+    ui_text_output_position_and_draw lego_selected_entity_ground_marker_render
+  LABELS encyclopedia)
