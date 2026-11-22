@@ -1080,14 +1080,18 @@ void reward_draw_item(RewardLevelItem* item, unsigned int mask, unsigned int cou
         Area2F rect;
         if (item->flic == NULL)
             flic_setup(item->flicName, (void**)&item->flic, 0);
-        rect.x = (float)item->flicX;
-        rect.y = (float)item->flicY;
-        rect.width = (float)item->flicWidth;
-        rect.height = (float)item->flicHeight;
-        if (REWARD_FLIC_FRAME(item->flic) < 35)
-            flic_animate(item->flic, &rect, 1, 0);
-        else
-            flic_animate(item->flic, &rect, 0, 0);
+        /* PORT-ONLY: a flic that cannot be opened leaves item->flic NULL
+         * (Flic_Setup): draw nothing. */
+        if (item->flic != NULL) {
+            rect.x = (float)item->flicX;
+            rect.y = (float)item->flicY;
+            rect.width = (float)item->flicWidth;
+            rect.height = (float)item->flicHeight;
+            if (REWARD_FLIC_FRAME(item->flic) < 35)
+                flic_animate(item->flic, &rect, 1, 0);
+            else
+                flic_animate(item->flic, &rect, 0, 0);
+        }
     }
     if (rewardGlobs.displayText) {
         if ((item->flags & REWARD_ITEM_FLAG_TEXT) && (mask & REWARD_ITEM_FLAG_TEXT)) {

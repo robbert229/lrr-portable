@@ -322,10 +322,13 @@ void pointer_draw_pointer(unsigned int mouseX, unsigned int mouseY)
     y = (float)mouseY;
     pos.x = x;
     pos.y = y;
-    if (pointerGlobs.isFlic[pointerGlobs.currType] != 1) {
+    /* PORT-ONLY: a cursor flic that failed to open has no image (Flic_Setup
+     * leaves it NULL): draw the standard cursor in its place. */
+    if (pointerGlobs.isFlic[pointerGlobs.currType] != 1 ||
+        pointerGlobs.images[pointerGlobs.currType] == NULL) {
         image = pointerGlobs.images[pointerGlobs.currType];
         if (image == NULL) image = pointerGlobs.images[Pointer_Standard];
-        image_display_scaled(image, NULL, &pos, NULL);
+        if (image != NULL) image_display_scaled(image, NULL, &pos, NULL);
     } else {
         destArea.x = (float)pointerGlobs.flicOffsets[pointerGlobs.currType].x + x;
         destArea.y = (float)pointerGlobs.flicOffsets[pointerGlobs.currType].y + y;
