@@ -230,6 +230,7 @@ These change the original's code where it misbehaves. Each one is marked
 | --- | --- | --- | --- |
 | Restart Mission level name | frees `levelName`, which the new level keeps as its name; Win32's heap hid this | doesn't free it | 62f44679 (#903), `lego_unit.c` |
 | NaN move probe | a NaN facing gives `INT_MIN` block coordinates, which 32-bit arithmetic wraps to block 0 | clamps out-of-range coordinates to block 0, the original's result, instead of reading outside the grid | 62f44679, `lego_unit.c` |
+| Missing `.flh` animation | `Flic_Setup` fails but leaves its caller a half-built flic with no surface; the main menu's overlay animation (`Data\AVI\*.flh`) then calls through it and crashes a few seconds after the menu appears (a wasm `null function` trap on the web build); the reward screen and cursors would do the same (#983) | a flic that cannot be opened is skipped: the menu shows no overlay animation, the reward screen no flic, a cursor falls back to the standard one. No `[tweaks]` key: the original had no behaviour to restore | `flic_unit.c`, `pointer.c`, `reward.c` |
 | Animated cursor flic | walks past the drawn frame and over-reads | stops after the frame; bounds the walk by the loaded size | e04b5f1b (#895), `flic_unit.c` |
 | Texture free order | releases the surface before the texture that uses it; leaks the record | releases the texture first; frees the record | 16d561af (#896) |
 | Unopened movie size | reads a NULL surface | guards it | `movie_unit.cpp` |

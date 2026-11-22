@@ -635,6 +635,11 @@ if(BUILD_TESTING)
   add_executable(flic_chunk_walk_test ${ENGINE_DIR}/test_flic_chunk_walk.cpp)
   target_link_libraries(flic_chunk_walk_test PRIVATE units)
   add_test(NAME flic_chunk_walk COMMAND flic_chunk_walk_test)
+  # A flic that fails to open leaves its caller a NULL pointer, not a struct
+  # with no surface to animate (issue #983).
+  add_executable(flic_open_failure_test ${ENGINE_DIR}/test_flic_open_failure.cpp)
+  target_link_libraries(flic_open_failure_test PRIVATE units)
+  add_test(NAME flic_open_failure COMMAND flic_open_failure_test)
   # G98-029's registry walk over the test's own registry: the unit alone,
   # without the seam's stubs.
   add_executable(registry_test ${ENGINE_DIR}/test_registry.cpp ${ENGINE_DIR}/g98_029.c)

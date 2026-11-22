@@ -118,12 +118,18 @@ int Flic_Setup(const char* filename, LPFLICSTRUCT* fsp, unsigned int flags)
     unsigned int width;
     unsigned int height;
 
+    /* PORT-ONLY: a failed open leaves *fsp NULL. The original returned 0 with
+     * *fsp still the half-built, zeroed FLICSTRUCT, which its callers
+     * (FrontEnd.c's overlays, Reward.c's score flics, Pointer.c's cursors)
+     * then held and animated as if it were open: a missing .flh made the
+     * next Flic_Animate call through the struct's null surface (#983). */
     *fsp = (LPFLICSTRUCT)malloc(sizeof(FLICSTRUCT));
+    if (*fsp == NULL) return 0;
     memset(*fsp, 0, sizeof(FLICSTRUCT));
     (*fsp)->fsDisplayMode = FLICMODE_HICOLOR;
     _splitpath(filename, drive, dir, fname, ext);
 
-    if (!Flic_LoadHeader(filename, fsp)) return 0;
+    if (!Flic_LoadHeader(filename, fsp)) goto fail;
 
     memset(&ddsd, 0, sizeof(ddsd));
     ddsd.dwSize = sizeof(ddsd);
@@ -136,6 +142,7 @@ int Flic_Setup(const char* filename, LPFLICSTRUCT* fsp, unsigned int flags)
     (*fsp)->fsXsize = width;
     (*fsp)->fsYsize = height;
     dd->CreateSurface(&ddsd, &(*fsp)->fsSurface, NULL);
+    if ((*fsp)->fsSurface == NULL) goto fail;
 
     colourKey.dwColorSpaceLowValue = 0;
     colourKey.dwColorSpaceHighValue = 0;
@@ -154,6 +161,11 @@ int Flic_Setup(const char* filename, LPFLICSTRUCT* fsp, unsigned int flags)
         (*fsp)->pointerposition = 0;
         (*fsp)->rambufferhandle = (char*)malloc((*fsp)->fsHeader.size);
         (*fsp)->filehandle = file_open(filename, "rb");
+        if ((*fsp)->rambufferhandle == NULL || (*fsp)->filehandle == NULL) {
+            if ((*fsp)->filehandle != NULL) file_close((*fsp)->filehandle);
+            (*fsp)->filehandle = NULL;
+            goto fail;
+        }
         file_seek((*fsp)->filehandle, 128, SEEK_SET);
         file_read((*fsp)->rambufferhandle, (*fsp)->fsHeader.size, 1,
                   (*fsp)->filehandle);
@@ -164,7 +176,7 @@ int Flic_Setup(const char* filename, LPFLICSTRUCT* fsp, unsigned int flags)
         if ((*fsp)->filehandle == NULL) {
             // STRING: LEGORR 0x004ab10c
             snprintf(buff, sizeof(buff), "Not Enough Memory > %s", filename);
-            return 0;
+            goto fail;
         }
         file_seek((*fsp)->filehandle, 128, SEEK_SET);
     }
@@ -172,6 +184,16 @@ int Flic_Setup(const char* filename, LPFLICSTRUCT* fsp, unsigned int flags)
     (*fsp)->fsLoadBuffer = malloc(20000);
 
     return 1;
+
+fail:
+    /* PORT-ONLY: release what was built so far, so that the caller's pointer
+     * is NULL (safe to test, draw and close) rather than a struct with no
+     * surface. */
+    if ((*fsp)->fsSurface != NULL) (*fsp)->fsSurface->Release();
+    free((*fsp)->rambufferhandle);
+    free(*fsp);
+    *fsp = NULL;
+    return 0;
 }
 
 // FUNCTION: LEGORR 0x00483f00
