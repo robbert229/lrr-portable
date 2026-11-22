@@ -82,3 +82,7 @@ lrr_unit_test(text SOURCES ${GAME_DIR}/test_text.cpp LABELS text)
 lrr_unit_test(tooltip SOURCES ${GAME_DIR}/test_tooltip.cpp
   WRAP surface_fill_pixel_spans surface_draw_polyline font_print_f Image_DisplayScaled
   LABELS tooltip)
+
+# Configured upgrade parts and rebuilding the list when a level changes.
+lrr_unit_test(upgrade SOURCES ${GAME_DIR}/test_upgrade.cpp
+  WRAP lego_upgrade_name_entry_find legoobject_create legoobject_remove LABELS upgrade)
