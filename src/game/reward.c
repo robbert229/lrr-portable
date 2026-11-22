@@ -38,6 +38,7 @@
 #include "gods98/record_api.h"
 #include "gods98/view_api.h"
 #include "advisor.h"
+#include "platform/native/config.h"
 #include "effects.h"
 #include "entity_api.h"
 #include "frontend.h"
@@ -1459,6 +1460,16 @@ int reward_check_skip(void)
             sound_request_queue_submit(0x29, 1);
             return 1;
         }
+        /* [divergence:training-save] The original goes straight on when a
+         * level shows no rewards screen (the training missions), so it
+         * offers no Save button, and a new game's progress stays in slot 5,
+         * which the Load menu never lists. Offer the Save Game screen the
+         * Save button opens; reward_advance then records the level in the
+         * slot chosen, or in slot 5 if the player backs out
+         * (docs/divergences.md). */
+        if (level->status == 1 &&
+            LRR_GetTrainingSave() == LRR_TRAINING_SAVE_PROMPT) // [library:config]
+            reward_save_menu();
         reward_advance();
     }
     return 0;

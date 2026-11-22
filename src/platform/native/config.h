@@ -12,7 +12,10 @@
  * It also holds the display settings that the original's start-up "Mode
  * Selection" dialog (gods98 Init.c) asked for, as isle.ini holds the ones
  * Lego Island's CONFIG.EXE set: full screen or a window, the resolution,
- * and the 3D device. The port starts without the dialog. */
+ * and the 3D device. The port starts without the dialog.
+ *
+ * And it holds the port's opt-outs from its divergences from the original
+ * game (docs/divergences.md): legorr:Training Save. */
 #ifndef LEGORRR_PLATFORM_NATIVE_CONFIG_H
 #define LEGORRR_PLATFORM_NATIVE_CONFIG_H
 
@@ -28,6 +31,7 @@
 #define LRR_CONFIG_XRES "legorr:Horizontal Resolution"
 #define LRR_CONFIG_YRES "legorr:Vertical Resolution"
 #define LRR_CONFIG_DEVICE "legorr:3D Device"
+#define LRR_CONFIG_TRAININGSAVE "legorr:Training Save"
 
 /* The display settings, in place of the dialog's choices. device is a 3D
  * device's description as DirectDraw.c lists it, e.g. "Miniwin driver
@@ -42,6 +46,17 @@ struct LRR_DisplayConfig {
     char device[256];
 };
 
+/* legorr:Training Save (docs/divergences.md, "Save after a training
+ * mission"). The original shows no rewards screen, and so no Save button,
+ * after a level whose Lego.cfg block has no Reward section (the eight
+ * training missions), and keeps their progress only in a slot the Load menu
+ * cannot open. "prompt", the default, opens the Save Game screen after such
+ * a level is completed; "off" keeps the original's behaviour. */
+enum LRR_TrainingSave {
+    LRR_TRAINING_SAVE_OFF = 0,
+    LRR_TRAINING_SAVE_PROMPT = 1,
+};
+
 /* Reads the configuration from `iniPath`, or from LRR_CONFIG_FILE in the
  * preference directory when it is NULL, writing that file with defaults
  * when it is missing or empty, and applies it (files_native_set_save_path).
@@ -52,5 +67,9 @@ bool LRR_LoadConfig(const char* iniPath);
 /* The display settings LRR_LoadConfig read, or the defaults before it
  * runs: a 640x480 window on the dialog's default device. */
 const LRR_DisplayConfig* LRR_GetDisplayConfig();
+
+/* The legorr:Training Save setting LRR_LoadConfig read, or the default,
+ * LRR_TRAINING_SAVE_PROMPT, before it runs. */
+LRR_TrainingSave LRR_GetTrainingSave();
 
 #endif /* LEGORRR_PLATFORM_NATIVE_CONFIG_H */
