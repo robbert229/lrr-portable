@@ -68,12 +68,15 @@ typedef struct WADFILE {
     int eof;
 } WADFILE;
 
+struct SDL_IOStream;
+
 /* An open file: a C library stream or a WAD entry. 8 bytes in the original;
- * the pointer widens on 64-bit hosts. */
+ * the pointer widens on 64-bit hosts. The original's FILE* is an SDL3
+ * stream (// [library:filesystem], as isle-portable's LegoFile). */
 typedef struct File {
     FileSys type;
     union {
-        FILE* std;
+        struct SDL_IOStream* std;
         WADFILE* wad;
     } stream;
 } File;

@@ -11,14 +11,19 @@
  * its cd.key and checks the install; File_CheckRedundantFiles lists the files
  * under the data directory against a log.
  *
- * The native port does not run this unit: its file layer is the port tail,
- * gods98/files_port.cpp, which native callers reach by the port's names
- * (files.h explains the naming). */
+ * [library:filesystem] (ADR 0007), as isle-portable's LegoFile: the C
+ * library streams are SDL3 streams, every path goes through
+ * files_native_host_path (Windows separators and case, isle-portable's
+ * MxString::MapPathToFilesystem), and a name under "Saves" opens in the save
+ * directory the configuration names (files_native_save_path), not in the
+ * data directory. */
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include <SDL3/SDL_filesystem.h>
+#include <SDL3/SDL_iostream.h>
 #include <miniwin/windows.h>
 
 #include "files_native.h"
@@ -41,6 +46,71 @@ static void files_nothing(const char* msg, ...)
 
 #define FILE_MAXPATH 260
 #define FILE_MAXWADS 10
+
+/* [library:filesystem] The original's C library calls on SDL3 streams, as
+ * isle-portable's LegoFile::Open: the Windows path maps to the host's
+ * first. SDL_IOFromFile fails cleanly on a NULL path (one too long). */
+static SDL_IOStream* files_io_open(const char* path, const char* mode)
+{
+    char hostPath[FILE_MAXPATH * 4];
+
+    return SDL_IOFromFile(files_native_host_path(hostPath, path, sizeof(hostPath)), mode);
+}
+
+/* [library:filesystem] fgets on an SDL3 stream: at most num - 1 bytes, up
+ * to and including a newline; NULL at the end with nothing read. */
+static char* files_io_gets(char* buffer, int num, SDL_IOStream* io)
+{
+    int pos = 0;
+    char c;
+
+    if (num <= 0) return NULL;
+    while (pos < num - 1 && SDL_ReadIO(io, &c, 1) == 1) {
+        buffer[pos++] = c;
+        if (c == '\n') break;
+    }
+    buffer[pos] = '\0';
+    return pos ? buffer : NULL;
+}
+
+/* [library:filesystem] fscanf(stream, "%<size-1>s", word) on an SDL3
+ * stream: skips blanks, then reads one word; 0 at the end of the stream. */
+static int files_io_scan_word(SDL_IOStream* io, char* word, int size)
+{
+    int len = 0;
+    char c;
+
+    do {
+        if (SDL_ReadIO(io, &c, 1) != 1) return 0;
+    } while (isspace((unsigned char)c));
+    for (;;) {
+        if (len == size - 1) {
+            SDL_SeekIO(io, -1, SDL_IO_SEEK_CUR); /* fscanf leaves it unread */
+            break;
+        }
+        word[len++] = c;
+        if (SDL_ReadIO(io, &c, 1) != 1) break;
+        if (isspace((unsigned char)c)) break;
+    }
+    word[len] = '\0';
+    return 1;
+}
+
+/* [library:filesystem] The name under the save directory of a name under
+ * the original's "Saves" ("Saves\\0.sav" -> "0.sav", "Saves" -> ""), or
+ * NULL when no save directory is configured or the name is elsewhere. */
+static const char* files_save_name(const char* name)
+{
+    const char* saves = "Saves";
+    size_t len = strlen(saves);
+
+    if (files_native_save_path() == NULL || name == NULL) return NULL;
+    if (*name == '\\' || *name == '/') name++;
+    if (strnicmp(name, saves, len) != 0) return NULL;
+    if (name[len] == '\0') return name + len;
+    if (name[len] == '\\' || name[len] == '/') return name + len + 1;
+    return NULL;
+}
 
 typedef struct File_Globs {
     char basePath[1024];               /* 005339a0 File_SetBaseSearchPath */
@@ -77,7 +147,7 @@ void file_initialise(const char* programName, int insistOnCD,
     int foundWad = 0;
     int foundCD;
     int failed = 0;
-    FILE* fp;
+    SDL_IOStream* fp;
 
     _getcwd(cwd, FILE_MAXPATH);
     if (cwd[strlen(cwd) - 1] == '\\') cwd[strlen(cwd) - 1] = '\0';
@@ -139,21 +209,23 @@ void file_initialise(const char* programName, int insistOnCD,
                 // STRING: LEGORR 0x004aaf1c
                 "cd.key");
         // STRING: LEGORR 0x004a1eac
-        if ((fp = files_native_fopen(path, "r")) != NULL) { // [library:filesystem]
-            fclose(fp);
+        if ((fp = files_io_open(path, "r")) != NULL) { // [library:filesystem]
+            SDL_CloseIO(fp); // [library:filesystem]
             failed = 1;
         }
     }
 
     if (!failed) {
-        _mkdir("Data");
+        char hostPath[FILE_MAXPATH * 4];
+
+        SDL_CreateDirectory(files_native_host_path(hostPath, "Data", sizeof(hostPath))); // [library:filesystem]
         sprintf(path, "%s\\%s", "Data",
                 // STRING: LEGORR 0x004aaf10
                 "delme.dat");
-        if ((fp = files_native_fopen(path, "r")) != NULL) { // [library:filesystem]
-            fclose(fp);
-            _chmod(path, 0x80);
-            remove(path);
+        if ((fp = files_io_open(path, "r")) != NULL) { // [library:filesystem]
+            SDL_CloseIO(fp); // [library:filesystem]
+            /* SDL_RemovePath needs no read-only bit cleared first (_chmod). */
+            SDL_RemovePath(files_native_host_path(hostPath, path, sizeof(hostPath))); // [library:filesystem]
         }
     } else {
         char err[1024];
@@ -176,15 +248,15 @@ int file_find_data_cd(void)
     char drive[] = "A:\\";
     char path[FILE_MAXPATH];
     unsigned char letter;
-    FILE* fp;
+    SDL_IOStream* fp;
 
     for (letter = 'C'; letter <= 'Z'; letter++) {
         drive[0] = letter;
         if (GetDriveTypeA(drive) == DRIVE_CDROM) {
             // STRING: LEGORR 0x004aaf64
             sprintf(path, "%c:\\%s\\%s", letter, "Data", "cd.key");
-            if ((fp = fopen(path, "r")) != NULL) {
-                fclose(fp);
+            if ((fp = files_io_open(path, "r")) != NULL) { // [library:filesystem]
+                SDL_CloseIO(fp); // [library:filesystem]
                 fileGlobs.cdLetter = letter;
                 return 1;
             }
@@ -241,10 +313,18 @@ int file_get_cd_file_path(char* path, const char* fname)
 // FUNCTION: LEGORR 0x0047f6a0
 void file_make_dir(const char* path)
 {
-    char buffer[FILE_MAXPATH];
+    char buffer[FILE_MAXPATH * 2];
+    char hostPath[FILE_MAXPATH * 4];
+    const char* saveName;
 
-    sprintf(buffer, "%s\\%s", "Data", path);
-    _mkdir(buffer);
+    if ((saveName = files_save_name(path)) != NULL) { // [library:filesystem]
+        snprintf(buffer, sizeof(buffer), "%s\\%s", files_native_save_path(), saveName);
+    } else {
+        sprintf(buffer, "%s\\%s", "Data", path);
+    }
+    /* SDL_CreateDirectory also makes any missing parent, which a save
+     * directory outside the data directory may need. */
+    SDL_CreateDirectory(files_native_host_path(hostPath, buffer, sizeof(hostPath))); // [library:filesystem]
 }
 
 // FUNCTION: LEGORR 0x0047f6e0
@@ -274,7 +354,7 @@ File* file_open(const char* fName, const char* mode)
         break;
     case FileSystem_Std:
         if ((file = file_alloc(fs)) != NULL) {
-            if ((file->stream.std = files_native_fopen(fullName, mode)) != NULL) { // [library:filesystem]
+            if ((file->stream.std = files_io_open(fullName, mode)) != NULL) { // [library:filesystem]
                 // STRING: LEGORR 0x004aafa4
                 flic_opcode27_fallback_noop("STD Load %s\n", fullName);
                 return file;
@@ -282,7 +362,7 @@ File* file_open(const char* fName, const char* mode)
             // STRING: LEGORR 0x004a52b8
             if (case_insensitive_substring_find(mode, "w") == NULL &&
                 file_get_cd_file_path(cdName, fName) &&
-                (file->stream.std = fopen(cdName, mode)) != NULL) {
+                (file->stream.std = files_io_open(cdName, mode)) != NULL) { // [library:filesystem]
                 return file;
             }
             // STRING: LEGORR 0x004aaf94
@@ -334,7 +414,9 @@ int file_seek(File* f, int pos, int mode)
         }
         return 0;
     case FileSystem_Std:
-        return fseek(f->stream.std, pos, mode);
+        /* SEEK_SET, SEEK_CUR and SEEK_END are SDL_IO_SEEK_SET, _CUR and
+         * _END; fseek's 0 is success, SDL_SeekIO's the new position. */
+        return SDL_SeekIO(f->stream.std, pos, (SDL_IOWhence)mode) < 0 ? -1 : 0; // [library:filesystem]
     default:
         // STRING: LEGORR 0x004ab028
         file_error_file("%s(%i) : Unknown file system in call to %s",
@@ -370,7 +452,9 @@ int file_read(void* buffer, int size, int count, File* f)
         f->stream.wad->streamPos += amount;
         return amount / size;
     case FileSystem_Std:
-        return fread(buffer, size, count, f->stream.std);
+        /* fread's count of whole items. */
+        if (size <= 0 || count <= 0) return 0;
+        return (int)(SDL_ReadIO(f->stream.std, buffer, (size_t)size * count) / size); // [library:filesystem]
     default:
         file_error_file("%s(%i) : Unknown file system in call to %s",
                         "C:\\Dev\\SourceSafe\\gods98_dx6\\gods98\\src\\Files.c",
@@ -392,7 +476,9 @@ int file_write(const void* buffer, int size, int count, File* f)
         file_error_file("Cannot write to a file stored in a Wad!");
         return 0;
     case FileSystem_Std:
-        return fwrite(buffer, size, count, f->stream.std);
+        /* fwrite's count of whole items. */
+        if (size <= 0 || count <= 0) return 0;
+        return (int)(SDL_WriteIO(f->stream.std, buffer, (size_t)size * count) / size); // [library:filesystem]
     default:
         file_error_file("%s(%i) : Unknown file system in call to %s",
                         "C:\\Dev\\SourceSafe\\gods98_dx6\\gods98\\src\\Files.c",
@@ -432,7 +518,7 @@ int file_close(File* f)
 // PORT-ONLY: the original's unreferenced File_Flush, which /OPT:REF removed; kept for its fflush reference (finding 667)
 int file_flush(File* f)
 {
-    if (file_get_system(f) == FileSystem_Std) return fflush(f->stream.std);
+    if (file_get_system(f) == FileSystem_Std) return SDL_FlushIO(f->stream.std) ? 0 : EOF; // [library:filesystem]
     return 0;
 }
 
@@ -446,7 +532,7 @@ int file_tell(File* f)
     case FileSystem_Wad:
         return f->stream.wad->streamPos;
     case FileSystem_Std:
-        return ftell(f->stream.std);
+        return (int)SDL_TellIO(f->stream.std); // [library:filesystem]
     default:
         file_error_file("%s(%i) : Unknown file system in call to %s",
                         "C:\\Dev\\SourceSafe\\gods98_dx6\\gods98\\src\\Files.c",
@@ -462,19 +548,19 @@ int file_exists(const char* fName)
 {
     char* fullName;
     FileSys fs;
-    FILE* f;
+    SDL_IOStream* f;
     char cdName[FILE_MAXPATH];
 
     fullName = file_verify_filename(fName);
     fs = file_check_system(fullName, "r");
     if (fs == FileSystem_Std) {
-        if ((f = files_native_fopen(fullName, "r")) != NULL) { // [library:filesystem]
-            fclose(f);
+        if ((f = files_io_open(fullName, "r")) != NULL) { // [library:filesystem]
+            SDL_CloseIO(f); // [library:filesystem]
             return 1;
         }
         if (file_get_cd_file_path(cdName, fName)) {
-            if ((f = fopen(cdName, "r")) != NULL) {
-                fclose(f);
+            if ((f = files_io_open(cdName, "r")) != NULL) { // [library:filesystem]
+                SDL_CloseIO(f); // [library:filesystem]
                 return 1;
             }
         }
@@ -499,8 +585,11 @@ int file_getc(File* f)
          * reading the byte alone does not run past the WAD buffer. */
         return *((const char*)wad_file_data(f->stream.wad->hFile) +
                  f->stream.wad->streamPos++);
-    case FileSystem_Std:
-        return fgetc(f->stream.std);
+    case FileSystem_Std: {
+        unsigned char c;
+
+        return SDL_ReadIO(f->stream.std, &c, 1) == 1 ? c : EOF; // [library:filesystem]
+    }
     default:
         file_error_file("%s(%i) : Unknown file system in call to %s",
                         "C:\\Dev\\SourceSafe\\gods98_dx6\\gods98\\src\\Files.c",
@@ -550,7 +639,7 @@ char* file_gets(char* fgetsBuffer, int num, File* f)
     case FileSystem_Wad:
         return file_internal_fgets(fgetsBuffer, num, f);
     case FileSystem_Std:
-        return fgets(fgetsBuffer, num, f->stream.std);
+        return files_io_gets(fgetsBuffer, num, f->stream.std); // [library:filesystem]
     default:
         file_error_file("%s(%i) : Unknown file system in call to %s",
                         "C:\\Dev\\SourceSafe\\gods98_dx6\\gods98\\src\\Files.c",
@@ -575,7 +664,7 @@ int file_printf(File* f, const char* msg, ...)
         return 0;
     case FileSystem_Std:
         va_start(args, msg);
-        vfprintf(f->stream.std, msg, args);
+        SDL_IOvprintf(f->stream.std, msg, args); // [library:filesystem]
         va_end(args);
         return 0;
     default:
@@ -653,7 +742,7 @@ void file_dealloc(File* file)
     if (file) {
         if (file_get_system(file) == FileSystem_Std) {
             if (file->stream.std) {
-                fclose(file->stream.std);
+                SDL_CloseIO(file->stream.std); // [library:filesystem]
             }
         } else if (file_get_system(file) == FileSystem_Wad) {
             if (file->stream.wad) {
@@ -766,9 +855,21 @@ int file_load_binary_handle(const char* filename, unsigned int* sizeptr)
 char* file_verify_filename(const char* filename)
 {
     char buff[FILE_MAXPATH];
+    const char* saveName;
 
     if (filename) {
         if (*filename == '\\') filename++;
+        if ((saveName = files_save_name(filename)) != NULL) { // [library:filesystem]
+            /* A save opens in the save directory, and must stay inside it
+             * as a data file stays inside the data directory. */
+            const char* savePath = files_native_save_path();
+
+            if ((unsigned)snprintf(buff, sizeof(buff), "%s\\%s", savePath, saveName) < sizeof(buff) &&
+                _fullpath(fileGlobs.fullName, buff, FILE_MAXPATH) &&
+                strncmp(fileGlobs.fullName, savePath, strlen(savePath)) == 0)
+                return fileGlobs.fullName;
+            return NULL;
+        }
         sprintf(buff, "%s\\%s", fileGlobs.dataDir, filename);
         if (_fullpath(fileGlobs.fullName, buff, FILE_MAXPATH)) {
             if (strncmp(fileGlobs.fullName, fileGlobs.dataDir,
@@ -796,10 +897,10 @@ void file_check_redundant_files(const char* logName)
         /* The original hands the File record itself to fscanf and fclose
          * as a C library stream; read the record's own stream instead (a
          * WAD stream has none) and close the record. */
-        FILE* stream = (f->type == FileSystem_Std) ? f->stream.std : NULL;
+        SDL_IOStream* stream = (f->type == FileSystem_Std) ? f->stream.std : NULL;
         fileRedundantListCount = 0;
         while (stream && fileRedundantListCount < 2000 &&
-               fscanf(stream, "%1023s", line) != EOF) {
+               files_io_scan_word(stream, line, sizeof(line))) { // [library:filesystem]
             strcpy(fileRedundantList[fileRedundantListCount++], line);
         }
         file_check_directory(fileGlobs.dataDir);

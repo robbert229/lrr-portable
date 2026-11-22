@@ -9,11 +9,19 @@
  * name after the last backslash and opens <name>0.wad, <name>1.wad, ... in
  * the working directory. The rest goes to WinMain as lpCmdLine, so the
  * shipped exe's flags (-best, -window, -nosound, -debug, ...) work
- * unchanged. */
+ * unchanged.
+ *
+ * Before WinMain it reads the port's configuration file (config.h), as
+ * isle-portable's IsleApp does before it starts the game: --ini <path>
+ * names the file, which otherwise lives in the preference directory. The
+ * option does not reach WinMain. */
 #include <SDL3/SDL.h>
 
 #include <miniwin/windows.h>
 
+#include "platform/native/config.h"
+
+#include <cstring>
 #include <string>
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
@@ -39,7 +47,12 @@ std::string QuoteArgument(const char* arg)
 int main(int argc, char** argv)
 {
     std::string arguments;
+    const char* iniPath = NULL;
     for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--ini") == 0 && i + 1 < argc) {
+            iniPath = argv[++i];
+            continue;
+        }
         if (!arguments.empty()) arguments += ' ';
         arguments += QuoteArgument(argv[i]);
     }
@@ -55,6 +68,10 @@ int main(int argc, char** argv)
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_Init: %s", SDL_GetError());
+        return 1;
+    }
+    if (!LRR_LoadConfig(iniPath)) {
+        SDL_Quit();
         return 1;
     }
     int result = WinMain(NULL, NULL, const_cast<LPSTR>(arguments.c_str()), SW_SHOWNORMAL);

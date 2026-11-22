@@ -49,6 +49,30 @@ make run
 make test
 ```
 
+### Saves and configuration
+
+The original game keeps its saves in `Data\Saves` inside the install. Like
+[isle-portable](https://github.com/isledecomp/isle-portable), the port keeps
+them in a writable per-user directory instead, named by `LegoRR.ini`. The port
+writes that file with defaults on first run, in SDL's preference directory:
+
+| Host | Configuration and saves |
+| --- | --- |
+| Linux | `~/.local/share/lrr-portable/LegoRR/` |
+| macOS | `~/Library/Application Support/lrr-portable/LegoRR/` |
+| Windows | `%APPDATA%\lrr-portable\LegoRR\` |
+
+```ini
+[legorr]
+savepath = /home/me/.local/share/lrr-portable/LegoRR/
+```
+
+Point `savepath` elsewhere to move the saves. Leave it empty to keep the
+original's `Data\Saves`. `--ini <path>` reads another configuration file. Save
+files keep the original's format, so you can copy saves from an install into
+the save directory. The file formats are described in
+[finding 08](docs/findings/08-save-and-checkpoints.md).
+
 [Build guide](docs/building.md) · [Findings](docs/findings/README.md) ·
 [Pseudocode](docs/decompiles/README.md) · [Tools](tools/README.md) ·
 [Compatibility harness](tools/compat/README.md) ·

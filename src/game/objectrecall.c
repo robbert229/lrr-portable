@@ -13,6 +13,7 @@
  * run on the game context natively. The C callers reach the functions here
  * by aliases in their imports headers (finding 648). The unit has no link
  * names: nothing calls it by a port name. */
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -172,7 +173,12 @@ int object_recall_load_rrosfile(const char* fname)
     object_recall_reset();
     if ((file = file_open(fname, "rb")) != NULL) {
         length = file_length(file) - 8;
+        header[0] = header[1] = 0;
         file_read(header, 4, 2, file);
+        /* As isle-portable asserts its save version (LegoGameState::Load):
+         * a debug build stops at a sidecar from another program; a release
+         * build falls through to the original's check, which loads nothing. */
+        assert(header[0] == 0x534f5252);
         if (header[0] == 0x534f5252 && length == (int)(header[1] * sizeof(ObjectRecall))) {
             objectRecallGlobs.objRecallCount = header[1];
             objectRecallGlobs.objRecallSize = header[1];
