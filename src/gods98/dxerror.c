@@ -63,7 +63,7 @@ extern DxerrorGlobs dxerrorGlobs; /* defined at the end of the file */
 // FUNCTION: LEGORR 0x00489d90
 void directx_error_message_format(const char* name, const char* description)
 {
-    sprintf(dxerrorGlobs.message,
+    snprintf(dxerrorGlobs.message, sizeof(dxerrorGlobs.message),
         // STRING: LEGORR 0x004ab834
         "A DirectX error was set in module %s at line no %i.\nError : %s (code %i)\nDX Module : %s\nError Description : %s\n",
         dxerrorGlobs.file, dxerrorGlobs.line, name, dxerrorGlobs.err,

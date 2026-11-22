@@ -163,7 +163,7 @@ int Flic_Setup(const char* filename, LPFLICSTRUCT* fsp, unsigned int flags)
         (*fsp)->filehandle = file_open(filename, "rb");
         if ((*fsp)->filehandle == NULL) {
             // STRING: LEGORR 0x004ab10c
-            sprintf(buff, "Not Enough Memory > %s", filename);
+            snprintf(buff, sizeof(buff), "Not Enough Memory > %s", filename);
             return 0;
         }
         file_seek((*fsp)->filehandle, 128, SEEK_SET);
@@ -201,7 +201,7 @@ int Flic_LoadHeader(const char* filename, LPFLICSTRUCT* fsp)
 
     if ((fp = file_open(filename, "rb")) == NULL) {
         // STRING: LEGORR 0x004ab150
-        sprintf(buff, "Flic File Not Found %s", filename);
+        snprintf(buff, sizeof(buff), "Flic File Not Found %s", filename);
         return 0;
     }
 
@@ -211,7 +211,7 @@ int Flic_LoadHeader(const char* filename, LPFLICSTRUCT* fsp)
     if ((*fsp)->fsHeader.size != file_length(fp)) {
         file_close(fp);
         // STRING: LEGORR 0x004ab13c
-        sprintf(buff, "Flic File Invalid", filename);
+        snprintf(buff, sizeof(buff), "Flic File Invalid", filename);
         return 0;
     }
 
@@ -235,7 +235,7 @@ int Flic_LoadHeader(const char* filename, LPFLICSTRUCT* fsp)
 
     file_close(fp);
     // STRING: LEGORR 0x004ab124
-    sprintf(buff, "Flic File Invalid %s", filename);
+    snprintf(buff, sizeof(buff), "Flic File Invalid %s", filename);
     return 0;
 }
 
@@ -458,7 +458,7 @@ int Flic_FrameChunk(LPFLICSTRUCT fsp)
             fsp->fsLoadBuffer = malloc(size);
             if (fsp->fsLoadBuffer == NULL) {
                 // STRING: LEGORR 0x004ab168
-                sprintf(buff, "Flic Not Enough Memory");
+                snprintf(buff, sizeof(buff), "Flic Not Enough Memory");
                 return 0;
             }
             chunk = (int*)fsp->fsLoadBuffer;
@@ -540,7 +540,7 @@ int Flic_LoadPointers(LPFLICSTRUCT fsp)
             fsp->fsLoadBufferSize = size;
             fsp->fsLoadBuffer = malloc(size);
             if (fsp->fsLoadBuffer == NULL) {
-                sprintf(buff, "Flic Not Enough Memory");
+                snprintf(buff, sizeof(buff), "Flic Not Enough Memory");
                 return 0;
             }
             chunk = (int*)fsp->fsLoadBuffer;
@@ -567,7 +567,7 @@ int Flic_LoadPalette64(LPFLICSTRUCT fsp)
             fsp->fsLoadBufferSize = size;
             fsp->fsLoadBuffer = malloc(size);
             if (fsp->fsLoadBuffer == NULL) {
-                sprintf(buff, "Flic Not Enough Memory");
+                snprintf(buff, sizeof(buff), "Flic Not Enough Memory");
                 return 1;
             }
             chunk = (int*)fsp->fsLoadBuffer;

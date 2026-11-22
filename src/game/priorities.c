@@ -83,7 +83,7 @@ void priorities_load_images(BlockFile* config, const char* game_name)
          item != NULL; item = block_next_equal_key(item)) {
         if (cmd_kind_by_name(item->key, &type)) {
             int count;
-            sprintf(line, "%s", item->value);
+            snprintf(line, sizeof(line), "%s", item->value);
             sound_variant_split(line, parts, ":");
             count = sound_variant_split(parts[0], names, "|");
             priorities.tool_tips[type] = string_duplicate(names[0]);

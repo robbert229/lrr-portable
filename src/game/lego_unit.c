@@ -866,12 +866,12 @@ int lego_game_config_init(void)
                 shared_texture_root_register(sharedDir);
 
                 // STRING: LEGORR 0x004a3a08
-                sprintf(buff, "NextButton%ix%i", display_width_get(), display_height_get());
+                snprintf(buff, sizeof(buff), "NextButton%ix%i", display_width_get(), display_height_get());
                 imageNameStr = block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main", buff, 0));
                 if (imageNameStr != NULL && (legoGlobs_NextButtonImage = image_load_bmp_scaled(imageNameStr, 0, 0)) != NULL) {
                     image_setup_trans(legoGlobs_NextButtonImage, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
                     // STRING: LEGORR 0x004a39f4
-                    sprintf(buff, "NextButtonPos%ix%i", display_width_get(), display_height_get());
+                    snprintf(buff, sizeof(buff), "NextButtonPos%ix%i", display_width_get(), display_height_get());
                     if ((posString = block_get_str_copy(cfgStr, string_path_join(s_engine_config_root, "Main", buff, 0))) != NULL) {
                         if (sound_variant_split(posString, posArgvStr, ",") == 2) {
                             legoGlobs_NextButtonPos[0] = (float)atof(posArgvStr[0]);
@@ -881,12 +881,12 @@ int lego_game_config_init(void)
                     }
                 }
                 // STRING: LEGORR 0x004a39e4
-                sprintf(buff, "BackButton%ix%i", display_width_get(), display_height_get());
+                snprintf(buff, sizeof(buff), "BackButton%ix%i", display_width_get(), display_height_get());
                 imageNameStr = block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main", buff, 0));
                 if (imageNameStr != NULL && (legoGlobs_BackButtonImage = image_load_bmp_scaled(imageNameStr, 0, 0)) != NULL) {
                     image_setup_trans(legoGlobs_BackButtonImage, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
                     // STRING: LEGORR 0x004a39d0
-                    sprintf(buff, "BackButtonPos%ix%i", display_width_get(), display_height_get());
+                    snprintf(buff, sizeof(buff), "BackButtonPos%ix%i", display_width_get(), display_height_get());
                     if ((posString = block_get_str_copy(cfgStr, string_path_join(s_engine_config_root, "Main", buff, 0))) != NULL) {
                         if (sound_variant_split(posString, posArgvStr, ",") == 2) {
                             legoGlobs_BackButtonPos[0] = (float)atof(posArgvStr[0]);
@@ -3560,7 +3560,7 @@ void lego_entity_command_status_feedback_dispatch(struct Lego_Object* liveObj)
 
         if (liveObj->type == 4 &&
             legoGlobs_upgradeNames[liveObj->objLevel] != NULL) {
-            sprintf(buff2,
+            snprintf(buff2, sizeof(buff2),
                     // STRING: LEGORR 0x004a41d4
                     " (%s)",
                     legoGlobs_upgradeNames[liveObj->objLevel]);
@@ -3569,7 +3569,7 @@ void lego_entity_command_status_feedback_dispatch(struct Lego_Object* liveObj)
         if ((liveObj->flags3 & 0x40000) &&
             entity_quad_mesh_render_record_allowed(liveObj) &&
             liveObj->type != 2 && liveObj->type != 3) {
-            sprintf(buff2,
+            snprintf(buff2, sizeof(buff2),
                     // STRING: LEGORR 0x004a41cc
                     "\n%s: %i",
                     legoGlobs_energyText,
@@ -3579,7 +3579,7 @@ void lego_entity_command_status_feedback_dispatch(struct Lego_Object* liveObj)
         if (liveObj->type == 1 && liveObj->driveObject != NULL) {
             name = liveObj->driveObject->customName;
             if (name != NULL && *name != '\0' && legoGlobs_drivenByText != NULL) {
-                sprintf(buff2,
+                snprintf(buff2, sizeof(buff2),
                         // STRING: LEGORR 0x004a41c4
                         "\n%s: %s",
                         legoGlobs_drivenByText, name);
@@ -3660,7 +3660,7 @@ void lego_terrain_command_feedback_dispatch(const int* blockPos, int showConstru
             studs = count_matching_coordinates_in_list(site, 7, 1);
             studsCost = stats_table_word_at_b8(4, site->objID, 0);
             if (crystalsCost) {
-                sprintf(buff2,
+                snprintf(buff2, sizeof(buff2),
                         // STRING: LEGORR 0x004a41dc
                         "\n%s: %i/%i",
                         legoGlobs_crystalsText, crystals, crystalsCost);
@@ -3668,13 +3668,13 @@ void lego_terrain_command_feedback_dispatch(const int* blockPos, int showConstru
             }
             if (usesStuds) {
                 if (studsCost) {
-                    sprintf(buff2,
+                    snprintf(buff2, sizeof(buff2),
                             "\n%s: %i/%i",
                             legoGlobs_studsText, studs, studsCost);
                     strcat(buffer, buff2);
                 }
             } else if (oreCost) {
-                sprintf(buff2,
+                snprintf(buff2, sizeof(buff2),
                         "\n%s: %i/%i",
                         legoGlobs_oreText, ore, oreCost);
                 strcat(buffer, buff2);
@@ -4322,7 +4322,7 @@ int lego_level_load(const char* levelName)
     copy = (char*)sav_build_ctx_target();
     render_config_six_field_copy_in_or_clear(copy ? (const uint32_t*)(copy + 0x1c) : NULL);
     if (!osf_read_dirty_flag_get_original() && (number = save_slot_get_target()) != -1) {
-        sprintf(buff, "%s\\%i.osf", "Saves", number);
+        snprintf(buff, sizeof(buff), "%s\\%i.osf", "Saves", number);
         osf_read_original(buff);
     }
 
@@ -4699,9 +4699,9 @@ int lego_load_tile_meshes(Lego_Level* level, const char* baseName)
             for (y = 0; y < height; y++) {
                 for (x = 0; x < width; x++) {
                     // STRING: LEGORR 0x004a45d4
-                    sprintf(names[0], "%s%0.1x%0.1xa", baseName, x, y);
+                    snprintf(names[0], sizeof(names[0]), "%s%0.1x%0.1xa", baseName, x, y);
                     // STRING: LEGORR 0x004a45c4
-                    sprintf(names[1], "%s%0.1x%0.1xb", baseName, x, y);
+                    snprintf(names[1], sizeof(names[1]), "%s%0.1x%0.1xb", baseName, x, y);
                     level->f_080[(y * width) + x] =
                         tile_model_entity_register_original(legoGlobs_rootCont, names[0], names[1], level->blockSize,
                                                             level->textureSet);
@@ -9018,7 +9018,7 @@ void lego_panels_config_entry_apply(struct BlockRec* config,
     char* argv[10];
 
     // STRING: LEGORR 0x004a47d8
-    sprintf(buff, "Panels%ix%i", screenWidth, screenHeight);
+    snprintf(buff, sizeof(buff), "Panels%ix%i", screenWidth, screenHeight);
     for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, buff, 0));
          arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
         if (ui_panel_name_table_lookup(arrayItem->key, &panelType)) {
@@ -9053,7 +9053,7 @@ void lego_panel_button_layout_config_load(struct BlockRec* config,
     unsigned int i;
 
     // STRING: LEGORR 0x004a47e4
-    sprintf(buff, "Buttons%ix%i", screenWidth, screenHeight);
+    snprintf(buff, sizeof(buff), "Buttons%ix%i", screenWidth, screenHeight);
     if ((arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, buff, 0))) != NULL) {
         do {
             if (ui_panel_name_table_lookup(arrayItem->key, (int*)&panelType)) {

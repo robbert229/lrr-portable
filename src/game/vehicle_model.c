@@ -178,7 +178,7 @@ int vehicle_load(VehicleModel* vehicle, unsigned int objID, void* root,
         if (count > 1) {
             for (loop = 1; loop < count; loop++) argv[loop][-1] = '\\';
         }
-        sprintf(aeFile, "%s\\%s.%s", baseDir, argv[count - 1], "ae");
+        snprintf(aeFile, sizeof(aeFile), "%s\\%s.%s", baseDir, argv[count - 1], "ae");
 
         if ((config = block_open(aeFile))) {
             if ((vehicle->cameraNullName = block_get_str_copy(config,
@@ -259,7 +259,7 @@ int vehicle_load(VehicleModel* vehicle, unsigned int objID, void* root,
                                      // STRING: LEGORR 0x004aaa20
                                      "WheelMesh",
                                      NULL)))) {
-                sprintf(wheelFile, "%s\\%s", baseDir, wheelMesh);
+                snprintf(wheelFile, sizeof(wheelFile), "%s\\%s", baseDir, wheelMesh);
                 free(wheelMesh);
 
                 if ((vehicle->wheelNullName = block_get_str_copy(config,
@@ -300,7 +300,7 @@ int vehicle_load(VehicleModel* vehicle, unsigned int objID, void* root,
                         if (count > 1) {
                             for (loop = 1; loop < count; loop++) argv[loop][-1] = '\\';
                         }
-                        sprintf(aeFile, "%s\\%s.%s", baseDir, argv[count - 1], "ae");
+                        snprintf(aeFile, sizeof(aeFile), "%s\\%s.%s", baseDir, argv[count - 1], "ae");
                         if ((config2 = block_open(aeFile))) {
                             vehicle->polyMedium2 = mesh_lod_load(config2, gameName, stringParts[1], 1, 1);
                         }

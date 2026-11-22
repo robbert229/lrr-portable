@@ -103,7 +103,7 @@ static BOOL WINAPI directdraw_enum_driver_callback(GUID* lpGUID,
         DIRECTDRAW_FLAG_DRIVER_PRIMARY;
     if (!lpGUID) directDrawGlobs.driverList[directDrawGlobs.driverCount].flags |=
         DIRECTDRAW_FLAG_DRIVER_WINDOWOK;
-    sprintf(directDrawGlobs.driverList[directDrawGlobs.driverCount].desc,
+    snprintf(directDrawGlobs.driverList[directDrawGlobs.driverCount].desc, sizeof(directDrawGlobs.driverList[directDrawGlobs.driverCount].desc),
             "%s (%s)", lpDriverDescription, lpDriverName);
     directDrawGlobs.driverCount++;
     return TRUE;
@@ -168,7 +168,7 @@ static HRESULT WINAPI directdraw_enum_device_callback(GUID* lpGuid,
     }
 
     dev->guid = *lpGuid;
-    sprintf(dev->desc, "%s (%s)", lpDeviceName, lpDeviceDescription);
+    snprintf(dev->desc, sizeof(dev->desc), "%s (%s)", lpDeviceName, lpDeviceDescription);
     directDrawGlobs.deviceCount++;
     return 1; /* D3DENUMRET_OK */
 }
@@ -214,9 +214,9 @@ static HRESULT WINAPI directdraw_enum_mode_callback(
     mode->bitDepth = lpDDSurfaceDesc->ddpfPixelFormat.dwRGBBitCount;
 
     // STRING: LEGORR 0x004aae6c
-    if (*(int*)lpContext) sprintf(mode->desc, "%ix%i (%i bit)", lpDDSurfaceDesc->dwWidth, lpDDSurfaceDesc->dwHeight, lpDDSurfaceDesc->ddpfPixelFormat.dwRGBBitCount);
+    if (*(int*)lpContext) snprintf(mode->desc, sizeof(mode->desc), "%ix%i (%i bit)", lpDDSurfaceDesc->dwWidth, lpDDSurfaceDesc->dwHeight, lpDDSurfaceDesc->ddpfPixelFormat.dwRGBBitCount);
     // STRING: LEGORR 0x004aae64
-    else sprintf(mode->desc, "%ix%i", lpDDSurfaceDesc->dwWidth, lpDDSurfaceDesc->dwHeight);
+    else snprintf(mode->desc, sizeof(mode->desc), "%ix%i", lpDDSurfaceDesc->dwWidth, lpDDSurfaceDesc->dwHeight);
 
     if (!*(int*)lpContext && directDrawGlobs.modeCount &&
         mode->bitDepth != (unsigned int)window_runtime_display_caps_query()) {

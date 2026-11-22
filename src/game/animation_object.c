@@ -55,7 +55,7 @@ int entity_type_config_resource_row_load(void* destination,
     if (count > 1) {
         for (i = 1; i < count; i++) parts[i][-1] = '\\';
     }
-    sprintf(path,
+    snprintf(path, sizeof(path),
             // STRING: LEGORR 0x004a19b8
             "%s\\%s.%s",
             baseDir, parts[count - 1],

@@ -999,9 +999,9 @@ int interface_do_mouse(int x, int y, int leftButton, int leftButtonLast,
             if (!leftButton && !leftReleased && depType != 20) {
                 if (lego_upgrade_level_names[depLevel] != NULL) {
                     // STRING: LEGORR 0x004a3544
-                    sprintf(nameSep, "%s (%s)", localized_object_name_get(depType, depIndex), lego_upgrade_level_names[depLevel]);
+                    snprintf(nameSep, sizeof(nameSep), "%s (%s)", localized_object_name_get(depType, depIndex), lego_upgrade_level_names[depLevel]);
                 } else {
-                    sprintf(nameSep, "%s", localized_object_name_get(depType, depIndex));
+                    snprintf(nameSep, sizeof(nameSep), "%s", localized_object_name_get(depType, depIndex));
                 }
                 tooltip_set_content(4, nameSep);
                 timed_effect_update_request_set_corpus(4);
@@ -1022,7 +1022,7 @@ int interface_do_mouse(int x, int y, int leftButton, int leftButtonLast,
                 if (type == INTERFACE_MENUITEM_OBJECT) {
                     interfaceGlobs.flags |= INTERFACE_FLAG_HOVER_OBJECT;
                     interfaceGlobs.flags |= 0x2000;
-                    sprintf(buff, "%s", localized_object_name_get(objType, objIndex));
+                    snprintf(buff, sizeof(buff), "%s", localized_object_name_get(objType, objIndex));
                     if (!(s_panel_highlight_flags & 0x100000)) {
                         simulation_global_word_set(
                             object_tooltip_sfx[objType * 15 + objIndex]);
@@ -1043,7 +1043,7 @@ int interface_do_mouse(int x, int y, int leftButton, int leftButtonLast,
                                 lego_get_resource(1) < lego_upgrade_cost_studs &&
                                 lego_tooltip_ore_icon != NULL) {
                                 if (lego_upgrade_cost_text != NULL) {
-                                    sprintf(costText, "%s", lego_upgrade_cost_text);
+                                    snprintf(costText, sizeof(costText), "%s", lego_upgrade_cost_text);
                                     tooltip = costText;
                                 }
                                 iconCount = lego_upgrade_cost_ore - lego_get_resource(0);
@@ -1098,7 +1098,7 @@ int interface_do_mouse(int x, int y, int leftButton, int leftButtonLast,
                         }
                     } else {
                         // STRING: LEGORR 0x004a352c
-                        sprintf(buff, "Missing config for\n'%s'", interfaceGlobs.menuItemName[type]);
+                        snprintf(buff, sizeof(buff), "Missing config for\n'%s'", interfaceGlobs.menuItemName[type]);
                         tooltip_set_content(4, buff);
                     }
                     timed_effect_update_request_set_corpus(4);

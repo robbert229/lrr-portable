@@ -51,7 +51,7 @@ int building_load(BuildingModel* building, unsigned int objID, void* root,
         if (count > 1) {
             for (loop = 1; loop < count; loop++) argv[loop][-1] = '\\';
         }
-        sprintf(aeFile, "%s\\%s.%s", baseDir, argv[count - 1], "ae");
+        snprintf(aeFile, sizeof(aeFile), "%s\\%s.%s", baseDir, argv[count - 1], "ae");
 
         if ((config = block_open(aeFile))) {
             if ((building->carryNullName = block_get_str_copy(config,
@@ -151,7 +151,7 @@ int building_load(BuildingModel* building, unsigned int objID, void* root,
             if ((scene = block_get_strptr(config, string_path_join(gameName,
                     // STRING: LEGORR 0x004a1cc4
                     "PowerLevelScene", NULL)))) {
-                sprintf(aeFile, "%s\\%s", baseDir, scene);
+                snprintf(aeFile, sizeof(aeFile), "%s\\%s", baseDir, scene);
                 building->contPowerLevel = container_load(root, aeFile, "LWS", 1);
             }
 

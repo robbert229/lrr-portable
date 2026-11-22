@@ -1445,7 +1445,7 @@ void nerps_runtime_execute(float elapsed)
                 } else if (kind == 3) {
                     if (condition) {
                         if (nerpsruntimeGlobs.debug)
-                            sprintf(buff, "Func Call %s", nerpsFunctions[script[i] & 0xffff].name);
+                            snprintf(buff, sizeof(buff), "Func Call %s", nerpsFunctions[script[i] & 0xffff].name);
                         nerpsFunctions[script[i] & 0xffff].function(NULL);
                     }
                     statements++;
@@ -1455,7 +1455,7 @@ void nerps_runtime_execute(float elapsed)
                 } else if (kind == 4) {
                     if (condition) {
                         if (nerpsruntimeGlobs.debug)
-                            sprintf(buff, "Func Call %s", nerpsFunctions[script[i] & 0xffff].name);
+                            snprintf(buff, sizeof(buff), "Func Call %s", nerpsFunctions[script[i] & 0xffff].name);
                         stack[0] = script[i + 1];
                         nerps_runtime_resolve_argument(&stack[0]);
                         nerpsFunctions[script[i] & 0xffff].function(stack);
@@ -1987,7 +1987,7 @@ void nerps_set_objects_level(const char* name, unsigned int level)
 {
     NERPs_ObjectLevelSearch search;
 
-    sprintf(search.name, "%s", name);
+    snprintf(search.name, sizeof(search.name), "%s", name);
     search.level = level;
     lego_entity_type_pair_lookup(name, &search.type, &search.id, NULL);
     legoobject_run_through_lists_skip_upgrade_parts(

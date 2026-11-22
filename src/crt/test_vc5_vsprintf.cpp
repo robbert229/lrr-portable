@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* test_vc5_vsprintf — the units' vsprintf (crt/vc5names.h) prints "%b" as
+/* test_vc5_vsprintf — the units' vsnprintf (crt/vc5names.h) prints "%b" as
  * the original's VC5 LIBC does: the "b" as text, with no argument taken,
  * whatever flags, width, precision or size come before it. A "%" left
  * unfinished at the end of the format prints nothing. Every other format
- * goes to the host's vsprintf unchanged. */
+ * goes to the host's vsnprintf unchanged. */
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -21,7 +21,7 @@ static void CHECK(int cond, const char* what)
     }
 }
 
-/* vsprintf as a unit calls it. */
+/* vsnprintf as a unit calls it. */
 static char s_formatted[256];
 static int format(const char* msg, ...)
 {
@@ -29,7 +29,7 @@ static int format(const char* msg, ...)
     int len;
 
     va_start(args, msg);
-    len = vsprintf(s_formatted, msg, args);
+    len = vsnprintf(s_formatted, sizeof(s_formatted), msg, args);
     va_end(args);
     return len;
 }
@@ -52,6 +52,6 @@ int main()
         printf("%d failure(s)\n", s_failures);
         return 1;
     }
-    printf("vc5 vsprintf: ok\n");
+    printf("vc5 vsnprintf: ok\n");
     return 0;
 }

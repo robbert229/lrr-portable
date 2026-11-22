@@ -8318,7 +8318,7 @@ int legoobject_activity_register_bookkeeping(Lego_Object* obj)
             // STRING: LEGORR 0x004a50dc
             activity = isRoute ? "Activity_" : obj->activityName1;
             // STRING: LEGORR 0x004a50d4
-            sprintf(buffer, "%s%s", activity, legoobject_item_name_by_kind(obj->type, obj->id));
+            snprintf(buffer, sizeof(buffer), "%s%s", activity, legoobject_item_name_by_kind(obj->type, obj->id));
             activity_runner_update((struct AnimationObject*)obj->driveObject->miniFigure, buffer, 0.0f);
             obj->driveObject->field_2dc = activity_runner_state_read(obj->driveObject->miniFigure, obj->driveObject->field_2e0);
             obj->driveObject->activityName1 = obj->driveObject->activityName2;
@@ -9653,13 +9653,13 @@ void* legoobject_poly_variant_section_model_build(void* config, const char* game
     for (i = 0; i < cameraCount; i++) {
         if (polyKind == 3)
             // STRING: LEGORR 0x004a5140
-            sprintf(buffer, "FPPoly::Camera%i", i + 1);
+            snprintf(buffer, sizeof(buffer), "FPPoly::Camera%i", i + 1);
         else if (polyKind == 2)
             // STRING: LEGORR 0x004a5134
-            sprintf(buffer, "HighPoly");
+            snprintf(buffer, sizeof(buffer), "HighPoly");
         else if (polyKind == 1)
             // STRING: LEGORR 0x004a5128
-            sprintf(buffer, "MediumPoly");
+            snprintf(buffer, sizeof(buffer), "MediumPoly");
         for (item = block_subgroup((struct BlockRec*)config, string_path_join(gameName, buffer, NULL));
              item != NULL; item = block_next_equal_key(item)) {
             name = item->key;

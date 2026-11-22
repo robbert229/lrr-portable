@@ -111,7 +111,7 @@ void credits_play(const char* textFile, struct TextureSurface* font,
     centre = s_display_w / 2;
 
     // STRING: LEGORR 0x004a1d68
-    sprintf(cconvName, "%s.cconv", textFile);
+    snprintf(cconvName, sizeof(cconvName), "%s.cconv", textFile);
     if ((buffer = (char*)file_load_binary(cconvName, (unsigned int*)&fileSize)) ||
         (buffer = (char*)file_load_binary(textFile, (unsigned int*)&fileSize))) {
         buffer = (char*)realloc(buffer, fileSize + 4);
@@ -192,12 +192,12 @@ void damage_font_load_frames(const char* dirName, const char* fileName)
 
     for (i = 0; i < 11; i++) {
         /* "%s\\" (004a1d88) and "%s%i.bmp" (004a1d7c) are marked in sfx.c. */
-        sprintf(baseName, "%s\\", dirName);
+        snprintf(baseName, sizeof(baseName), "%s\\", dirName);
         if (fileName) {
-            sprintf(name, "%s%i.bmp", fileName, i);
+            snprintf(name, sizeof(name), "%s%i.bmp", fileName, i);
         } else {
             // STRING: LEGORR 0x004a1d74
-            sprintf(name, "%i.bmp", i);
+            snprintf(name, sizeof(name), "%i.bmp", i);
         }
         if (i == 10) {
             damageFontGlobs.fontTextMinus =

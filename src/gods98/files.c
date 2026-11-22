@@ -164,14 +164,14 @@ void file_initialise(const char* programName, int insistOnCD,
     files_disk_dir(cwd, FILE_MAXPATH); // [library:config]
     if (cwd[strlen(cwd) - 1] == '\\') cwd[strlen(cwd) - 1] = '\0';
     // STRING: LEGORR 0x004a1cbc
-    sprintf(fileGlobs.dataDir, "%s\\%s", cwd,
+    snprintf(fileGlobs.dataDir, sizeof(fileGlobs.dataDir), "%s\\%s", cwd,
             // STRING: LEGORR 0x004aaf5c
             "Data");
 
     for (i = 0; i < FILE_MAXWADS; i++) {
         char wadFile[FILE_MAXPATH];
         // STRING: LEGORR 0x004aaf50
-        sprintf(wadFile, "%s%i.wad", programName, i);
+        snprintf(wadFile, sizeof(wadFile), "%s%i.wad", programName, i);
         /* The WAD in the diskpath, by its host path: Wad.c opens it with
          * the C library's fopen. */
         files_native_host_path(wadFile, wadFile, FILE_MAXPATH); // [library:config]
@@ -220,7 +220,7 @@ void file_initialise(const char* programName, int insistOnCD,
     }
 
     if (insistOnCD) {
-        sprintf(path, "%s\\%s", "Data",
+        snprintf(path, sizeof(path), "%s\\%s", "Data",
                 // STRING: LEGORR 0x004aaf1c
                 "cd.key");
         // STRING: LEGORR 0x004a1eac
@@ -234,7 +234,7 @@ void file_initialise(const char* programName, int insistOnCD,
         char hostPath[FILE_MAXPATH * 4];
 
         SDL_CreateDirectory(files_native_host_path(hostPath, "Data", sizeof(hostPath))); // [library:filesystem]
-        sprintf(path, "%s\\%s", "Data",
+        snprintf(path, sizeof(path), "%s\\%s", "Data",
                 // STRING: LEGORR 0x004aaf10
                 "delme.dat");
         if ((fp = files_io_open(path, "r")) != NULL) { // [library:filesystem]
@@ -269,7 +269,7 @@ int file_find_data_cd(void)
         drive[0] = letter;
         if (GetDriveTypeA(drive) == DRIVE_CDROM) {
             // STRING: LEGORR 0x004aaf64
-            sprintf(path, "%c:\\%s\\%s", letter, "Data", "cd.key");
+            snprintf(path, sizeof(path), "%c:\\%s\\%s", letter, "Data", "cd.key");
             if ((fp = files_io_open(path, "r")) != NULL) { // [library:filesystem]
                 SDL_CloseIO(fp); // [library:filesystem]
                 fileGlobs.cdLetter = letter;
@@ -303,7 +303,7 @@ void file_error_file(const char* msg, ...)
     va_list args;
 
     va_start(args, msg);
-    vsprintf(buffer, msg, args);
+    vsnprintf(buffer, sizeof(buffer), msg, args);
     OutputDebugStringA(buffer);
     va_end(args);
 }
@@ -319,7 +319,8 @@ int file_load_wad(const char* fName)
 int file_get_cd_file_path(char* path, const char* fname)
 {
     if (fileGlobs.cdLetter) {
-        sprintf(path, "%c:\\%s\\%s", fileGlobs.cdLetter, "Data", fname);
+        /* Every caller passes a buffer of at least FILE_MAXPATH. */
+        snprintf(path, FILE_MAXPATH, "%c:\\%s\\%s", fileGlobs.cdLetter, "Data", fname);
         return 1;
     }
     return 0;
@@ -335,7 +336,7 @@ void file_make_dir(const char* path)
     if ((saveName = files_save_name(path)) != NULL) { // [library:filesystem]
         snprintf(buffer, sizeof(buffer), "%s\\%s", files_native_save_path(), saveName);
     } else {
-        sprintf(buffer, "%s\\%s", "Data", path);
+        snprintf(buffer, sizeof(buffer), "%s\\%s", "Data", path);
     }
     /* SDL_CreateDirectory also makes any missing parent, which a save
      * directory outside the data directory may need. */
@@ -786,7 +787,7 @@ char* file_get_wad_name(char* fName)
         fName[baseLen] = '\0';
         if (_strcmpi(fName, fileGlobs.basePath) == 0) {
             // STRING: LEGORR 0x004a1d60
-            sprintf(fileGlobs.wadName, "%s", &fName[baseLen + 1]);
+            snprintf(fileGlobs.wadName, sizeof(fileGlobs.wadName), "%s", &fName[baseLen + 1]);
             fName[baseLen] = c;
             return fileGlobs.wadName;
         }
@@ -885,7 +886,7 @@ char* file_verify_filename(const char* filename)
                 return fileGlobs.fullName;
             return NULL;
         }
-        sprintf(buff, "%s\\%s", fileGlobs.dataDir, filename);
+        snprintf(buff, sizeof(buff), "%s\\%s", fileGlobs.dataDir, filename);
         if (_fullpath(fileGlobs.fullName, buff, FILE_MAXPATH)) {
             if (strncmp(fileGlobs.fullName, fileGlobs.dataDir,
                         strlen(fileGlobs.dataDir)) == 0)

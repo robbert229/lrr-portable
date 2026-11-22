@@ -204,7 +204,7 @@ void text_set_message_with_image(int textType, const char* message,
                                  const char* imageFile, const char* soundName)
 {
     text_set_message(textType, message);
-    sprintf(textGlobs.soundNames[textType], "%s", soundName);
+    snprintf(textGlobs.soundNames[textType], sizeof(textGlobs.soundNames[textType]), "%s", soundName);
     if ((textGlobs.images[textType] = image_load_bmp_scaled(imageFile, 0, 0)) != NULL) {
         image_surface_blit_transformed((struct TextureSurface*)textGlobs.images[textType],
                                        0, 0, 0, 0, 0, 0);

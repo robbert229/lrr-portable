@@ -1660,7 +1660,7 @@ ModelEntryRecord* model_entry_record_load(ModelEntryRecord* previous,
     void* container;
     ModelEntryRecord* record;
 
-    sprintf(path, "%s\\%s", dir, meshName);
+    snprintf(path, sizeof(path), "%s\\%s", dir, meshName);
     if ((container = container_load(NULL, path, "LWO", 1)) == NULL) {
         container = container_load(NULL, path, "MESH", 1);
     }

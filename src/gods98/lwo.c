@@ -174,7 +174,7 @@ int lwo_points_read(File* file, LWSIZE* size, int csize, float** verts,
         *vptr++ = point[2];
         if (verbose) {
             // STRING: LEGORR 0x004afa14
-            sprintf(str, "Point %d > %f %f %f\n", i, point[0], point[1], point[2]);
+            snprintf(str, sizeof(str), "Point %d > %f %f %f\n", i, point[0], point[1], point[2]);
         }
         i++;
         csize -= 12;
@@ -250,7 +250,7 @@ int lwo_polygons_read(File* file, LWSIZE* size, LWPOLY** polys, int csize,
             plyd = (unsigned short*)malloc(vcount * sizeof(unsigned short));
             if (verbose) {
                 // STRING: LEGORR 0x004afa40
-                sprintf(buff, "Poly %d, Vertex Count %d > ", pc, vcount);
+                snprintf(buff, sizeof(buff), "Poly %d, Vertex Count %d > ", pc, vcount);
             }
             ply->plyCount = vcount;
             ply->plyData = plyd;
@@ -258,7 +258,7 @@ int lwo_polygons_read(File* file, LWSIZE* size, LWPOLY** polys, int csize,
                 vcur = LWO_SWAPWORD(*swp);
                 if (verbose) {
                     // STRING: LEGORR 0x004afa3c
-                    sprintf(buff2, "%d ", vcur);
+                    snprintf(buff2, sizeof(buff2), "%d ", vcur);
                     strcat(buff, buff2);
                 }
                 *plyd++ = vcur;
@@ -271,7 +271,7 @@ int lwo_polygons_read(File* file, LWSIZE* size, LWPOLY** polys, int csize,
             ply->srfIndex = vsurf;
             if (verbose) {
                 // STRING: LEGORR 0x004afa2c
-                sprintf(buff2, "Surface :- %d\n", vsurf);
+                snprintf(buff2, sizeof(buff2), "Surface :- %d\n", vsurf);
                 strcat(buff, buff2);
             }
         }
@@ -311,7 +311,7 @@ int lwo_surface_names_read(File* file, LWSIZE* size, LWSURFLIST** list,
     while (csize > 0) {
         if (verbose) {
             // STRING: LEGORR 0x004afa5c
-            sprintf(str, "Surface %d > %s\n", num, ptr);
+            snprintf(str, sizeof(str), "Surface %d > %s\n", num, ptr);
         }
         len = strlen(ptr) + 1;
         if (len & 1) len++;
@@ -382,7 +382,7 @@ int lwo_surface_settings_read(File* file, LWSIZE* size, LWSURFACE** surf,
 
     if (verbose) {
         // STRING: LEGORR 0x004afc0c
-        sprintf(buff, "Surface %d :- %s", sc, cp);
+        snprintf(buff, sizeof(buff), "Surface %d :- %s", sc, cp);
     }
     len = strlen(cp) + 1;
     if (len & 1)
@@ -394,7 +394,7 @@ int lwo_surface_settings_read(File* file, LWSIZE* size, LWSURFACE** surf,
         cp += 4;
         len = (unsigned short)((*(unsigned short*)cp << 8) + (*(unsigned short*)cp >> 8));
         // STRING: LEGORR 0x004afc00
-        sprintf(buff, " %s (%d)", cbuff, len);
+        snprintf(buff, sizeof(buff), " %s (%d)", cbuff, len);
         cp += 2;
         // STRING: LEGORR 0x004afbf8
         if (!strnicmp(cbuff, "TIMG", 4)) {
@@ -416,7 +416,7 @@ int lwo_surface_settings_read(File* file, LWSIZE* size, LWSURFACE** surf,
         // STRING: LEGORR 0x004afbe4
         else if (!strnicmp(cbuff, "COLR", 4)) {
             // STRING: LEGORR 0x004afbd0
-            sprintf(buff2, " RGBA %d,%d,%d,%d", (unsigned char)cp[0], (unsigned char)cp[1], (unsigned char)cp[2], (unsigned char)cp[3]);
+            snprintf(buff2, sizeof(buff2), " RGBA %d,%d,%d,%d", (unsigned char)cp[0], (unsigned char)cp[1], (unsigned char)cp[2], (unsigned char)cp[3]);
             strcat(buff, buff2);
             if (surf) {
                 srfb->srfCol[0] = cp[0];
@@ -470,7 +470,7 @@ int lwo_surface_settings_read(File* file, LWSIZE* size, LWSURFACE** surf,
                 sval = LWSPVALUE((unsigned short*)cp);
                 srfb->srfTexFlags |= sval;
                 // STRING: LEGORR 0x004afba8
-                sprintf(buff2, "%xH - ", sval);
+                snprintf(buff2, sizeof(buff2), "%xH - ", sval);
                 for (i = 0; i < 8; i++) {
                     if (sval & (1 << i)) {
                         if (f)
@@ -512,7 +512,7 @@ int lwo_surface_settings_read(File* file, LWSIZE* size, LWSURFACE** surf,
 
                 sval = LWSPVALUE((unsigned short*)cp);
                 srfb->srfFlags = sval;
-                sprintf(buff2, "%xH - ", sval);
+                snprintf(buff2, sizeof(buff2), "%xH - ", sval);
                 for (i = 0; i < 10; i++) {
                     if (sval & (1 << i)) {
                         if (f)
@@ -534,7 +534,7 @@ int lwo_surface_settings_read(File* file, LWSIZE* size, LWSURFACE** surf,
                 lwo_read_big_endian_float(&ccp, &td[1]);
                 lwo_read_big_endian_float(&ccp, &td[2]);
                 // STRING: LEGORR 0x004afaac
-                sprintf(buff2, " (%f,%f,%f)", td[0], td[1], td[2]);
+                snprintf(buff2, sizeof(buff2), " (%f,%f,%f)", td[0], td[1], td[2]);
                 srfb->srfTSIZ[0] = td[0];
                 srfb->srfTSIZ[1] = td[1];
                 srfb->srfTSIZ[2] = td[2];
@@ -549,7 +549,7 @@ int lwo_surface_settings_read(File* file, LWSIZE* size, LWSURFACE** surf,
                 lwo_read_big_endian_float(&ccp, &td[0]);
                 lwo_read_big_endian_float(&ccp, &td[1]);
                 lwo_read_big_endian_float(&ccp, &td[2]);
-                sprintf(buff2, " (%f,%f,%f)", td[0], td[1], td[2]);
+                snprintf(buff2, sizeof(buff2), " (%f,%f,%f)", td[0], td[1], td[2]);
                 srfb->srfTCTR[0] = td[0];
                 srfb->srfTCTR[1] = td[1];
                 srfb->srfTCTR[2] = td[2];
@@ -603,7 +603,7 @@ int lwo_surface_settings_read(File* file, LWSIZE* size, LWSURFACE** surf,
                     break;
                 }
                 // STRING: LEGORR 0x004afa70
-                sprintf(buff2, "%f", fval);
+                snprintf(buff2, sizeof(buff2), "%f", fval);
                 strcat(buff, buff2);
             }
         }
@@ -639,7 +639,7 @@ int lwo_load(const char* fname, LWSIZE* size, float** verts, LWPOLY** polys,
     char str[1024];
 
     // STRING: LEGORR 0x004afc98
-    sprintf(path, "%s.lwo", fname);
+    snprintf(path, sizeof(path), "%s.lwo", fname);
     if ((file = file_open(path, "rb")) == NULL) return 0;
 
     sizeData = (LWSIZE*)malloc(sizeof(LWSIZE));
@@ -649,7 +649,7 @@ int lwo_load(const char* fname, LWSIZE* size, float** verts, LWPOLY** polys,
 
     if (uvFile) {
         // STRING: LEGORR 0x004afc90
-        sprintf(path, "%s.uv", fname);
+        snprintf(path, sizeof(path), "%s.uv", fname);
         if (file_exists(path)) *uvFile = file_open(path, "rb");
         else *uvFile = NULL;
     }
@@ -660,7 +660,7 @@ int lwo_load(const char* fname, LWSIZE* size, float** verts, LWPOLY** polys,
         free(sizeData);
         file_close(file);
         // STRING: LEGORR 0x004afc64
-        sprintf(str, "Error in Lightwave file %s", fname);
+        snprintf(str, sizeof(str), "Error in Lightwave file %s", fname);
         return 0;
     }
     file_read(&formSize, 4, 1, file);
@@ -670,7 +670,7 @@ int lwo_load(const char* fname, LWSIZE* size, float** verts, LWPOLY** polys,
     if (0 != _strcmpi(id, "LWOB")) {
         free(sizeData);
         file_close(file);
-        sprintf(str, "Error in Lightwave file %s", fname);
+        snprintf(str, sizeof(str), "Error in Lightwave file %s", fname);
         return 0;
     }
 
@@ -680,7 +680,7 @@ int lwo_load(const char* fname, LWSIZE* size, float** verts, LWPOLY** polys,
         chunkSize = LWO_SWAPLONG(chunkSize);
         if (verbose) {
             // STRING: LEGORR 0x004afc50
-            sprintf(str, "LW OBJECT %s %d\n", id, chunkSize);
+            snprintf(str, sizeof(str), "LW OBJECT %s %d\n", id, chunkSize);
         }
         // STRING: LEGORR 0x004afc48
         if (0 == _strcmpi(id, "PNTS")) lwo_points_read(file, sizeData, chunkSize, verts, verbose);

@@ -251,7 +251,7 @@ void advisor_config_slots_load_target(BlockFile* config, const char* gameName)
         if ((str = block_get_strptr(config, string_path_join(gameName, "Advisor", advisorGlobs.animName[loop], 0))) == NULL) {
             if (!(s_engine_feature_word & ADVISOR_MAIN_FLAG_REDUCEANIMATION)) {
                 // STRING: LEGORR 0x004a13e8
-                sprintf(name, "!%s", advisorGlobs.animName[loop]);
+                snprintf(name, sizeof(name), "!%s", advisorGlobs.animName[loop]);
                 str = block_get_strptr(config, string_path_join(gameName, "Advisor", advisorGlobs.animName[loop], 0));
             }
         }
@@ -349,7 +349,7 @@ void advisor_position_config_load(BlockFile* config, const char* gameName,
     float pos[2];
 
     // STRING: LEGORR 0x004a13fc
-    sprintf(name, "AdvisorPositions%ix%i", screenWidth, screenHeight);
+    snprintf(name, sizeof(name), "AdvisorPositions%ix%i", screenWidth, screenHeight);
     for (item = block_subgroup(config, string_path_join(gameName, name, 0)); item; item = block_next_equal_key(item)) {
         textType = ADVISOR_TEXT_NONE;
         panelType = ADVISOR_PANEL_NONE;

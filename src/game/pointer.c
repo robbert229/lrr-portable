@@ -247,7 +247,7 @@ void pointer_load_pointers(BlockRec* config)
             else ok = 0;
         }
         if (ok && pointer_get_type(name, &pointerType)) {
-            sprintf(buff, "%s", config->value);
+            snprintf(buff, sizeof(buff), "%s", config->value);
             if (sound_variant_split(buff, argv, ",") == 1) {
                 pointerGlobs.images[pointerType] = image_load_bmp_scaled(argv[0], 0, 0);
                 pointerGlobs.isFlic[pointerType] = 0;

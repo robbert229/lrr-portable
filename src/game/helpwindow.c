@@ -203,7 +203,7 @@ void help_window_load_infos(BlockFile* config, const char* gameName)
     for (i = 0; i < helpWindow_typeCounts[0]; i++) {
         for (j = 0; j < HELPWINDOW_MAXINFOLEVELS; j++) {
             // STRING: LEGORR 0x004a2804
-            sprintf(buff, "HelpWindow::HelpWindowInfo::%sL%i", legoGlobs_vehicleName[i], j);
+            snprintf(buff, sizeof(buff), "HelpWindow::HelpWindowInfo::%sL%i", legoGlobs_vehicleName[i], j);
             if ((s = helpwindowGlobs.vehicleInfo[i][j] = block_get_str_copy(config, string_path_join(gameName, buff, 0))) != NULL) {
                 for (; *s != '\0'; s++) {
                     if (*s == '_') *s = ' ';
@@ -213,7 +213,7 @@ void help_window_load_infos(BlockFile* config, const char* gameName)
     }
     for (i = 0; i < helpWindow_typeCounts[1]; i++) {
         for (j = 0; j < HELPWINDOW_MAXINFOLEVELS; j++) {
-            sprintf(buff, "HelpWindow::HelpWindowInfo::%sL%i", legoGlobs_miniFigureName[i], j);
+            snprintf(buff, sizeof(buff), "HelpWindow::HelpWindowInfo::%sL%i", legoGlobs_miniFigureName[i], j);
             if ((s = helpwindowGlobs.miniFigureInfo[i][j] = block_get_str_copy(config, string_path_join(gameName, buff, 0))) != NULL) {
                 for (; *s != '\0'; s++) {
                     if (*s == '_') *s = ' ';
@@ -223,7 +223,7 @@ void help_window_load_infos(BlockFile* config, const char* gameName)
     }
     for (i = 0; i < helpWindow_typeCounts[3]; i++) {
         for (j = 0; j < HELPWINDOW_MAXINFOLEVELS; j++) {
-            sprintf(buff, "HelpWindow::HelpWindowInfo::%sL%i", legoGlobs_buildingName[i], j);
+            snprintf(buff, sizeof(buff), "HelpWindow::HelpWindowInfo::%sL%i", legoGlobs_buildingName[i], j);
             if ((s = helpwindowGlobs.buildingInfo[i][j] = block_get_str_copy(config, string_path_join(gameName, buff, 0))) != NULL) {
                 for (; *s != '\0'; s++) {
                     if (*s == '_') *s = ' ';

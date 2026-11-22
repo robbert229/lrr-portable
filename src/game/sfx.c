@@ -601,9 +601,9 @@ void smoke_load_textures(const char* dirName, const char* baseName,
     smokeGlobs.textureCount = textureCount;
     for (i = 0; i < textureCount; i++) {
         // STRING: LEGORR 0x004a1d88
-        sprintf(path, "%s\\", dirName);
+        snprintf(path, sizeof(path), "%s\\", dirName);
         // STRING: LEGORR 0x004a1d7c
-        sprintf(name, "%s%i.bmp", baseName, i);
+        snprintf(name, sizeof(name), "%s%i.bmp", baseName, i);
         smokeGlobs.textures[i] = sfx_mesh_load_texture_adapter(path, name, NULL, NULL);
     }
 }

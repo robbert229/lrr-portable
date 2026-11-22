@@ -105,7 +105,7 @@ int reward_initialise(void)
     rewardGlobs.itemPart->itemCount = REWARD_ITEM_COUNT;
 
     for (i = 0; i < REWARD_ITEM_COUNT; i++)
-        sprintf(rewardGlobs.itemPart->items[i].name, "%s", names[i]);
+        snprintf(rewardGlobs.itemPart->items[i].name, sizeof(rewardGlobs.itemPart->items[i].name), "%s", names[i]);
     for (i = 0; i < REWARD_ITEM_COUNT; i++)
         reward_load_item_image(&rewardGlobs.itemPart->items[i]);
     for (i = 0; i < REWARD_ITEM_COUNT; i++)
@@ -165,7 +165,7 @@ void reward_load_item_box_image(RewardLevelItem* item)
                               "BoxImages",
                               item->name, 0))) == NULL) {
         if (!(s_engine_feature_word & 0x2000000)) {
-            sprintf(altName, "!%s", item->name);
+            snprintf(altName, sizeof(altName), "!%s", item->name);
             str = block_get_str_copy(rewardGlobs.config,
                 string_path_join(rewardGlobs.gameName, "Reward",
                                  // STRING: LEGORR 0x004a9380
@@ -176,7 +176,7 @@ void reward_load_item_box_image(RewardLevelItem* item)
     }
 
     sound_variant_split(str, argv, "|");
-    sprintf(name, "%s", argv[0]);
+    snprintf(name, sizeof(name), "%s", argv[0]);
     item->boxImageX = atoi(argv[1]);
     item->boxImageY = atoi(argv[2]);
     if ((item->boxImage = image_load_bmp_scaled(name, 0, 0)) != NULL) {
@@ -198,7 +198,7 @@ void reward_load_item_image(RewardLevelItem* item)
              string_path_join(rewardGlobs.gameName, "Reward", "Images",
                               item->name, 0))) == NULL) {
         if (!(s_engine_feature_word & 0x2000000)) {
-            sprintf(altName, "!%s", item->name);
+            snprintf(altName, sizeof(altName), "!%s", item->name);
             str = block_get_str_copy(rewardGlobs.config,
                 string_path_join(rewardGlobs.gameName, "Reward", "Images",
                                  altName, 0));
@@ -207,7 +207,7 @@ void reward_load_item_image(RewardLevelItem* item)
     }
 
     sound_variant_split(str, argv, "|");
-    sprintf(name, "%s", argv[0]);
+    snprintf(name, sizeof(name), "%s", argv[0]);
     item->imageX = atoi(argv[1]);
     item->imageY = atoi(argv[2]);
     if ((item->image = image_load_bmp_scaled(name, 0, 0)) != NULL) {
@@ -227,7 +227,7 @@ void reward_load_item_text(RewardLevelItem* item)
              string_path_join(rewardGlobs.gameName, "Reward", "Text",
                               item->name, 0))) != NULL) {
         sound_variant_split(str, argv, "|");
-        sprintf(item->text, "%s", argv[0]);
+        snprintf(item->text, sizeof(item->text), "%s", argv[0]);
         mission_replace_char(item->text, '_', ' ');
         item->textX = atoi(argv[1]);
         item->textY = atoi(argv[2]);
@@ -251,7 +251,7 @@ void reward_load_item_flic(RewardLevelItem* item)
                               "Flics",
                               item->name, 0))) == NULL) {
         if (!(s_engine_feature_word & 0x1000000)) {
-            sprintf(altName, "!%s", item->name);
+            snprintf(altName, sizeof(altName), "!%s", item->name);
             str = block_get_str_copy(rewardGlobs.config,
                 string_path_join(rewardGlobs.gameName, "Reward", "Flics",
                                  altName, 0));
@@ -260,8 +260,8 @@ void reward_load_item_flic(RewardLevelItem* item)
     }
 
     sound_variant_split(str, argv, "|");
-    sprintf(name, "%s", argv[0]);
-    sprintf(item->flicName, "%s", name);
+    snprintf(name, sizeof(name), "%s", argv[0]);
+    snprintf(item->flicName, sizeof(item->flicName), "%s", name);
     item->flicX = atoi(argv[1]);
     item->flicY = atoi(argv[2]);
     item->flicWidth = atoi(argv[3]);
@@ -683,7 +683,7 @@ int reward_prepare_results(void)
     current->itemsArray[REWARD_ITEM_ORE].total = current->itemsArray[REWARD_ITEM_ORE].total -
         -4.0f * (current->itemsArray[REWARD_ITEM_DIGGABLE].total);
     for (i = 0; i < current->buildingCount; i++)
-        sprintf(current->buildingNames[i], "%s", current->buildingCounts.names[i]);
+        snprintf(current->buildingNames[i], sizeof(current->buildingNames[i]), "%s", current->buildingCounts.names[i]);
 
     current->itemsArray[REWARD_ITEM_CRYSTALS].actual = (float)level->f_08c;
     current->itemsArray[REWARD_ITEM_ORE].actual = (float)level->crystals;
@@ -845,15 +845,15 @@ int reward_create_scroll(void)
                             0.0f, (float)s_display_h * 0.04f, 3);
     switch (level->status) {
     case 1:
-        sprintf(rewardGlobs.statusText, "%s",
+        snprintf(rewardGlobs.statusText, sizeof(rewardGlobs.statusText), "%s",
                 formatted_text_escape_decode_and_emit(rewardGlobs.completeText));
         break;
     case 2:
-        sprintf(rewardGlobs.statusText, "%s",
+        snprintf(rewardGlobs.statusText, sizeof(rewardGlobs.statusText), "%s",
                 formatted_text_escape_decode_and_emit(rewardGlobs.failedText));
         break;
     case 3:
-        sprintf(rewardGlobs.statusText, "%s",
+        snprintf(rewardGlobs.statusText, sizeof(rewardGlobs.statusText), "%s",
                 formatted_text_escape_decode_and_emit(rewardGlobs.quitText));
         break;
     }
@@ -878,59 +878,59 @@ int reward_format_values(void)
 
     current->itemsArray[REWARD_ITEM_CRYSTALS].percentInt =
         (unsigned int)current->itemsArray[REWARD_ITEM_CRYSTALS].percent;
-    sprintf(current->itemsArray[REWARD_ITEM_CRYSTALS].percentText,
+    snprintf(current->itemsArray[REWARD_ITEM_CRYSTALS].percentText, sizeof(current->itemsArray[REWARD_ITEM_CRYSTALS].percentText),
             // STRING: LEGORR 0x004a94c8
             "%d%%%%",
             current->itemsArray[REWARD_ITEM_CRYSTALS].percentInt);
     current->itemsArray[REWARD_ITEM_ORE].percentInt =
         (unsigned int)current->itemsArray[REWARD_ITEM_ORE].percent;
-    sprintf(current->itemsArray[REWARD_ITEM_ORE].percentText, "%d%%%%",
+    snprintf(current->itemsArray[REWARD_ITEM_ORE].percentText, sizeof(current->itemsArray[REWARD_ITEM_ORE].percentText), "%d%%%%",
             current->itemsArray[REWARD_ITEM_ORE].percentInt);
     current->itemsArray[REWARD_ITEM_DIGGABLE].percentInt =
         (unsigned int)current->itemsArray[REWARD_ITEM_DIGGABLE].percent;
-    sprintf(current->itemsArray[REWARD_ITEM_DIGGABLE].percentText, "%d%%%%",
+    snprintf(current->itemsArray[REWARD_ITEM_DIGGABLE].percentText, sizeof(current->itemsArray[REWARD_ITEM_DIGGABLE].percentText), "%d%%%%",
             current->itemsArray[REWARD_ITEM_DIGGABLE].percentInt);
     current->walls.percentInt = (unsigned int)current->walls.percent;
-    sprintf(current->walls.percentText,
+    snprintf(current->walls.percentText, sizeof(current->walls.percentText),
             // STRING: LEGORR 0x004a94c4
             "%d",
             current->walls.percentInt);
     current->itemsArray[REWARD_ITEM_CONSTRUCTIONS].percentInt = current->buildingCount;
-    sprintf(current->itemsArray[REWARD_ITEM_CONSTRUCTIONS].percentText, "%d",
+    snprintf(current->itemsArray[REWARD_ITEM_CONSTRUCTIONS].percentText, sizeof(current->itemsArray[REWARD_ITEM_CONSTRUCTIONS].percentText), "%d",
             current->itemsArray[REWARD_ITEM_CONSTRUCTIONS].percentInt);
     current->itemsArray[REWARD_ITEM_CAVERNS].percentInt =
         (unsigned int)current->itemsArray[REWARD_ITEM_CAVERNS].percent;
-    sprintf(current->itemsArray[REWARD_ITEM_CAVERNS].percentText, "%d%%%%",
+    snprintf(current->itemsArray[REWARD_ITEM_CAVERNS].percentText, sizeof(current->itemsArray[REWARD_ITEM_CAVERNS].percentText), "%d%%%%",
             current->itemsArray[REWARD_ITEM_CAVERNS].percentInt);
     current->itemsArray[REWARD_ITEM_FIGURES].percentInt =
         (unsigned int)current->itemsArray[REWARD_ITEM_FIGURES].percent;
-    sprintf(current->itemsArray[REWARD_ITEM_FIGURES].percentText, "%d%%%%",
+    snprintf(current->itemsArray[REWARD_ITEM_FIGURES].percentText, sizeof(current->itemsArray[REWARD_ITEM_FIGURES].percentText), "%d%%%%",
             current->itemsArray[REWARD_ITEM_FIGURES].percentInt);
     current->itemsArray[REWARD_ITEM_ROCKMONSTERS].percentInt = (unsigned int)
         ((current->itemsArray[REWARD_ITEM_ROCKMONSTERS].damage < 100.0f) ?
          current->itemsArray[REWARD_ITEM_ROCKMONSTERS].damage : 100.0f);
-    sprintf(current->itemsArray[REWARD_ITEM_ROCKMONSTERS].percentText, "%d%%%%",
+    snprintf(current->itemsArray[REWARD_ITEM_ROCKMONSTERS].percentText, sizeof(current->itemsArray[REWARD_ITEM_ROCKMONSTERS].percentText), "%d%%%%",
             current->itemsArray[REWARD_ITEM_ROCKMONSTERS].percentInt);
     current->itemsArray[REWARD_ITEM_OXYGEN].percentInt =
         (unsigned int)current->itemsArray[REWARD_ITEM_OXYGEN].percent;
-    sprintf(current->itemsArray[REWARD_ITEM_OXYGEN].percentText, "%d%%%%",
+    snprintf(current->itemsArray[REWARD_ITEM_OXYGEN].percentText, sizeof(current->itemsArray[REWARD_ITEM_OXYGEN].percentText), "%d%%%%",
             current->itemsArray[REWARD_ITEM_OXYGEN].percentInt);
 
     time = current->itemsArray[REWARD_ITEM_TIMER].percentInt = (unsigned int)
         (current->itemsArray[REWARD_ITEM_TIMER].actual *
          current->itemsArray[REWARD_ITEM_TIMER].total * 0.04f);
     time %= 359999;
-    sprintf(timeText, "");
+    snprintf(timeText, sizeof(timeText), "");
     if (time > 3600) {
         n = (time - 1) / 3600;
         value = n;
         do time -= 3600; while (--n);
         if (value < 10)
             // STRING: LEGORR 0x004a94bc
-            sprintf(buff, "0%d:", value);
+            snprintf(buff, sizeof(buff), "0%d:", value);
         else
             // STRING: LEGORR 0x004a94b8
-            sprintf(buff, "%d:", value);
+            snprintf(buff, sizeof(buff), "%d:", value);
         strcat(timeText, buff);
     } else {
         // STRING: LEGORR 0x004a94b4
@@ -942,10 +942,10 @@ int reward_format_values(void)
         do time -= 60; while (--n);
         if (value < 10)
             // STRING: LEGORR 0x004a94ac
-            sprintf(buff, "0%d.", value);
+            snprintf(buff, sizeof(buff), "0%d.", value);
         else
             // STRING: LEGORR 0x004a94a8
-            sprintf(buff, "%d.", value);
+            snprintf(buff, sizeof(buff), "%d.", value);
         strcat(timeText, buff);
     } else {
         // STRING: LEGORR 0x004a94a4
@@ -954,19 +954,19 @@ int reward_format_values(void)
     if (time > 1) {
         if (time - 1 < 10)
             // STRING: LEGORR 0x004a94a0
-            sprintf(buff, "0%d", time - 1);
+            snprintf(buff, sizeof(buff), "0%d", time - 1);
         else
-            sprintf(buff, "%d", time - 1);
+            snprintf(buff, sizeof(buff), "%d", time - 1);
         strcat(timeText, buff);
     } else {
         // STRING: LEGORR 0x004a949c
         strcat(timeText, "00");
     }
-    sprintf(current->itemsArray[REWARD_ITEM_TIMER].percentText, "%s", timeText);
+    snprintf(current->itemsArray[REWARD_ITEM_TIMER].percentText, sizeof(current->itemsArray[REWARD_ITEM_TIMER].percentText), "%s", timeText);
 
     current->itemsArray[REWARD_ITEM_SCORE].percentInt =
         (unsigned int)current->itemsArray[REWARD_ITEM_SCORE].percent;
-    sprintf(current->itemsArray[REWARD_ITEM_SCORE].percentText, "%d%%%%",
+    snprintf(current->itemsArray[REWARD_ITEM_SCORE].percentText, sizeof(current->itemsArray[REWARD_ITEM_SCORE].percentText), "%d%%%%",
             current->itemsArray[REWARD_ITEM_SCORE].percentInt);
     return 1;
 }
@@ -1149,11 +1149,11 @@ int reward_draw_score(unsigned int count, float time)
     if ((current = reward_level_get(level->rewardKey)) == NULL) return 0;
     if (level->status == 1) {
         reward_draw_item(&current->items[REWARD_ITEM_SCORE], REWARD_ITEM_FLAG_TEXT, count, time);
-        sprintf(name, "%s", current->items[REWARD_ITEM_SCORE].text);
+        snprintf(name, sizeof(name), "%s", current->items[REWARD_ITEM_SCORE].text);
         for (i = 0; i < (int)strlen(current->items[REWARD_ITEM_SCORE].text); i++) {
             if (current->items[REWARD_ITEM_SCORE].text[i] == ' ') {
                 name[i] = '\0';
-                sprintf(value, "%s", &name[i + 1]);
+                snprintf(value, sizeof(value), "%s", &name[i + 1]);
             }
         }
         font_print_f(rewardGlobs.backFont,
@@ -1580,7 +1580,7 @@ RewardScrollLabel* reward_scroll_add_label(RewardScroll* scroll, const char* tex
     scroll->labels[index]->x = x;
     scroll->labels[index]->y = y;
     scroll->labels[index]->text = (char*)malloc(strlen(text) + 1);
-    sprintf(scroll->labels[index]->text, "%s", text);
+    snprintf(scroll->labels[index]->text, strlen(text) + 1, "%s", text);
     scroll->labels[index]->type = 3;
     scroll->labels[index]->font = font;
     scroll->labels[index]->flags |= flags;

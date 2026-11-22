@@ -64,7 +64,7 @@ Detail_TextureSet* detail_load_texture_set(const char* textureBaseName,
             for (y = 0; y < height; y++) {
                 for (x = 0; x < width; x++) {
                     // STRING: LEGORR 0x004a1da8
-                    sprintf(name, "%s%0.1x%0.1x.bmp", textureBaseName, x, y);
+                    snprintf(name, sizeof(name), "%s%0.1x%0.1x.bmp", textureBaseName, x, y);
                     textureSet->textures[(y * width) + x] =
                         detail_container_load_texture2_adapter(name, 1, NULL, NULL);
                 }

@@ -433,12 +433,12 @@ int media_cd_audio_track_completion_poll(int track)
 
     track++;
     // STRING: LEGORR 0x004ab720
-    sprintf(chText, "status cdaudio mode");
+    snprintf(chText, sizeof(chText), "status cdaudio mode");
     soundGlobs.mciErr = audio_mci_send_string(chText, sound_mci_return, SOUND_MCI_RETURN_SIZE, NULL); // [library:audio]
     // STRING: LEGORR 0x004ab718
     if (_strcmpi(sound_mci_return, "stopped") == 0) goto not_playing;
     // STRING: LEGORR 0x004ab6f8
-    sprintf(chText, "status cdaudio current track");
+    snprintf(chText, sizeof(chText), "status cdaudio current track");
     soundGlobs.mciErr = audio_mci_send_string(chText, sound_mci_return, SOUND_MCI_RETURN_SIZE, NULL); // [library:audio]
     if (atoi(sound_mci_return) > track) {
 not_playing:

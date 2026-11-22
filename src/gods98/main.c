@@ -201,7 +201,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     if (productName) {
         char mutexName[128];
         // STRING: LEGORR 0x004aac78
-        sprintf(mutexName, "%s Mutex", productName);
+        snprintf(mutexName, sizeof(mutexName), "%s Mutex", productName);
         CreateMutexA(NULL, TRUE, mutexName);
         if (GetLastError() == ERROR_ALREADY_EXISTS) return 0;
     }
@@ -240,9 +240,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     if (registry_path_accessor(MAIN_REGISTRY_KEY, "StandardParameters", 0,
                                tempStr, 1024)) {
         // STRING: LEGORR 0x004aac2c
-        sprintf(commandLine, "%s %s", lpCmdLine, tempStr);
+        snprintf(commandLine, sizeof(commandLine), "%s %s", lpCmdLine, tempStr);
     } else {
-        sprintf(commandLine, "%s", lpCmdLine);
+        snprintf(commandLine, sizeof(commandLine), "%s", lpCmdLine);
     }
 
     winmain_parse_options(commandLine, &nosound, &insistOnCD);
@@ -251,7 +251,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     if (!registry_path_accessor(MAIN_REGISTRY_KEY, "NoHALMessage", 0,
                                 noHALMsg, 1024)) {
         // STRING: LEGORR 0x004aabf0
-        sprintf(noHALMsg, "No DirectX 3D accelerator could be found.");
+        snprintf(noHALMsg, sizeof(noHALMsg), "No DirectX 3D accelerator could be found.");
     }
 
     ledger_stub_0048b260_StartupStreamStateReset();
