@@ -56,3 +56,7 @@ lrr_unit_test(scrollinfo SOURCES ${GAME_DIR}/test_scrollinfo.cpp
 
 # Placement footprint rotation and translation on the block grid.
 lrr_unit_test(selectplace SOURCES ${GAME_DIR}/test_selectplace.cpp LABELS selectplace)
+
+# Sound name registration, sample markers, deferred playback and cooldown.
+lrr_unit_test(sfx SOURCES ${GAME_DIR}/test_sfx.cpp
+  WRAP sound_bank_entry_load s_play_seam sound_source_spatial_refresh_all LABELS sfx)
