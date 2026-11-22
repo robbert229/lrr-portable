@@ -60,6 +60,14 @@ workflows that build every pull request, and attaches these:
 | `lrr-portable-<v>-Linux-x86_64.flatpak`, `-aarch64.flatpak` | `native-packages`, Flatpak jobs |
 | `SHA256SUMS` | the release workflow |
 
+A pull request that changes `release.yml`, the release tools, the two
+package workflows or `packaging/` runs the release workflow as a dry run, so
+a renamed package fails there and not on the tag.
+
+The Flatpak's AppStream entry says `development` even at the tag, because
+flatpak-builder doesn't pass the CI environment into its build; the other
+packages say `stable`.
+
 Each Windows ZIP holds `LegoRR.exe`, `LICENSE.txt`, `THIRD-PARTY-NOTICES.txt`
 and the Visual C++ runtime DLLs (`msvcp140*.dll`, `vcruntime140*.dll`), so
 it runs without the Visual C++ Redistributable installed. Each DMG holds
@@ -111,8 +119,8 @@ fails before you tag.
 4. **Update `docs/divergences.md`.** Every user-facing change merged since
    the last release must have its entry.
 5. **Update `CHANGELOG.md`.**
-   - Move the `[Unreleased]` notes into a `## [x.y.z] - YYYY-MM-DD`
-     section dated for the release.
+   - Replace `unreleased` in the `## [x.y.z] - unreleased` heading with the
+     release date (`YYYY-MM-DD`).
    - Check that the section covers the user-facing changes from
      `docs/divergences.md`.
    - List as *Coming next* what is still in flight, without promising dates.
@@ -153,6 +161,10 @@ Steps 4 to 7 go in one pull request, the release PR, for example
 
    You can also run *Actions → release → Run workflow* from an existing tag,
    with *draft* ticked.
+
+   The draft waits for every `native-hosts` and `native-packages` job,
+   including those that ship nothing (FreeBSD, MinGW64, web). If one fails
+   on a flaky runner, re-run the failed jobs.
 2. **Let the workflow run.** On the tag, it builds every package and checks
    the tag against the version and the changelog. It checks the packages'
    contents and that the tagged Linux build reports exactly
@@ -164,16 +176,23 @@ Steps 4 to 7 go in one pull request, the release PR, for example
    - every asset in the table above is there;
    - `SHA256SUMS` matches the assets (`sha256sum -c SHA256SUMS` in a
      directory with them all);
-   - the notes read well.
+   - the notes read well;
+   - no stale asset is left over. A re-run replaces assets of the same name
+     but doesn't remove ones a renamed package left behind; delete those by
+     hand.
 
    Then decide whether to mark it as a pre-release, and publish it.
 
 ## After the release
 
 - In a follow-up PR, bump `project(VERSION)` to the next planned version
-  (`0.2.0` after `0.1.0`) and start a new empty `[Unreleased]` section. Until
+  (`0.2.0` after `0.1.0`), and add its section to `CHANGELOG.md` as
+  `## [0.2.0] - unreleased`, with at least a line of notes, and its link
+  reference. `tools/tests/test_release.py`, part of `native-build`, fails while
+  the version has no notes, so the two changes go in the same PR. Until
   then, builds from `main` report `0.1.0-dev+g…`, which sorts *before* the
-  release they come after.
+  release they come after. Player-facing changes add their notes to that
+  section as they merge.
 - Point the README's "Get a build" step at the
   [Releases page](https://github.com/robbert229/lrr-portable/releases).
 

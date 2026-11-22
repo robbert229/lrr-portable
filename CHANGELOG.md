@@ -5,11 +5,8 @@ format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 versions follow [Semantic Versioning](https://semver.org/) (0.x while the
 port is young). Each section below is also the text of that release on
 GitHub. [docs/releasing.md](docs/releasing.md) explains how a release is
-made.
-
-## [Unreleased]
-
-Nothing yet.
+made. The section for the version `main` is working towards is dated
+`unreleased` until its release.
 
 ## [0.1.0] - unreleased
 
@@ -41,7 +38,8 @@ common and you may not reach the end of a mission. Please
 
 `SHA256SUMS` lists every file's checksum. Each download carries the licence
 (`LICENSE`) and the notices for the libraries it includes
-(`THIRD-PARTY-NOTICES.txt`). `LegoRR --version` prints the version.
+(`THIRD-PARTY-NOTICES.txt`). `LegoRR --version` prints the version (on
+Windows, run `LegoRR.exe --version | more` to see it).
 
 ### What works
 
@@ -123,5 +121,4 @@ These are in progress and not in 0.1.0:
   ([#961](https://github.com/robbert229/lrr-portable/issues/961),
   [#976](https://github.com/robbert229/lrr-portable/pull/976)).
 
-[Unreleased]: https://github.com/robbert229/lrr-portable/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/robbert229/lrr-portable/releases/tag/v0.1.0

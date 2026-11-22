@@ -586,7 +586,8 @@ needs:
 
 Every package carries `LICENSE` and `THIRD-PARTY-NOTICES.txt`.
 `tools/check_package.py` checks a package for them, and for anything outside
-its allow-list, such as game data. CI runs it on every package, and
+its allow-list, such as game data. Each package job runs it, except the
+Flatpak jobs, whose bundles the release workflow checks; and
 [Releasing](releasing.md) covers the release workflow that ships them.
 
 The icon is original artwork drawn for this repository

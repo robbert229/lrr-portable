@@ -14,7 +14,7 @@
 #   - when it is run by hand from such a tag (Run workflow, "Use workflow
 #     from: Tags / v<version>") with "draft" ticked.
 # Otherwise (a run by hand without "draft", or a pull request that changes
-# the release tooling) it is a dry run: the same builds and checks, with the
+# the release tooling, the package workflows or packaging/) it is a dry run: the same builds and checks, with the
 # assets uploaded as the release-assets artifact and no release.
 # A tag must equal v + project(VERSION) in CMakeLists.txt, and CHANGELOG.md
 # must have notes for that version; tools/release.py checks both.
@@ -35,6 +35,9 @@ on:
       - tools/release.py
       - tools/check_package.py
       - tools/version.cmake
+      - .github/workflows/native-hosts.yml
+      - .github/workflows/native-packages.yml
+      - packaging/**
 
 permissions:
   contents: read
@@ -222,7 +225,9 @@ jobs:
           VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           set -euo pipefail
-          if state="$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null)"; then
+          # Only "release not found" means there is none; any other failure
+          # stops here rather than create a second draft.
+          if state="$(gh release view "$TAG" --json isDraft --jq .isDraft 2>"$RUNNER_TEMP/view.err")"; then
             if [ "$state" != true ]; then
               echo "::error::release $TAG is already published; this workflow only drafts"
               exit 1
@@ -230,9 +235,13 @@ jobs:
             gh release edit "$TAG" --draft --title "lrr-portable $VERSION" \
               --notes-file assets/release-notes.md
             gh release upload "$TAG" assets/release/* --clobber
-          else
+          elif grep -qi 'not found' "$RUNNER_TEMP/view.err"; then
             gh release create "$TAG" assets/release/* --draft --verify-tag \
               --title "lrr-portable $VERSION" --notes-file assets/release-notes.md
+          else
+            cat "$RUNNER_TEMP/view.err" >&2
+            echo "::error::could not tell whether release $TAG exists"
+            exit 1
           fi
           echo "Draft release $TAG is ready for review: $(gh release view "$TAG" --json url --jq .url)" \
             >> "$GITHUB_STEP_SUMMARY"

@@ -60,9 +60,10 @@ class VersionTests(unittest.TestCase):
         self.assertRegex(version, r"^\d+\.\d+\.\d+$")
 
     def test_the_changelog_has_notes_for_the_repository_version(self):
+        # The section for the version main is working towards always exists
+        # (docs/releasing.md), so a tag on any commit finds its notes.
         version = release.project_version((ROOT / "CMakeLists.txt").read_text())
-        notes = release.release_notes((ROOT / "CHANGELOG.md").read_text(), version)
-        self.assertIn("own copy", notes)
+        release.release_notes((ROOT / "CHANGELOG.md").read_text(), version)
 
 
 class NotesTests(unittest.TestCase):
