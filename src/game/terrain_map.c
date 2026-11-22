@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-026 — original translation unit (text 0044e0c0-00451cd0; finding
- * 505): the 3D terrain map (the original's Map3D.c) and the level-of-detail
- * mesh lists (MeshLOD) at the end of the object.
+/* GAME-026 — original translation unit (text 0044e0c0-004519b0; finding
+ * 505): the 3D terrain map (the original's Map3D.c). The level-of-detail
+ * mesh lists after it are their own object (GAME-053, meshlod.c).
  *
  * Rebuilt in the original's shape (issue #522, ADR 0005): one file for the
- * unit, its 62 functions in original order and the C-compatible subset, so
+ * unit, its 56 functions in original order and the C-compatible subset, so
  * the matching build compiles it as C. The native port compiles it as C++.
  *
  * The port's terrain model is a different contract, so the port's
@@ -57,7 +57,7 @@ TerrainMap* terrain_map_create(void* root, const char* filename,
     TerrainMapPoint2* uv;
     float r;
     float scale;
-    int diffA, diffB;
+    unsigned int diffA, diffB;
     TerrainMapBlock* block;
 
     if ((file = (TerrainMapFile*)read_whole_file(filename, NULL)) != NULL) {
@@ -129,7 +129,7 @@ TerrainMap* terrain_map_create(void* root, const char* filename,
                                     map->blocks[(y + 1) * map->blockWidth + x + 1].height;
                             diffB = map->blocks[y * map->blockWidth + x + 1].height -
                                     map->blocks[(y + 1) * map->blockWidth + x].height;
-                            if ((unsigned int)abs(diffA) < (unsigned int)abs(diffB)) {
+                            if ((unsigned int)abs((int)diffA) < (unsigned int)abs((int)diffB)) {
                                 terrain_map_block_rotated_set(map, x, y, 1);
                             }
                             else {
@@ -278,6 +278,16 @@ void terrain_map_vertex_normals_update_all(TerrainMap* map)
     }
 }
 
+/* The shape walks' test for a repeated point, an inline helper: the
+ * original reads the second point through its own address ([ecx + 4] for
+ * its y). Defined here, before its first caller, as a header include at
+ * this point moves the unit's symbol phase (finding 538). */
+static __inline int terrain_map_point2i_differs(const TerrainMapPoint2I* a,
+                                                const TerrainMapPoint2I* b)
+{
+    return a->x != b->x || a->y != b->y;
+}
+
 // FUNCTION: LEGORR 0x0044e8c0
 int terrain_map_shape_tolerance_check(TerrainMap* map,
                                       const TerrainMapPoint2I* shape,
@@ -296,8 +306,7 @@ int terrain_map_shape_tolerance_check(TerrainMap* map,
     lowest = 10000.0f;
     highest = -10000.0f;
     for (i = 0; i < count; i++) {
-        if (i == count - 1 || shape[i].x != shape[i + 1].x ||
-            shape[i].y != shape[i + 1].y) {
+        if (i == count - 1 || terrain_map_point2i_differs(&shape[i], &shape[i + 1])) {
             terrain_map_block_vertices_get(map, shape[i].x, shape[i].y,
                                            vertices);
             for (j = 0; j < 6; j++) {
@@ -354,8 +363,7 @@ void terrain_map_shape_flatten(TerrainMap* map,
     highest = -10000.0f;
     blockCount = 0;
     for (i = 0; i < count; i++) {
-        if (i == count - 1 || shape[i].x != shape[i + 1].x ||
-            shape[i].y != shape[i + 1].y) {
+        if (i == count - 1 || terrain_map_point2i_differs(&shape[i], &shape[i + 1])) {
             point = &s_terrain_map_flatten_blocks[blockCount];
             *point = shape[i];
             terrain_map_block_vertices_get(map, point->x, point->y,
@@ -952,12 +960,15 @@ void terrain_map_block_first_vertex_get(TerrainMap* map, int bx, int by,
                                         TerrainMapVector3* position)
 {
     TerrainMapVertex vertex;
+    unsigned int flags;
+    unsigned int group;
 
-    lwo_layer_polygon_vertex_data_read(
-        map->mesh, by * map->gridWidth + bx,
-        map->blocks[map->blockWidth * by + bx].flags &
-            TERRAIN_MAP_BLOCK_ROTATED,
-        1, &vertex);
+    group = by * map->gridWidth + bx;
+    flags = map->blocks[map->blockWidth * by + bx].flags;
+    if (flags & TERRAIN_MAP_BLOCK_ROTATED) flags = 1;
+    else flags = 0;
+    lwo_layer_polygon_vertex_data_read(map->mesh, group,
+                                       flags, 1, &vertex);
     *position = vertex.position;
 }
 
@@ -1055,8 +1066,8 @@ int terrain_map_screen_pick(TerrainMap* map, void* viewport,
                                       &block, 20)) {
         return 0;
     }
-    for (oy = -2; oy < 3; oy++) {
-        for (ox = -2; ox < 3; ox++) {
+    for (oy = -2; oy <= 2; oy++) {
+        for (ox = -2; ox <= 2; ox++) {
             if ((unsigned int)(ox + block.x) < map->gridWidth &&
                 (unsigned int)(oy + block.y) < map->gridHeight) {
                 terrain_map_block_vertices_get(map, ox + block.x,
@@ -1291,8 +1302,7 @@ void terrain_map_uv_wobble_update(TerrainMap* map, float elapsed)
     TerrainMapPoint2I blockOffsets[4];
     TerrainMapVertex vertices[4];
     TerrainMapPoint2 wobble;
-    TerrainMapPoint2 cur;
-    TerrainMapPoint2 target;
+    TerrainMapPoint2 uv[2]; /* the vertex's UV, then its wobble target */
     float speed, scale, dist;
     unsigned int i, j, k, x, y, group;
     int rotated;
@@ -1329,29 +1339,28 @@ void terrain_map_uv_wobble_update(TerrainMap* map, float elapsed)
                 k = j;
                 if (rotated) k = (j + 1) & 3;
                 wobble = map->blocks[(y + blockOffsets[j].y) * map->blockWidth + x + blockOffsets[j].x].uvWobble;
-                cur.x = vertices[k].tu;
-                cur.y = vertices[k].tv;
-                target.x = wobble.x + uvOffsets[j].x;
-                target.y = wobble.y + uvOffsets[j].y;
-                dist = terrain_map_vector2d_distance(&cur, &target);
+                terrain_map_vector2d_add(&uv[1], &wobble, &uvOffsets[j]);
+                uv[0].x = vertices[k].tu;
+                uv[0].y = vertices[k].tv;
+                dist = terrain_map_vector2d_distance(&uv[0], &uv[1]);
                 if (dist > 0.36f) {
-                    cur = target;
+                    uv[0] = uv[1];
                 }
                 else if (dist < 0.05f) {
                     wobble.x = random_float_range(0.0f, 1.0f);
                     wobble.y = random_float_range(0.0f, 1.0f);
                     terrain_map_vector2d_normalise(&wobble);
                     uvw = &map->blocks[(y + blockOffsets[j].y) * map->blockWidth + x + blockOffsets[j].x].uvWobble;
-                    wobble.x = (uvw->x + wobble.x) * 0.3f;
-                    wobble.y = (uvw->y + wobble.y) * 0.3f;
-                    target.x = wobble.x + uvOffsets[j].x;
-                    target.y = wobble.y + uvOffsets[j].y;
+                    terrain_map_vector2d_add(&wobble, uvw, &wobble);
+                    terrain_map_vector2d_scale(&wobble, &wobble, 0.3f);
+                    terrain_map_vector2d_add(&uv[1], &wobble, &uvOffsets[j]);
                     *uvw = wobble;
                 }
-                cur.x = speed * cur.x + target.x;
-                cur.y = speed * cur.y + target.y;
-                vertices[k].tu = scale * cur.x;
-                vertices[k].tv = scale * cur.y;
+                terrain_map_vector2d_scale(&uv[0], &uv[0], speed);
+                terrain_map_vector2d_add(&uv[0], &uv[0], &uv[1]);
+                terrain_map_vector2d_scale(&uv[0], &uv[0], scale);
+                vertices[k].tu = uv[0].x;
+                vertices[k].tv = uv[0].y;
             }
             container_mesh_set_vertices(map->mesh, group, 0, 4, vertices);
         }
@@ -1391,7 +1400,7 @@ void terrain_map_block_vertex_normals_update(TerrainMap* map,
     normals[3].y = 0.0f;
     normals[3].z = 0.0f;
     for (i = 0; i < 4; i++) {
-        blockOffsets[i].x += (float)vx;
+        blockOffsets[i].x = (blockOffsets[i].x) + (float)vx;
         blockOffsets[i].y = (float)vy + blockOffsets[i].y;
     }
     for (i = 0; i < 4; i++) {
@@ -1424,17 +1433,17 @@ int terrain_map_block_pair_fades(TerrainMap* map, unsigned int bx1,
                                  unsigned int by2)
 {
     unsigned char texA;
-    char texB;
+    unsigned char texB;
     unsigned int i;
 
     if (by1 != by2 || bx1 != bx2) {
         if (bx1 < map->gridWidth && by1 < map->gridHeight &&
             bx2 < map->gridWidth && by2 < map->gridHeight) {
             texA = map->blocks[by1 * map->blockWidth + bx1].texture;
-            texB = (char)map->blocks[by2 * map->blockWidth + bx2].texture;
-            if (texA != 0xff && texB != -1) {
+            texB = map->blocks[by2 * map->blockWidth + bx2].texture;
+            if (texA != 0xff && texB != 0xff) {
                 for (i = 0; i < map->fadePairCount[texA]; i++) {
-                    if ((char)map->fadePairs[texA][i] == texB) return 1;
+                    if (map->fadePairs[texA][i] == texB) return 1;
                 }
                 return 0;
             }
@@ -1565,8 +1574,7 @@ int terrain_map_block_ray_intersection(TerrainMap* map, int bx, int by,
 {
     TerrainMapVector3 v[4];
     TerrainMapVector3 normal;
-    TerrainMapVector3 hitA;
-    TerrainMapVector3 hitB;
+    TerrainMapVector3 hit[2];
     TerrainMapPoint2 point;
     TerrainMapPoint2 list[4];
     int rotated;
@@ -1576,7 +1584,7 @@ int terrain_map_block_ray_intersection(TerrainMap* map, int bx, int by,
     hitAFound = 0;
     hitBFound = 0;
     normal = map->blocks[by * map->blockWidth + bx].normalA;
-    if (view_ray_intersection_test(&hitA.x, &origin->x, &direction->x,
+    if (view_ray_intersection_test(&hit[0].x, &origin->x, &direction->x,
                                    &v[0].x, &normal.x)) {
         if (!rotated) {
             list[0].x = v[0].x;
@@ -1598,13 +1606,13 @@ int terrain_map_block_ray_intersection(TerrainMap* map, int bx, int by,
             list[3].x = v[0].x;
             list[3].y = v[0].y;
         }
-        point = *(TerrainMapPoint2*)&hitA;
+        point = *(TerrainMapPoint2*)&hit[0];
         if (point_in_polygon_2d(&point.x, &list[0].x, &list[1].x, 3)) {
             hitAFound = 1;
         }
     }
     normal = map->blocks[by * map->blockWidth + bx].normalB;
-    if (view_ray_intersection_test(&hitB.x, &origin->x, &direction->x,
+    if (view_ray_intersection_test(&hit[1].x, &origin->x, &direction->x,
                                    &v[2].x, &normal.x)) {
         if (!rotated) {
             list[0].x = v[1].x;
@@ -1626,158 +1634,25 @@ int terrain_map_block_ray_intersection(TerrainMap* map, int bx, int by,
             list[3].x = v[0].x;
             list[3].y = v[0].y;
         }
-        point = *(TerrainMapPoint2*)&hitB;
+        point = *(TerrainMapPoint2*)&hit[1];
         if (point_in_polygon_2d(&point.x, &list[0].x, &list[1].x, 3)) {
             hitBFound = 1;
         }
     }
     if (!hitAFound && !hitBFound) return 0;
     if (hitAFound && hitBFound) {
-        if (terrain_map_vector3d_distance(&hitA, origin) <
-            terrain_map_vector3d_distance(&hitB, origin)) {
-            *intersection = hitA;
+        if (!(terrain_map_vector3d_distance(&hit[0], origin) <
+              terrain_map_vector3d_distance(&hit[1], origin))) {
+            *intersection = hit[1];
             return 1;
         }
-    }
-    else if (hitAFound) {
-        *intersection = hitA;
+        *intersection = hit[0];
         return 1;
     }
-    *intersection = hitB;
+    if (hitAFound) {
+        *intersection = hit[0];
+        return 1;
+    }
+    *intersection = hit[1];
     return 1;
-}
-
-// FUNCTION: LEGORR 0x004519b0
-ModelEntryRecord* model_entry_record_load(ModelEntryRecord* previous,
-                                          const char* partName,
-                                          const char* dir,
-                                          const char* meshName, int setID)
-{
-    char path[256];
-    void* container;
-    ModelEntryRecord* record;
-
-    sprintf(path, "%s\\%s", dir, meshName);
-    if ((container = container_load(NULL, path, "LWO", 1)) == NULL) {
-        container = container_load(NULL, path, "MESH", 1);
-    }
-    if (container) {
-        record = (ModelEntryRecord*)malloc(sizeof(ModelEntryRecord));
-        record->flags = 2;
-        if (previous) previous->next = record;
-        record->object = container;
-        record->next = NULL;
-        record->kind = setID;
-        record->name = (char*)malloc(strlen(partName) + 1);
-        strcpy(record->name, partName);
-        record->instance = NULL;
-        return record;
-    }
-    return NULL;
-}
-
-// FUNCTION: LEGORR 0x00451ab0
-ModelEntryRecord* model_primitive_record_create(ModelEntryRecord* previous,
-                                                const char* name, int kind)
-{
-    ModelEntryRecord* record;
-
-    record = (ModelEntryRecord*)malloc(sizeof(ModelEntryRecord));
-    record->flags = 2;
-    if (previous) previous->next = record;
-    record->kind = kind;
-    record->next = NULL;
-    record->object = NULL;
-    record->name = (char*)malloc(strlen(name) + 1);
-    strcpy(record->name, name);
-    record->instance = NULL;
-    return record;
-}
-
-// FUNCTION: LEGORR 0x00451b30
-ModelEntryRecord* model_entry_list_flatten(const ModelEntryRecord* head)
-{
-    const ModelEntryRecord* node;
-    ModelEntryRecord* clone;
-    unsigned int count = 0;
-    unsigned int i;
-
-    for (node = head; node; node = node->next) count++;
-    if (count) {
-        clone = (ModelEntryRecord*)malloc(count * sizeof(ModelEntryRecord));
-        i = 0;
-        for (node = head; node; node = node->next) {
-            clone[i] = *node;
-            clone[i].instance = NULL;
-            clone[i].flags = (clone[i].flags & ~2) | 1;
-            clone[i].next = &clone[i + 1];
-            i++;
-        }
-        clone[0].flags |= 2;
-        clone[i - 1].next = NULL;
-        return clone;
-    }
-    return NULL;
-}
-
-// FUNCTION: LEGORR 0x00451bc0
-void resource_list_update_matching_key(void* list, void* library,
-                                       void* update_value,
-                                       unsigned int key)
-{
-    ModelEntryRecord* record;
-
-    for (record = (ModelEntryRecord*)list; record; record = record->next) {
-        if (key == (unsigned int)record->kind) {
-            if (!record->instance) {
-                const char* name = xf_texture_name_format(library, record->name, NULL);
-                record->instance = resource_name_register_or_query_target(
-                    (void**)library, name, 0, NULL);
-            }
-            if (record->instance) {
-                interface_array_forward_sync(record->instance, record->object,
-                                             update_value);
-            }
-        }
-    }
-}
-
-// FUNCTION: LEGORR 0x00451c30
-void linked_record_field4_clear(void* record)
-{
-    ModelEntryRecord* node;
-
-    for (node = (ModelEntryRecord*)record; node; node = node->next) {
-        node->instance = NULL;
-    }
-}
-
-// FUNCTION: LEGORR 0x00451c50
-void owned_object_reference_chain_release(void* head)
-{
-    ModelEntryRecord* node;
-    ModelEntryRecord* next;
-    ModelEntryRecord* last = NULL;
-    ModelEntryRecord* root = (ModelEntryRecord*)head;
-
-    for (node = root; node; node = node->next) {
-        if (!(node->flags & 1)) {
-            if (node->name) free(node->name);
-            if (node->object) {
-                ledger_stub_00472a40_DDiSceneObjectDestroy(node->object);
-            }
-        }
-        if (node->flags & 2) {
-            last = node;
-        }
-        else if (last) {
-            last->next = node->next;
-        }
-    }
-    if (last) {
-        for (node = root; node; node = next) {
-            next = node->next;
-            free(node);
-        }
-    }
 }

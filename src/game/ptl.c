@@ -22,6 +22,7 @@
 #include "gods98/config.h"
 #include "message_unit.h"
 #include "radarmap.h"
+#include "gods98/maths_normalise_head.h"
 
 #define PTL_MAXPROPERTIES 40
 

@@ -151,6 +151,10 @@ int spiderweb_check_collision(Lego_Object* liveObj)
     return 0;
 }
 
+/* Maths.h's inline normalise. Its 1.0f (0049e784) follows the 0.0f
+ * spiderweb_check_collision creates, so the copy is compiled here. */
+#include "gods98/maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x004665c0
 void spiderweb_update(float elapsedGame)
 {

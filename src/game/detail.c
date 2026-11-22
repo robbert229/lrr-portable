@@ -135,7 +135,7 @@ Detail_Mesh* detail_load_meshes(void* root, const char* uncoveredName,
                                 Detail_TextureSet* textureSet)
 {
     Detail_Mesh* mesh;
-    unsigned int loop, sub, vertexCount;
+    unsigned int loop, sub;
     Detail_Vertex* vertices;
     int swapV, swapU;
     float scale;
@@ -162,6 +162,8 @@ Detail_Mesh* detail_load_meshes(void* root, const char* uncoveredName,
             }
 
             for (loop = 0; loop < DETAIL_MESH_COUNT; loop++) {
+                unsigned int vertexCount;
+
                 if (loop == 0) swapV = swapU = 0;
                 else swapV = swapU = 1;
 
@@ -286,19 +288,23 @@ void detail_set_mesh_frame(void* cont, float blockSize, Detail_Vector3F* a,
                            Detail_Vector3F* b, Detail_Vector3F* c)
 {
     float mat[4][4];
-    float dirScale, upScale;
     Detail_Vector3F dir, up, tb, tc;
 
     detail_vector3d_subtract(&dir, b, a);
     detail_vector3d_subtract(&up, c, b);
     detail_vector3d_cross_product(&up, &up, &dir);
-    dirScale = 1.0f / detail_vector3d_modulus(&dir);
-    upScale = 1.0f / detail_vector3d_modulus(&up);
+    detail_vector3d_normalise(&dir);
+    detail_vector3d_normalise(&up);
 
-    ddiscene_object_pose_method_dispatch(cont, NULL, -(up.x * upScale), -(up.y * upScale),
-                                         -(up.z * upScale), dir.x * dirScale,
-                                         dir.y * dirScale, dir.z * dirScale);
-    ddiscene_object_position_set(cont, NULL, a->x, a->y, a->z);
+    ddiscene_object_pose_method_dispatch(cont, NULL, -up.x, -up.y, -up.z, dir.x,
+                                         dir.y, dir.z);
+    {
+        /* y and z as float locals of the block: the original copies them
+         * through the x87 stack and only x through a register. */
+        float y = a->y;
+        float z = a->z;
+        ddiscene_object_position_set(cont, NULL, a->x, y, z);
+    }
     detail_container_inverse_transform_adapter(cont, &tb, b);
     detail_container_inverse_transform_adapter(cont, &tc, c);
     detail_matrix_setup(&mat[0][0], blockSize, blockSize, tb.y, tc.x, tc.y);
@@ -326,6 +332,8 @@ void detail_matrix_setup(float* m, float sx, float sy, float y, float x2,
     m[5] = y / sy;
     m[1] = (y2 / x2) * (x2 / sx);
 }
+
+#include "detail_tail.h"
 
 #ifdef __cplusplus
 }

@@ -204,6 +204,10 @@ void text_initialise(const char* panelImageFile, unsigned int panelX,
     text_clear();
 }
 
+/* Maths.h's inline normalise. Its 1.0f (0049e7bc) follows the 0.0f and
+ * 100.0f of text_load, so the copy is compiled here. */
+#include "gods98/maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x0046a9e0
 void text_clear(void)
 {

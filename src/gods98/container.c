@@ -646,6 +646,10 @@ static int Container_TextureSetSort(const void* a, const void* b);
 static void CNT_CDECL Container_TextureDestroyCallback(CntObject* obj,
                                                        void* arg);
 
+/* Maths.h's inline normalise. Its unread 1.0f (0049e88c) opens the
+ * unit's literal pool, before the 0.0f and 255.0f its code reads. */
+#include "maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x00472710
 Container* Container_Initialise(const char* gameName)
 {
@@ -952,8 +956,8 @@ Container* Container_Load(Container* parent, const char* filename,
 
                     if (*actname == '!') {
                         if (s_engine_feature_word & 0x00400000) goto next;
-                        actname++;
                     }
+                    if (*actname == '!') actname++;
 
                     sprintf(tempString,
                             // STRING: LEGORR 0x004aab04
@@ -1026,7 +1030,6 @@ Container* Container_Load(Container* parent, const char* filename,
             }
 
             block_close(config);
-            return cont;
         }
     } else if (type == Container_Frame) {
         cont = Container_Create(parent);
@@ -1034,7 +1037,6 @@ Container* Container_Load(Container* parent, const char* filename,
         // STRING: LEGORR 0x004aaac8
         sprintf(path, "%s.%s", name, containerGlobs.extensionName[Container_Frame]);
         Container_FrameLoad(path, cont->activityFrame);
-        return cont;
     } else if (type == Container_Mesh) {
         void* fileData;
         unsigned long fileSize;
@@ -1050,7 +1052,6 @@ Container* Container_Load(Container* parent, const char* filename,
                 Container_SetTypeData(cont, NULL, NULL, mesh, NULL);
             }
             free(fileData);
-            return cont;
         }
     } else if (type == Container_Anim || type == Container_LWS) {
         struct AnimClone* animClone;
@@ -1063,9 +1064,10 @@ Container* Container_Load(Container* parent, const char* filename,
                                               type == Container_LWS, looping)) {
             Container_Frame_SetAppData(cont->activityFrame, cont, animClone, name,
                                        &frameCount, NULL, NULL, NULL, NULL, NULL, NULL);
-            return cont;
+        } else {
+            Container_Remove(cont);
+            cont = NULL;
         }
-        Container_Remove(cont);
     } else if (type == Container_LWO) {
         void* transMesh;
 
@@ -1074,12 +1076,13 @@ Container* Container_Load(Container* parent, const char* filename,
         if (transMesh = lwo_model_entry_load(name, cont->activityFrame,
                                              (void*)(long)noTexture)) {
             Container_SetTypeData(cont, NULL, NULL, NULL, transMesh);
-            return cont;
+        } else {
+            Container_Remove(cont);
+            cont = NULL;
         }
-        Container_Remove(cont);
     }
 
-    return NULL;
+    return cont;
 }
 
 // FUNCTION: LEGORR 0x00473340
@@ -1094,7 +1097,7 @@ int Container_IsCurrentActivity(Container* cont, const char* actname)
 // FUNCTION: LEGORR 0x00473370
 int Container_SetActivity(Container* cont, const char* actname)
 {
-    char* freeName = NULL;
+    char* freeName;
     char* currAnimName;
     CntFrame* newFrame;
     CntFrame* oldFrame;
@@ -1102,6 +1105,7 @@ int Container_SetActivity(Container* cont, const char* actname)
     int result = 0;
 
     if (cont->type == Container_FromActivity) {
+        freeName = NULL;
         if (newFrame = Container_Frame_Find(cont, actname, 1)) {
             if (cont->typeData && (currAnimName = cont->typeData->name)) {
                 if (oldFrame = Container_Frame_Find(cont, currAnimName, 0)) {
@@ -3352,3 +3356,7 @@ static void CNT_CDECL Container_TextureDestroyCallback(CntObject* obj,
     ref->fileName = NULL;
     ref->texture = NULL;
 }
+
+/* A removed colour helper's unread 1/255 (0049e898), the last word of the
+ * unit's .rdata, after the 255.0f its colour setters read. */
+#include "container_colour_tail.h"

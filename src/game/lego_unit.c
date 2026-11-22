@@ -174,11 +174,13 @@ int legoGlobs_mouseBlockPos[2];
 
 /* Gates the AllowRename key. */
 
-/* The first mini-figure the object list loads (OListEntityRecordParse sets
- * it); the StartFP view follows it. It is objectGlobs +0x9cb8
- * (legoobject_globs.h, finding 662). Kept, unreferenced, so the symbol
- * counter does not move. Deviation (scoring only). */
-extern void* s_lego_f_4e8448;
+/* Maths.h's inline normalise, whose 1.0f opens the unit's .rdata
+ * (0049e2b0) before 0041fb50's 25.0f. The include costs three symbols of
+ * MSVC's counter (finding 538): the unreferenced declaration of
+ * s_lego_f_4e8448 (objectGlobs +0x9cb8, legoobject_globs.h) that was here
+ * and the two parameter names lego_unit_imports.h no longer gives
+ * ui_overlay_animation_advance. Deviation (scoring only). */
+#include "gods98/maths_normalise_head.h"
 /* ---- state, group E ---- */
 
 /* legoGlobs.config (005560c0): the game's Lego.cfg block root. */
@@ -2607,8 +2609,8 @@ void lego_terrain_pointer_command_update(void)
     float objPos[2];
     unsigned int clickX, clickY;
 
-    level = legoGlobs_currLevel;
     if ((legoGlobs_flags1 & 2) && (legoGlobs_flags1 & 0x1000) && !(legoGlobs_flags1 & 0x100)) {
+        level = legoGlobs_currLevel;
         {
             float diff[2];
 
@@ -2617,23 +2619,25 @@ void lego_terrain_pointer_command_update(void)
             media_pointer_cursor_select(0);
             if (!(system_state_flags_get_original(0) & 0x1000))
                 s_lego_radarDragDistance += (float)sqrt(diff[0] * diff[0] + diff[1] * diff[1]);
+        }
 
-            if (s_lego_radarDragging && g_renderer_word_c && s_lego_radarDragDistance >= 4.0f &&
-                terrain_point_pick_resolve_original(
-                    (const struct TerrainPointPickRegion*)LEGO_LEVEL_PTR(void, level->f_084),
-                    s_renderer_word_a, s_renderer_word_b, scroll, &bx, &by)) {
-                selection_record_point_get((struct ViewContext*)s_zoom_step_context, diff);
-                if (bx < (unsigned int)view_grid_edge_get() ||
-                    bx >= LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), unsigned int, 0x0) - view_grid_edge_get())
-                    scroll[0] = diff[0];
-                if (by < (unsigned int)view_grid_edge_get() ||
-                    by >= LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), unsigned int, 0x4) - view_grid_edge_get())
-                    scroll[1] = diff[1];
-                if (s_context_mode == 1)
-                    selection_record_point_set((struct ViewContext*)s_zoom_step_context, scroll[0], scroll[1]);
-                media_pointer_cursor_select(0xc);
-                legoGlobs_flags1 |= 0x200;
-            }
+        if (s_lego_radarDragging && g_renderer_word_c && s_lego_radarDragDistance >= 4.0f &&
+            terrain_point_pick_resolve_original(
+                (const struct TerrainPointPickRegion*)LEGO_LEVEL_PTR(void, level->f_084),
+                s_renderer_word_a, s_renderer_word_b, scroll, &bx, &by)) {
+            LegoVector3FC camPos;
+
+            selection_record_point_get((struct ViewContext*)s_zoom_step_context, &camPos.x);
+            if (bx < (unsigned int)view_grid_edge_get() ||
+                bx >= LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), unsigned int, 0x0) - view_grid_edge_get())
+                scroll[0] = camPos.x;
+            if (by < (unsigned int)view_grid_edge_get() ||
+                by >= LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), unsigned int, 0x4) - view_grid_edge_get())
+                scroll[1] = camPos.y;
+            if (s_context_mode == 1)
+                selection_record_point_set((struct ViewContext*)s_zoom_step_context, scroll[0], scroll[1]);
+            media_pointer_cursor_select(0xc);
+            legoGlobs_flags1 |= 0x200;
         }
 
         if (rect_contains_point_half_open((const float*)LEGO_LEVEL_PTR(void, level->f_084),
@@ -2659,13 +2663,13 @@ void lego_terrain_pointer_command_update(void)
                         timed_effect_update_request_set_corpus(2);
                     }
                 }
+            } else if (!g_renderer_word_c && s_lego_radarPrevButton) {
+                if (terrain_point_pick_resolve_original(
+                        (const struct TerrainPointPickRegion*)LEGO_LEVEL_PTR(void, level->f_084),
+                        s_renderer_word_a, s_renderer_word_b, &legoGlobs_f_5563f8.x, &clickX, &clickY))
+                    legoGlobs_flags1 |= 0x4000;
             } else if (!g_renderer_word_c) {
-                if (s_lego_radarPrevButton) {
-                    if (terrain_point_pick_resolve_original(
-                            (const struct TerrainPointPickRegion*)LEGO_LEVEL_PTR(void, level->f_084),
-                            s_renderer_word_a, s_renderer_word_b, &legoGlobs_f_5563f8.x, &clickX, &clickY))
-                        legoGlobs_flags1 |= 0x4000;
-                } else if (terrain_point_pick_resolve_original(
+                if (terrain_point_pick_resolve_original(
                                (const struct TerrainPointPickRegion*)LEGO_LEVEL_PTR(void, level->f_084),
                                s_renderer_word_a, s_renderer_word_b, NULL, &bx, &by)) {
                     if (s_lego_radarBlockX == bx && s_lego_radarBlockY == by) {
@@ -3025,6 +3029,11 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                             }
                         }
                     } else if (!(s_global_low_word & 0x20) && !(s_global_low_word & 0x40)) {
+                        /* One `type` for both object tests, and one `unit`
+                         * for both route checks below: lego_maths.h's two
+                         * `level` locals take their place in Lego.c's symbol
+                         * count (finding 538), and the code is unchanged. */
+                        int type;
                         if (!(s_global_low_word & 8) && !(s_global_low_word & 0x10)) {
                             if ((s_global_low_word & 2) || (s_global_low_word & 4)) {
                                 if (s_global_low_word & 2) media_pointer_cursor_select(0x25);
@@ -3039,6 +3048,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                 }
                             } else if (entity_shared_eligibility_check(liveObj, 1)) {
                                 int objPos[2];
+                                struct EntitySlot* unit;
                                 media_pointer_cursor_select(2);
                                 if (!s_lego_dragging)
                                     lego_entity_command_status_feedback_dispatch(liveObj);
@@ -3055,7 +3065,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                                 !(LEGO_FIELD(liveObj, uint32_t, 0x3e0) & 0x40000)) &&
                                                (!(legoGlobs_flags1 & 0x10000000) ||
                                                 (LEGO_FIELD(liveObj, uint32_t, 0x3ec) & 1))) {
-                                        int type = LEGO_FIELD(liveObj, int, 0);
+                                        type = LEGO_FIELD(liveObj, int, 0);
                                         if (type == 1 || type == 4 || type == 2 ||
                                             (type == 0xb &&
                                              (LEGO_FIELD(liveObj, uint32_t, 0x3e4) & 0x2000000))) {
@@ -3068,7 +3078,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                                 cmd_produce(0x2d, NULL, 0, NULL);
                                             }
                                         } else if (type == 6 || type == 7) {
-                                            struct EntitySlot* unit = selection_active_entity_get();
+                                            unit = selection_active_entity_get();
                                             if (unit != NULL) {
                                                 entity_position_to_terrain_cell_adapter(
                                                     liveObj, &objPos[0], &objPos[1]);
@@ -3087,7 +3097,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                         }
                                     }
                                 } else {
-                                    struct EntitySlot* unit = selection_active_entity_get();
+                                    unit = selection_active_entity_get();
                                     if (unit != NULL &&
                                         (LEGO_FIELD(liveObj, int, 0) == 6 ||
                                          LEGO_FIELD(liveObj, int, 0) == 7)) {
@@ -3107,7 +3117,6 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                 }
                             }
                         } else {
-                            int type;
                             if (s_global_low_word & 8) media_pointer_cursor_select(0x21);
                             else media_pointer_cursor_select(0x22);
                             type = LEGO_FIELD(liveObj, int, 0);
@@ -3217,7 +3226,16 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                              * `handled` (a command was found, kept in memory)
                              * and a per-test flag in a register, for which the
                              * dead `picked` is reused. In the last tests
-                             * `handled` is also the "no command" sound's flag. */
+                             * `handled` is also the "no command" sound's flag.
+                             * Neither flag is reset again inside the tests
+                             * below that run only while `picked` is 0 (every
+                             * `handled = 1` comes with `picked = 1`): the
+                             * original keeps each in one register or slot
+                             * throughout, which a reset would split, and the
+                             * second route check is nested as its own
+                             * `if (!picked)`. The reinforced tests are written
+                             * `? 0 : 1`, which keeps the original's 0/1
+                             * result (finding 671). */
                             picked = 0;
                             handled = 0;
                             if (!(block->flags1 & 8))
@@ -3264,9 +3282,8 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                     }
                                 }
                                 if (!picked && (block->flags1 & 8)) {
-                                    if (!lego_C_block_is_reinforced(bx, by) &&
+                                    if ((lego_C_block_is_reinforced(bx, by) ? 0 : 1) &&
                                         !(block->flags2 & 0x20)) {
-                                        picked = 0;
                                         if (!(block->flags1 & 0x200000) &&
                                             (entity_stats_word_get(selection_active_entity_get()) & 0x10000) &&
                                             lego_terrain_cell_route_and_occupancy_check(
@@ -3283,32 +3300,30 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                                 selection_clear_request_and_hud_reset();
                                             }
                                         }
-                                        if (picked) goto tracking;
-                                        picked = 0;
-                                        if (lego_terrain_cell_route_and_occupancy_check(
-                                                selection_active_entity_get(), bx, by, bx, by, 0)) {
-                                            picked = 1;
-                                            handled = 1;
-                                            if (LEGO_FIELD(selection_active_entity_get(), int, 0) == 2) media_pointer_cursor_select(0x27);
-                                            else media_pointer_cursor_select(0x28);
-                                            advisor_text_animation_update(0, 0, 0);
-                                            if (leftReleased &&
-                                                !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
-                                                cmd_produce(8, NULL, 0, legoGlobs_mouseBlockPos);
-                                                media_action_feedback_sound_dispatch(0);
-                                                selection_clear_request_and_hud_reset();
+                                        if (!picked) {
+                                            if (lego_terrain_cell_route_and_occupancy_check(
+                                                    selection_active_entity_get(), bx, by, bx, by, 0)) {
+                                                picked = 1;
+                                                handled = 1;
+                                                if (LEGO_FIELD(selection_active_entity_get(), int, 0) == 2) media_pointer_cursor_select(0x27);
+                                                else media_pointer_cursor_select(0x28);
+                                                advisor_text_animation_update(0, 0, 0);
+                                                if (leftReleased &&
+                                                    !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
+                                                    cmd_produce(8, NULL, 0, legoGlobs_mouseBlockPos);
+                                                    media_action_feedback_sound_dispatch(0);
+                                                    selection_clear_request_and_hud_reset();
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
                             if (!picked) {
-                                handled = 0;
-                                if (!lego_C_block_is_reinforced(bx, by) &&
+                                if ((lego_C_block_is_reinforced(bx, by) ? 0 : 1) &&
                                     block->f_02 != 6 && block->f_02 != 9 &&
                                     !(block->flags2 & 0x20)) {
                                     if (block->flags1 & 8) {
-                                        picked = 0;
                                         if (lego_C_block_at(legoGlobs_mouseBlockPos[0], legoGlobs_mouseBlockPos[1])->flags1 & 0x80000000) {
                                             picked = 1;
                                             handled = 1;
@@ -3358,22 +3373,26 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                                     command_context_post_to_hud(1, (const uint32_t*)legoGlobs_mouseBlockPos);
                                                 }
                                             }
-                                            if (!picked) {
-                                                handled = 0;
-                                                if (!(block->flags1 & 0x200000)) {
-                                                    handled = 1;
-                                                    if (leftReleased &&
-                                                        !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
-                                                        cmd_produce(3, NULL, 0, NULL);
-                                                        media_action_feedback_sound_dispatch(5);
-                                                        command_context_post_to_hud(5, (const uint32_t*)legoGlobs_mouseBlockPos);
-                                                    }
+                                            if (picked) goto tracking;
+                                            /* No sound test of its own: this
+                                             * test falls through to the shared
+                                             * "no command" sound below, as the
+                                             * original's cross-jumped
+                                             * command_context_post_to_hud call
+                                             * shows. */
+                                            handled = 0;
+                                            if (!(block->flags1 & 0x200000)) {
+                                                handled = 1;
+                                                if (leftReleased &&
+                                                    !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
+                                                    cmd_produce(3, NULL, 0, NULL);
+                                                    media_action_feedback_sound_dispatch(5);
+                                                    command_context_post_to_hud(5, (const uint32_t*)legoGlobs_mouseBlockPos);
                                                 }
-                                                if (!handled && leftReleased)
-                                                    media_action_feedback_sound_dispatch(1);
                                             }
+                                        } else {
+                                            goto tracking;
                                         }
-                                        goto tracking;
                                     } else if (block->f_02 != 1 && !(block->flags1 & 0x40)) {
                                         handled = 1;
                                         if (leftReleased &&
@@ -3422,8 +3441,8 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                 if (s_lego_dragging && !(s_panel_highlight_flags & 0x2000) &&
                     !(legoGlobs_flags1 & 0x200)) {
                     if (!(legoGlobs_flags1 & 0x100) &&
-                        sqrt(s_lego_drag_x * s_lego_drag_x +
-                             s_lego_drag_y * s_lego_drag_y) > 10.0f)
+                        (float)sqrt(s_lego_drag_x * s_lego_drag_x +
+                                    s_lego_drag_y * s_lego_drag_y) > 10.0f)
                         legoGlobs_flags1 |= 0x100;
                     legoGlobs_f_556178[0] = (float)bx;
                     legoGlobs_f_556178[1] = (float)by;
@@ -3472,13 +3491,6 @@ end:
     s_lego_prev_left_button = legoInput_mslb;
     s_lego_prev_right_button = legoInput_msrb;
 }
-
-/* The time the buttons have been up (004de56c), declared at file scope
- * after its one reader. As a function static it cost one symbol more than
- * the block-scope extern above; this declaration restores the count for
- * every later function (finding 538, finding 691). Deviation (scoring
- * only). */
-extern float s_lego_hold_time;
 
 /* ToolTipInfoStringsLoad [group G] */
 // FUNCTION: LEGORR 0x00427e00
@@ -3644,13 +3656,18 @@ void lego_terrain_command_feedback_dispatch(const int* blockPos, int showConstru
     int show;
     const char* text;
     unsigned int sfx;
-    unsigned int valid;
 
     level = legoGlobs_currLevel;
     by = blockPos[1];
     bx = blockPos[0];
     block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx];
-    if (s_lego_toolTipBlockX != bx || s_lego_toolTipBlockY != by) {
+    /* The original lays the reset inline between the two tests, which
+     * MSVC 5 only does for a goto into the second test's block; an
+     * `a || b` block goes after the epilogue. */
+    if (s_lego_toolTipBlockX != bx)
+        goto reset_tooltip;
+    if (s_lego_toolTipBlockY != by) {
+    reset_tooltip:
         s_lego_toolTipBlockX = blockPos[0];
         s_lego_toolTipBlockY = blockPos[1];
         return;
@@ -3714,10 +3731,13 @@ void lego_terrain_command_feedback_dispatch(const int* blockPos, int showConstru
             show = 1;
         } else {
             if (bx >= 0 && by >= 0 && bx < (int)legoGlobs_currLevel->width && by < (int)legoGlobs_currLevel->height)
-                valid = LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[legoGlobs_currLevel->width * by + bx].flags1 & 0x20000000;
+                usesStuds = LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[legoGlobs_currLevel->width * by + bx].flags1 & 0x20000000;
             else
-                valid = 0;
-            if (valid || (flags & 0x8000)) {
+                usesStuds = 0;
+            /* `usesStuds` is dead on this path and holds the solid test, so
+             * the goto's label leaves Lego.c's symbol counter where it was
+             * (finding 671). */
+            if (usesStuds || (flags & 0x8000)) {
                 text = lego_terrain_surface_type_name_get(0xe);
                 sfx = lego_surface_type_configured_value_at_index(0xe);
                 show = 1;
@@ -3841,12 +3861,14 @@ void lego_level_debug_input_cell_mutator_dispatch(int bx, int by, struct EntityS
                                       legoGlobs_currLevel->f_0b0, bx, by);
     if (s_global_current_keys[0x11])
         lego_terrain_neighbor_flag_set(legoGlobs_currLevel, 0, bx, by);
-    if (s_global_current_keys[0x2e]) {
-        if (LEGO_KEY_PRESSED(0x2e) && selection_active_has_any_get())
+    /* Two tests of the key with no enclosing key test, as in the original.
+     * The second's nested if keeps the unit's label count, which the code of
+     * later functions follows. */
+    if (LEGO_KEY_PRESSED(0x2e) && selection_active_has_any_get())
+        entity_clear_nested_state_8_fields(selection_active_entity_get());
+    if (LEGO_KEY_PRESSED(0x2e))
+        if (selection_active_has_any_get())
             entity_clear_nested_state_8_fields(selection_active_entity_get());
-        if (LEGO_KEY_PRESSED(0x2e) && selection_active_has_any_get())
-            entity_clear_nested_state_8_fields(selection_active_entity_get());
-    }
     if (LEGO_KEY_PRESSED(0x58)) {
         if (legoGlobs_flags1 & 0x1000000) {
             legoGlobs_flags1 &= ~0x1000000;
@@ -4007,7 +4029,7 @@ void lego_block_visible_callback(int bx, int by)
 
     if (flags1 & 0x4000) {
         transient_effect_enable_set((void*)(uintptr_t)
-            LEGO_LEVEL_PTR(Lego_Block, level->blocks)
+            LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
                 [by * legoGlobs_currLevel->width + bx].f_10[3], 0);
     }
 }
@@ -4352,13 +4374,21 @@ int lego_level_load(const char* levelName)
     char* fullName;
     char buff[260];
     char* parts[10];
-    /* The original reuses its locals (finding 659): the three floats also
-     * hold the erosion times, `number` also holds the seed, and the
-     * address-taken lookups and copies live in inner blocks. That gives
-     * the original's stack slots. */
+    /* The locals give the original's stack slots (finding 659).
+     * MSVC 5.0 packs non-overlapping floats into three slots by itself, but
+     * which C variables exist decides the order of the tied map pointers:
+     * the three upgrade times need their own variables. `upgradeTime` also
+     * holds the erode time, `slugTime` the initial slug time, `number` the
+     * seed and `copy` the drag-box string; the address-taken lookups live
+     * in inner blocks. */
     float upgradeTime;
-    float value;
-    float slugValue;
+    float minifigureUpgradeTime;
+    float vehicleUpgradeTime;
+    float buildingUpgradeTime;
+    float slugTime;
+    float fogRate;
+    float triggerTime;
+    float lockTime;
     int number;
     unsigned int i;
     unsigned int rockFallStyle;
@@ -4388,11 +4418,11 @@ int lego_level_load(const char* levelName)
         if ((number = LEGO_D_INT("Seed")) != 0) srand(number);
 
         // STRING: LEGORR 0x004a45a8
-        if ((str = LEGO_D_TEMP("BoulderAnimation")) != NULL) {
+        if ((str = LEGO_D_TEMP("BoulderAnimation")) != NULL &&
             // STRING: LEGORR 0x004a45a0
-            if (!stricmp(str, "Rock")) level->f_274 = 0;
+            stricmp(str, "Rock")) {
             // STRING: LEGORR 0x004a4598
-            else if (!stricmp(str, "Lava")) level->f_274 = 1;
+            if (!stricmp(str, "Lava")) level->f_274 = 1;
             // STRING: LEGORR 0x004a4594
             else if (!stricmp(str, "Ice")) level->f_274 = 2;
             else level->f_274 = 0;
@@ -4466,20 +4496,20 @@ int lego_level_load(const char* levelName)
         upgradeTime = LEGO_D_FLOAT("UpgradeTime") * 25.0f;
         for (i = 0; i < 20; i++) level->upgradeTimes[i] = upgradeTime;
         // STRING: LEGORR 0x004a4400
-        value = LEGO_D_FLOAT("MinifigureUpgradeTime");
-        level->upgradeTimes[2] = value;
-        if (0.0f == value) level->upgradeTimes[2] = upgradeTime;
-        else level->upgradeTimes[2] = value * 25.0f;
+        minifigureUpgradeTime = LEGO_D_FLOAT("MinifigureUpgradeTime");
+        level->upgradeTimes[2] = minifigureUpgradeTime;
+        if (0.0f == minifigureUpgradeTime) level->upgradeTimes[2] = upgradeTime;
+        else level->upgradeTimes[2] = minifigureUpgradeTime * 25.0f;
         // STRING: LEGORR 0x004a43ec
-        value = LEGO_D_FLOAT("VehicleUpgradeTime");
-        level->upgradeTimes[1] = value;
-        if (0.0f == value) level->upgradeTimes[1] = upgradeTime;
-        else level->upgradeTimes[1] = value * 25.0f;
+        vehicleUpgradeTime = LEGO_D_FLOAT("VehicleUpgradeTime");
+        level->upgradeTimes[1] = vehicleUpgradeTime;
+        if (0.0f == vehicleUpgradeTime) level->upgradeTimes[1] = upgradeTime;
+        else level->upgradeTimes[1] = vehicleUpgradeTime * 25.0f;
         // STRING: LEGORR 0x004a43d8
-        value = LEGO_D_FLOAT("BuildingUpgradeTime");
-        level->upgradeTimes[4] = value;
-        if (0.0f == value) level->upgradeTimes[4] = upgradeTime;
-        else level->upgradeTimes[4] = value * 25.0f;
+        buildingUpgradeTime = LEGO_D_FLOAT("BuildingUpgradeTime");
+        level->upgradeTimes[4] = buildingUpgradeTime;
+        if (0.0f == buildingUpgradeTime) level->upgradeTimes[4] = upgradeTime;
+        else level->upgradeTimes[4] = buildingUpgradeTime * 25.0f;
         // STRING: LEGORR 0x004a43cc
         level->trainTime = LEGO_D_FLOAT("TrainTime") * 25.0f;
 
@@ -4513,16 +4543,15 @@ int lego_level_load(const char* levelName)
         else global_value_004ffe48_set(1);
 
         {
-            char* dragCopy;
             char* argv[10];
             // STRING: LEGORR 0x004a4338
-            if ((dragCopy = LEGO_D_COPY("DragBoxRGB")) != NULL) {
-                if (sound_variant_split(dragCopy, argv, ":") == 3) {
+            if ((copy = LEGO_D_COPY("DragBoxRGB")) != NULL) {
+                if (sound_variant_split(copy, argv, ":") == 3) {
                     for (i = 0; i < 3; i++) {
                         legoGlobs_dragBoxRGB[i] = (float)atoi(argv[i]) * (1.0f / 255.0f);
                     }
                 }
-                free(dragCopy);
+                free(copy);
             }
         }
 
@@ -4541,14 +4570,14 @@ int lego_level_load(const char* levelName)
             int slugType;
             if (lego_entity_type_pair_lookup(str, &slugType, &level->f_26c, NULL)) {
                 // STRING: LEGORR 0x004a42ec
-                slugValue = LEGO_D_FLOAT("SlugTime");
-                level->f_268 = slugValue;
-                if (0.0f == slugValue) level->f_268 = 60.0f;
+                slugTime = LEGO_D_FLOAT("SlugTime");
+                level->f_268 = slugTime;
+                if (0.0f == slugTime) level->f_268 = 60.0f;
                 level->f_268 *= 25.0f;
                 // STRING: LEGORR 0x004a42dc
-                slugValue = LEGO_D_FLOAT("InitialSlugTime");
-                if (0.0f == slugValue) slugValue = 60.0f;
-                g_camera_countdown = slugValue * 25.0f;
+                slugTime = LEGO_D_FLOAT("InitialSlugTime");
+                if (0.0f == slugTime) slugTime = 60.0f;
+                g_camera_countdown = slugTime * 25.0f;
             }
         } else level->f_26c = 20;
 
@@ -4578,8 +4607,8 @@ int lego_level_load(const char* levelName)
                 legoGlobs_flags1 |= 0x10000;
                 legoGlobs_f_556424 = 1.0f;
                 // STRING: LEGORR 0x004a4294
-                if (0.0f == (slugValue = LEGO_D_FLOAT("FogRate"))) slugValue = 60.0f;
-                legoGlobs_f_556ef8 = slugValue * 25.0f;
+                if (0.0f == (fogRate = LEGO_D_FLOAT("FogRate"))) fogRate = 60.0f;
+                legoGlobs_f_556ef8 = fogRate * 25.0f;
             } else legoGlobs_flags1 &= ~0x10000;
             renderer_fog_color_set_original(legoGlobs_fogColourRGB[0], legoGlobs_fogColourRGB[1],
                                             legoGlobs_fogColourRGB[2]);
@@ -4603,12 +4632,12 @@ int lego_level_load(const char* levelName)
         objective_load_original(config, s_engine_config_root, levelName, level, s_display_w, s_display_h);
 
         // STRING: LEGORR 0x004a4274
-        if (0.0f == (upgradeTime = LEGO_D_FLOAT("ErodeTriggerTime"))) upgradeTime = 10.0f;
+        if (0.0f == (triggerTime = LEGO_D_FLOAT("ErodeTriggerTime"))) triggerTime = 10.0f;
         // STRING: LEGORR 0x004a4264
-        if (0.0f == (slugValue = LEGO_D_FLOAT("ErodeErodeTime"))) slugValue = 5.0f;
+        if (0.0f == (upgradeTime = LEGO_D_FLOAT("ErodeErodeTime"))) upgradeTime = 5.0f;
         // STRING: LEGORR 0x004a4254
-        if (0.0f == (value = LEGO_D_FLOAT("ErodeLockTime"))) value = 60.0f;
-        erosion_timing_state_init(upgradeTime, slugValue, value);
+        if (0.0f == (lockTime = LEGO_D_FLOAT("ErodeLockTime"))) lockTime = 60.0f;
+        erosion_timing_state_init(triggerTime, upgradeTime, lockTime);
         // STRING: LEGORR 0x004a4234
         number = LEGO_D_INT("NumberOfLandSlidesTillCaveIn");
         if (number == 0) global_config_value_set(3);
@@ -4632,16 +4661,16 @@ int lego_level_load(const char* levelName)
         objective_advisor_token_file_load(nerpMessageFile);
 
         if (level_identifier_remap_table_load_original(ptlName, s_engine_config_root)) {
-            int surfaceParam, pathParam = 0, blockPointersParam = 0, cryOreParam = 0, terrainParam = 0, predugParam = 0, fallinParam;
+            int pathParam = 0, cryOreParam = 0, blockPointersParam = 0, terrainParam = 0, predugParam = 0;
 
-            if (surfaceMap && sound_variant_split(surfaceMap, parts, ":") == 2) surfaceParam = atoi(parts[1]);
+            if (surfaceMap && sound_variant_split(surfaceMap, parts, ":") == 2) atoi(parts[1]);
             if (predugMap && sound_variant_split(predugMap, parts, ":") == 2) predugParam = atoi(parts[1]);
             if (terrainMap && sound_variant_split(terrainMap, parts, ":") == 2) terrainParam = atoi(parts[1]);
             if (blockPointersMap && sound_variant_split(blockPointersMap, parts, ":") == 2)
                 blockPointersParam = atoi(parts[1]);
             if (cryOreMap && sound_variant_split(cryOreMap, parts, ":") == 2) cryOreParam = atoi(parts[1]);
             if (pathMap && sound_variant_split(pathMap, parts, ":") == 2) pathParam = atoi(parts[1]);
-            if (fallinMap && sound_variant_split(fallinMap, parts, ":") == 2) fallinParam = atoi(parts[1]);
+            if (fallinMap && sound_variant_split(fallinMap, parts, ":") == 2) atoi(parts[1]);
             if (emergeMap && sound_variant_split(emergeMap, parts, ":") == 2) pathParam = atoi(parts[1]);
 
             if (lego_map_load_pipeline(level, surfaceMap, predugMap, predugParam, terrainMap, terrainParam,
@@ -5048,8 +5077,8 @@ int lego_load_emerge_layer(Lego_Level* level, const char* filename)
                     pos.x = x;
                     pos.y = y;
                     value = level_map_cell_get(handle, x, y);
-                    erode = 0;
-                    if (value == 0 || (value % 2) == 1) value++;
+                    erode = value % 2;
+                    if (value == 0 || erode) { value++; erode = 0; }
                     else erode = 1;
                     LEGO_2A_BLOCK(level, x, y).f_06 = (unsigned char)(value >> 1);
                     if (erode) lava_erosion_stage_register(&pos.x, rng_thunk_draw15() % 4);
@@ -5386,12 +5415,15 @@ void lego_camera_grid_expiry(float elapsed)
 {
     Lego_Level* level = (Lego_Level*)level_current_owner_get();
     unsigned int width, height, x, y;
-    int blockPos[2];
     Lego_Block* block;
 
     if (legoGlobs_f_556f18 && (width = level->width) != 0 && (height = level->height) != 0) {
         for (y = 0; y < height; y++) {
             for (x = 0; x < width; x++) {
+                /* The inner loop's own local, as in the original: its
+                 * stores follow the block address. */
+                int blockPos[2];
+
                 blockPos[0] = x;
                 blockPos[1] = y;
                 block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x];
@@ -5752,7 +5784,7 @@ void lego_viewport_target_position_clamp(struct EntitySlot* liveObj, const int* 
                                          int smooth)
 {
     Lego_Level* level = legoGlobs_currLevel;
-    int pos[2];
+    LegoPoint2I2A pos;
     int x, y;
 
     legoGlobs_f_556158 = smooth;
@@ -5761,7 +5793,7 @@ void lego_viewport_target_position_clamp(struct EntitySlot* liveObj, const int* 
             entity_transform_position_get_outputs(liveObj, &legoGlobs_f_556150, &legoGlobs_f_556154);
         else
             entity_transform_position_get_outputs(liveObj, &legoGlobs_f_556148, &legoGlobs_f_55614c);
-        entity_position_to_terrain_cell_adapter(liveObj, &pos[0], &pos[1]);
+        entity_position_to_terrain_cell_adapter(liveObj, &pos.x, &pos.y);
     } else {
         if (smooth)
             terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map),
@@ -5769,20 +5801,19 @@ void lego_viewport_target_position_clamp(struct EntitySlot* liveObj, const int* 
         else
             terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map),
                                        blockPos[0], blockPos[1], &legoGlobs_f_556148, &legoGlobs_f_55614c);
-        pos[0] = blockPos[0];
-        pos[1] = blockPos[1];
+        pos = *(const LegoPoint2I2A*)blockPos;
     }
 
-    x = pos[0];
-    y = pos[1];
-    if (pos[0] < view_grid_edge_get()) x = view_grid_edge_get();
-    if (pos[0] >= LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), int, 0x0) - view_grid_edge_get())
+    x = pos.x;
+    y = pos.y;
+    if (pos.x < view_grid_edge_get()) x = view_grid_edge_get();
+    if (pos.x >= LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), int, 0x0) - view_grid_edge_get())
         x = LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), int, 0x0) - view_grid_edge_get() - 1;
-    if (pos[1] < view_grid_edge_get()) y = view_grid_edge_get();
-    if (pos[1] >= LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), int, 0x4) - view_grid_edge_get())
+    if (pos.y < view_grid_edge_get()) y = view_grid_edge_get();
+    if (pos.y >= LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), int, 0x4) - view_grid_edge_get())
         y = LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), int, 0x4) - view_grid_edge_get() - 1;
 
-    if (pos[0] != x || pos[1] != y) {
+    if (pos.x != x || pos.y != y) {
         if (smooth)
             terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map),
                                        x, y, &legoGlobs_f_556150, &legoGlobs_f_556154);
@@ -5979,10 +6010,13 @@ int lego_object_list_load_file(Lego_Level* level, const char* fileName)
                     if ((target = objList[j]) != NULL) {
                         LEGO_FIELD(obj, struct EntitySlot*, 0x2fc) = target;
                         LEGO_FIELD(obj, uint32_t, 0x3e4) |= 4;
-                        entity_linked_activity_event_dispatch(obj,
-                            (entity_capability_flags_get(target) & 0x100) ? 1 :
-                            (entity_stats_word_get(target) & 0x1000000) ?
-                                ((entity_stats_word_get(target) & 0x2000000) ? 1 : 2) : 4);
+                        (entity_capability_flags_get(target) & 0x100) ?
+                            entity_linked_activity_event_dispatch(obj, 1) :
+                        (entity_stats_word_get(target) & 0x1000000) ?
+                            ((entity_stats_word_get(target) & 0x2000000) ?
+                                entity_linked_activity_event_dispatch(obj, 1) :
+                                entity_linked_activity_event_dispatch(obj, 2)) :
+                            entity_linked_activity_event_dispatch(obj, 4);
                         entity_linked_route_flag_clear_original(obj, target);
                     }
                     break;
@@ -6837,13 +6871,14 @@ int lego_terrain_cell_mutate(Lego_Level* level, unsigned int bx,
                 terrain_map_vertex_move(map, bx + 1, by, level->digDepth);
                 LEGO_2F_BLOCK(level, bx + 1, by).f_00 = 1;
             }
-            if (LEGO_2F_BLOCK(level, bx + 1, by + 1).f_00 == 0) {
-                terrain_map_vertex_move(map, bx + 1, by + 1, level->digDepth);
-                LEGO_2F_BLOCK(level, bx + 1, by + 1).f_00 = 1;
+            y = by + 1;
+            if (LEGO_2F_BLOCK(level, bx + 1, y).f_00 == 0) {
+                terrain_map_vertex_move(map, bx + 1, y, level->digDepth);
+                LEGO_2F_BLOCK(level, bx + 1, y).f_00 = 1;
             }
-            if (LEGO_2F_BLOCK(level, bx, by + 1).f_00 == 0) {
-                terrain_map_vertex_move(map, bx, by + 1, level->digDepth);
-                LEGO_2F_BLOCK(level, bx, by + 1).f_00 = 1;
+            if (LEGO_2F_BLOCK(level, bx, y).f_00 == 0) {
+                terrain_map_vertex_move(map, bx, y, level->digDepth);
+                LEGO_2F_BLOCK(level, bx, y).f_00 = 1;
             }
 
             {
@@ -7082,8 +7117,7 @@ void lego_terrain_cell_queued_work_transition(unsigned int bx, unsigned int by)
 // FUNCTION: LEGORR 0x004311d0
 void lego_block_activity_create(Lego_Level* level, const int* blockPos, int build)
 {
-    LegoPoint2F2G wxwy;
-    float wz;
+    LegoVector3FC wpos;
     LegoVector3FC dirs[4] = {
         { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f },
         { 0.0f, -1.0f, 0.0f }, { -1.0f, 0.0f, 0.0f }
@@ -7114,11 +7148,13 @@ void lego_block_activity_create(Lego_Level* level, const int* blockPos, int buil
             LEGO_2F_PTR_SET(LEGO_2F_BLOCK(level, blockPos[0], blockPos[1]).f_10[2], activity);
         }
         terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, level->map),
-                                   blockPos[0], blockPos[1], &wxwy.x, &wxwy.y);
-        wz = terrain_map_world_z_get(LEGO_LEVEL_PTR(struct TerrainMap, level->map), wxwy.x, wxwy.y);
-        ddiscene_object_position_set(activity->cont, NULL, wxwy.x, wxwy.y, wz);
-        ddiscene_object_pose_method_dispatch(activity->cont, NULL, (float)dirs[direction].x,
-                                             (float)dirs[direction].y, (float)dirs[direction].z,
+                                   blockPos[0], blockPos[1], &wpos.x, &wpos.y);
+        wpos.z = terrain_map_world_z_get(LEGO_LEVEL_PTR(struct TerrainMap, level->map), wpos.x, wpos.y);
+        ddiscene_object_position_set(activity->cont, NULL, wpos.x, wpos.y, wpos.z);
+        /* Parenthesised, each component goes through the x87 stack to its
+         * argument slot (fld; push ecx; fstp [esp]), as in the original. */
+        ddiscene_object_pose_method_dispatch(activity->cont, NULL, (dirs[direction].x),
+                                             (dirs[direction].y), (dirs[direction].z),
                                              0.0f, 0.0f, -1.0f);
     }
 }
@@ -7311,10 +7347,11 @@ void lego_terrain_stamp_impact_handle(unsigned int bx, unsigned int by,
     {
         LegoPoint2F2G dirs[4] = { { 0.0f, 1.0f }, { 1.0f, 0.0f },
                                   { 0.0f, -1.0f }, { -1.0f, 0.0f } };
+        LegoPoint2F2G* dir = &dirs[direction];
         if (scene_slot_pose_scale_register((unsigned short)big, bx, by, x, y,
                 terrain_map_world_z_get((struct TerrainMap*)LEGO_LEVEL_PTR(void, legoGlobs_currLevel->map),
                                         x, y),
-                dirs[direction].x, dirs[direction].y)) {
+                dir->x, dir->y)) {
             LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
                 [legoGlobs_currLevel->width * by + bx].flags1 |= 0x800;
         }
@@ -7433,15 +7470,11 @@ int lego_first_free_neighbor_cell_pick(struct EntitySlot* liveObj,
     s_neighbor_pick_rotation++;
     for (i = 0; i < 4; i++) {
         dir = (s_neighbor_pick_rotation + i) & 3;
-        /* The original inlines a helper here: is the neighbour inside the
-         * map's border, with flags1 0x10 set and 8 clear, as a 0/1 value. */
+        /* Lego.h's inline wall test (lego_maths.h), its 0/1 result kept in
+         * eax as the original does. */
         if (!skipWalls ||
-            (bx = DIRECTIONS[dir][0] + blockPos[0], by = DIRECTIONS[dir][1] + blockPos[1],
-             wall = 0,
-             (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1 &&
-              (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[by * legoGlobs_currLevel->width + bx].flags1 & 0x10) &&
-              !(LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[by * legoGlobs_currLevel->width + bx].flags1 & 8))
-                 ? (wall = 1) : 0,
+            (wall = lego_C_block_is_wall(bx = DIRECTIONS[dir][0] + blockPos[0],
+                                         by = DIRECTIONS[dir][1] + blockPos[1]),
              !wall)) {
             if (lego_terrain_cell_route_and_occupancy_check(liveObj,
                     DIRECTIONS[dir][0] + blockPos[0], DIRECTIONS[dir][1] + blockPos[1],
@@ -8890,8 +8923,7 @@ int lego_entity_neighbor_blocked_cell_step_probe(struct EntitySlot* object,
         !(LEGO_FIELD(object, uint32_t, 0x3e0) & 1) &&
         !entity_flags_mask107c33de_or_1c00203_any_test(object) &&
         elapsed != 0.0f) {
-        rate = elapsed;
-        if (elapsed > 300.0f) rate = 300.0f;
+        if ((rate = elapsed) > 300.0f) rate = 300.0f;
         if ((unsigned int)(int)rng_thunk_draw15() % (unsigned int)(300.0f / rate) == 0) {
             entity_block_pos_get_adapter(object, &bx, &by);
             for (i = 0; i < 4; i++) {
@@ -8912,8 +8944,7 @@ int lego_entity_neighbor_blocked_cell_step_probe(struct EntitySlot* object,
         !entity_flags_mask107c33de_or_1c00203_any_test(object)) {
         maxRate = *(float*)(LEGO_FIELD(object, char*, 0x334) + 0x140);
         if (elapsed != 0.0f) {
-            rate = elapsed;
-            if (elapsed > maxRate) rate = maxRate;
+            if ((rate = elapsed) > maxRate) rate = maxRate;
             if (force || (unsigned int)(int)rng_thunk_draw15() % (unsigned int)(maxRate / rate) == 0) {
                 lego_entity_random_cell_step_route_adapter(object);
                 return 1;
@@ -9039,7 +9070,7 @@ void lego_terrain_projected_cell_state_refresh(void* cont, void* view,
         y = (int)visible[i].y;
         if (highCount < maxCount && visible[i].dist < maxDist) {
             float scale = 1.0f - visible[i].dist / maxDist;
-            float uniform = scale * 0.7f + 0.3f;
+            float uniform = (scale * 0.7f) + 0.3f;
             if ((legoGlobs_flags1 & 0x20) &&
                 lego_terrain_cell_surface_update_dispatch_level(level, x, y, scale, uniform)) {
                 LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 |= 0x100;
@@ -9750,8 +9781,8 @@ void lego_random_variant_cell_scatter(const int* blockPos, int radius, int stopA
     unsigned int dx, dy;
     int pos[2];
 
-    memset(done, 0, sizeof(done));
     size = radius * 2;
+    memset(done, 0, sizeof(done));
     for (count = 0; count < (stopAtFirst ? size * size : (size * size) / 4); count++) {
         dx = rng_thunk_draw15() % size;
         dy = rng_thunk_draw15() % size;
@@ -9789,7 +9820,7 @@ void lego_tutorial_block_icons_update(Lego_Level* level, void* view,
                                                           wPos[0], wPos[1]);
                         camera_project_point_to_screen((const struct ViewProjectionAdapter*)view, sPos, wPos);
                         sPos[0] -= (float)((int)legoGlobs_TutorialIcon->width / 2);
-                        sPos[1] -= bob * 20.0f + (int)legoGlobs_TutorialIcon->height * 2;
+                        sPos[1] -= (bob * 20.0f) + (int)legoGlobs_TutorialIcon->height * 2;
                         image_display_scaled(legoGlobs_TutorialIcon, NULL, (const struct Point2F*)sPos, NULL);
                         if (LEGO_FIELD(&interfaceGlobs, int, 0xfc4)) {
                             terrain_map_block_highlight_set(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), bx, by, 5);
@@ -9838,11 +9869,9 @@ int lego_global_handle_position_apply_if_present(void)
 
     pos[0] = 0.0f;
     pos[1] = 0.0f;
-    if (s_position_handle) {
-        image_display_scaled((struct Image*)s_position_handle, NULL, (const struct Point2F*)pos, NULL);
-        return 1;
-    }
-    return 0;
+    if (!s_position_handle) return 0;
+    image_display_scaled((struct Image*)s_position_handle, NULL, (const struct Point2F*)pos, NULL);
+    return 1;
 }
 
 /* MenuOptionPanelTextureUpdate [group 3C]: draws the in-game dialog and
@@ -9852,8 +9881,7 @@ int lego_menu_option_panel_texture_update(const char* title, const char* msg,
                                           const char* ok, const char* cancel)
 {
     float pos[2];
-    float wndRect[4];
-    float textX;
+    Area2F wndRect;
     unsigned int textWidth;
     unsigned int textHeight;
     int result = -1;
@@ -9868,43 +9896,41 @@ int lego_menu_option_panel_texture_update(const char* title, const char* msg,
         text_buffer_reset_target(legoGlobs_DialogTextWndOK);
         text_buffer_reset_target(legoGlobs_DialogTextWndCancel);
         if (ok) {
-            wndRect[0] = 0.0f;
-            wndRect[1] = 0.0f;
-            wndRect[2] = 0.0f;
-            textHeight = object_field_be4_dword_get(legoGlobs_fontBriefingHi);
+            memset(&wndRect.y, 0, 3 * sizeof(float));
             textWidth = formatted_text_printf_width((const struct TextureSurface*)legoGlobs_fontBriefingHi, ok);
-            textX = ((float)LEGO_FIELD(legoGlobs_DialogTextWndOK, int, 4) -
-                     (float)LEGO_FIELD(legoGlobs_DialogTextWndOK, int, 12) * -0.5f) - (float)(textWidth >> 1);
-            wndRect[0] = (float)LEGO_FIELD(legoGlobs_DialogTextWndOK, int, 8);
-            wndRect[2] = (float)textHeight;
-            if (textX > legoInput_mouseX || legoInput_mouseX >= textX + textWidth ||
-                wndRect[0] > legoInput_mouseY || legoInput_mouseY >= wndRect[0] + wndRect[2]) {
-                LEGO_FIELD(legoGlobs_DialogTextWndOK, void*, 0) = legoGlobs_fontBriefingHi;
-                text_buffer_append_format(legoGlobs_DialogTextWndOK, ok);
-            } else {
+            textHeight = object_field_be4_dword_get(legoGlobs_fontBriefingHi);
+            wndRect.x = (LEGO_FIELD(legoGlobs_DialogTextWndOK, float, 4) -
+                         LEGO_FIELD(legoGlobs_DialogTextWndOK, float, 12) * -0.5f - (float)(textWidth >> 1));
+            wndRect.y = LEGO_FIELD(legoGlobs_DialogTextWndOK, float, 8);
+            wndRect.width = (float)textWidth;
+            wndRect.height = (float)textHeight;
+            if (legoInput_mouseX > wndRect.x && legoInput_mouseX < wndRect.x + wndRect.width &&
+                legoInput_mouseY > wndRect.y && legoInput_mouseY < wndRect.y + wndRect.height) {
                 LEGO_FIELD(legoGlobs_DialogTextWndOK, void*, 0) = legoGlobs_fontBriefingLo;
                 text_buffer_append_format(legoGlobs_DialogTextWndOK, ok);
                 if (ledger_stub_00435550_GlobalStateZeroTransitionDetect()) result = 1;
+            } else {
+                LEGO_FIELD(legoGlobs_DialogTextWndOK, void*, 0) = legoGlobs_fontBriefingHi;
+                text_buffer_append_format(legoGlobs_DialogTextWndOK, ok);
             }
         }
         if (cancel) {
-            wndRect[0] = 0.0f;
-            wndRect[1] = 0.0f;
-            wndRect[2] = 0.0f;
+            memset(&wndRect.y, 0, 3 * sizeof(float));
             textWidth = formatted_text_printf_width((const struct TextureSurface*)legoGlobs_fontBriefingHi, cancel);
             textHeight = object_field_be4_dword_get(legoGlobs_fontBriefingHi);
-            textX = ((float)LEGO_FIELD(legoGlobs_DialogTextWndCancel, int, 4) -
-                     (float)LEGO_FIELD(legoGlobs_DialogTextWndCancel, int, 12) * -0.5f) - (float)(textWidth >> 1);
-            wndRect[0] = (float)LEGO_FIELD(legoGlobs_DialogTextWndCancel, int, 8);
-            wndRect[2] = (float)textHeight;
-            if (textX > legoInput_mouseX || legoInput_mouseX >= textX + textWidth ||
-                wndRect[0] > legoInput_mouseY || legoInput_mouseY >= wndRect[0] + wndRect[2]) {
-                LEGO_FIELD(legoGlobs_DialogTextWndCancel, void*, 0) = legoGlobs_fontBriefingHi;
-                text_buffer_append_format(legoGlobs_DialogTextWndCancel, cancel);
-            } else {
+            wndRect.x = (LEGO_FIELD(legoGlobs_DialogTextWndCancel, float, 4) -
+                         LEGO_FIELD(legoGlobs_DialogTextWndCancel, float, 12) * -0.5f - (float)(textWidth >> 1));
+            wndRect.y = LEGO_FIELD(legoGlobs_DialogTextWndCancel, float, 8);
+            wndRect.width = (float)textWidth;
+            wndRect.height = (float)textHeight;
+            if (legoInput_mouseX > wndRect.x && legoInput_mouseX < wndRect.x + wndRect.width &&
+                legoInput_mouseY > wndRect.y && legoInput_mouseY < wndRect.y + wndRect.height) {
                 LEGO_FIELD(legoGlobs_DialogTextWndCancel, void*, 0) = legoGlobs_fontBriefingLo;
                 text_buffer_append_format(legoGlobs_DialogTextWndCancel, cancel);
                 if (ledger_stub_00435550_GlobalStateZeroTransitionDetect()) result = 0;
+            } else {
+                LEGO_FIELD(legoGlobs_DialogTextWndCancel, void*, 0) = legoGlobs_fontBriefingHi;
+                text_buffer_append_format(legoGlobs_DialogTextWndCancel, cancel);
             }
         }
         text_buffer_append_format(legoGlobs_DialogTextWndTitle, title);

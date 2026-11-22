@@ -26,6 +26,8 @@
 #include "crt/vc5names.h"
 #include "dependencies.h"
 #include "dependencies_imports.h"
+/* The unit's .rdata is this header inline copy's 1.0 and 0.0 (0049e0c8). */
+#include "saturate_inline.h"
 
 /* The unit's functions have C linkage in the native C++ compile too. */
 #ifdef __cplusplus

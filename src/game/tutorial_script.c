@@ -1248,10 +1248,14 @@ static int nerpsHasNextButton = 1;
 static NERPs_Next nerpsNext = { 1, 0 };
 // GLOBAL: LEGORR 0x004a6748
 static NERPs_MessageTime nerpsMessageTime = { 1000.0f, 500.0f, 4000.0f, 0.0f };
+/* SetMessageIconPos' screen position (004a6758). */
+typedef struct NERPs_IconPos {
+    float x;                          /* 004a6758 */
+    float y;                          /* 004a675c */
+} NERPs_IconPos;
+
 // GLOBAL: LEGORR 0x004a6758
-static float nerpsIconX = 260.0f;
-// GLOBAL: LEGORR 0x004a675c
-static float nerpsIconY = 386.0f;
+static NERPs_IconPos nerpsIconPos = { 260.0f, 386.0f };
 // GLOBAL: LEGORR 0x004a6760
 static unsigned int nerpsIconWidth = 20;
 // GLOBAL: LEGORR 0x004a6764
@@ -1267,6 +1271,8 @@ extern NERPs_RuntimeGlobs nerpsruntimeGlobs;
 
 // GLOBAL: LEGORR 0x00555d40
 NERPs_Globs nerpsGlobs;
+
+#include "gods98/maths_normalise_head.h"
 
 // FUNCTION: LEGORR 0x00452df0
 int nerps_file_load_script_file(const char* filename)
@@ -1310,8 +1316,8 @@ int nerps_file_load_message_file(const char* filename)
                     if (*s == ':') {
                         char* key = (char*)++s;
                         if (sscanf((char*)s, "%s", imageKey)) {
-                            lineStart = 0;
                             s += strlen(imageKey);
+                            lineStart = 0;
                             while (*s < '!' && (unsigned int)(s - nerpsGlobs.messageBuffer) < fileSize) {
                                 if (*s == '\r') lineStart = 1;
                                 *s++ = '\0';
@@ -1337,8 +1343,8 @@ int nerps_file_load_message_file(const char* filename)
                     if (*s == '$') {
                         char* key = (char*)++s;
                         if (sscanf((char*)s, "%s", soundKey)) {
-                            lineStart = 0;
                             s += strlen(soundKey);
+                            lineStart = 0;
                             while (*s < '!' && (unsigned int)(s - nerpsGlobs.messageBuffer) < fileSize) {
                                 if (*s == '\r') lineStart = 1;
                                 *s++ = '\0';
@@ -1721,7 +1727,9 @@ void nerps_runtime_update_timers(float elapsed)
     unsigned int i;
 
     elapsed = (elapsed * 1000.0f) * 0.04f;
-    for (i = 0; i < 4; i++) nerpsruntimeGlobs.timers[i] += elapsed;
+    /* The parentheses keep the timer as the first operand (fld timer;
+     * fadd elapsed), as in the original. */
+    for (i = 0; i < 4; i++) nerpsruntimeGlobs.timers[i] = (nerpsruntimeGlobs.timers[i]) + elapsed;
     if (nerpsruntimeGlobs.messageTimer == 0.0f) return;
     if (nerpsruntimeGlobs.messageTimer < 0.0f) {
         nerpsruntimeGlobs.messageTimer = 0.0f;
@@ -2115,7 +2123,7 @@ void nerps_draw_tutorial_icon(NERPs_Level* level, void* viewport, int unused, fl
             world.z = terrain_map_world_z_get(level->map, world.x, world.y);
             camera_project_point_to_screen((struct ViewProjectionAdapter*)viewport, screen, &world.x);
             screen[0] -= (float)((int)legoGlobs_TutorialIcon->width / 2);
-            screen[1] -= bounce * 20.0f + (float)((int)legoGlobs_TutorialIcon->height * 2);
+            screen[1] -= (bounce * 20.0f) + (float)((int)legoGlobs_TutorialIcon->height * 2);
             image_display_scaled(legoGlobs_TutorialIcon, NULL, (Point2F*)screen, NULL);
         }
     }
@@ -2338,8 +2346,8 @@ int nerpfunc_get_any_key_pressed(unsigned int* stack)
 // FUNCTION: LEGORR 0x00454b10
 int nerpfunc_set_icon_pos(unsigned int* stack)
 {
-    nerpsIconX = (float)stack[0];
-    nerpsIconY = (float)stack[1];
+    nerpsIconPos.x = (float)stack[0];
+    nerpsIconPos.y = (float)stack[1];
     return 0;
 }
 
@@ -4076,46 +4084,51 @@ void nerps_parse_message(char* text, char* output, int setTimer)
     unsigned char i;
     char* out;
     unsigned char imageCount;
+    char* s;
     float time;
     struct Image* images[20] = { NULL };
     char name[256];
     char* p;
     unsigned char found;
 
-    time = nerpsMessageTime.defaultTime;
     imageCount = 0;
+    time = nerpsMessageTime.defaultTime;
+    s = text;
     out = output;
     if (nerpsGlobs.imageCount == 0 && nerpsGlobs.soundCount == 0 && output != NULL) {
         strcpy(output, text);
     } else {
-        while (*text != '\0') {
-            if (*text == '<') {
-                text++;
+        while (*s != '\0') {
+            if (*s == '<') {
+                s++;
                 found = 0;
                 p = name;
-                while (*text != '\0' && !found) {
-                    if (*text == '>') {
+                while (*s != '\0' && !found) {
+                    if (*s != '>') {
+                        *p++ = *s++;
+                    } else {
                         *p++ = '\0';
-                        text++;
+                        s++;
                         for (i = 0; i < nerpsGlobs.imageCount; i++) {
                             if (!stricmp(nerpsGlobs.imageList[i].key, name)) {
-                                images[imageCount++] = nerpsGlobs.imageList[i].image;
+                                struct Image* image = nerpsGlobs.imageList[i].image;
                                 found = 1;
+                                images[imageCount++] = image;
                                 break;
                             }
                         }
-                    } else {
-                        *p++ = *text++;
                     }
                 }
-            } else if (*text == '#') {
-                text++;
+            } else if (*s == '#') {
+                s++;
                 found = 0;
                 p = name;
-                while (*text != '\0' && !found) {
-                    if (*text == '#') {
+                while (*s != '\0' && !found) {
+                    if (*s != '#') {
+                        *p++ = *s++;
+                    } else {
                         *p++ = '\0';
-                        text++;
+                        s++;
                         for (i = 0; i < nerpsGlobs.soundCount; i++) {
                             if (!stricmp(nerpsGlobs.soundList[i].key, name)) {
                                 int sound = nerpsGlobs.soundList[i].sound;
@@ -4137,22 +4150,21 @@ void nerps_parse_message(char* text, char* output, int setTimer)
                             }
                         }
                         found = 1;
-                    } else {
-                        *p++ = *text++;
                     }
                 }
             } else {
-                if (output != NULL) *out++ = *text;
-                text++;
+                if (output != NULL) *out++ = *s;
+                s++;
             }
         }
         if (output != NULL) *out = '\0';
-        if (imageCount) {
-            int k;
+        {
+            unsigned char k;
             for (k = 0; k < imageCount; k++) {
                 Point2F pos;
-                pos.x = (float)(nerpsIconSpace * k) + (nerpsIconX - (float)(nerpsIconWidth * imageCount));
-                pos.y = nerpsIconY;
+                pos = *(Point2F*)&nerpsIconPos;
+                pos.x -= (float)(nerpsIconWidth * imageCount);
+                pos.x += (float)(nerpsIconSpace * k);
                 image_display_scaled(images[k], NULL, &pos, NULL);
             }
         }
@@ -4244,10 +4256,16 @@ int nerps_tutorial_action_callback(NERPs_BlockPointer* blockPointer,
         search->count += level_cell_occupied_at_current(&blockPos.x);
         return 1;
     case 4: /* SetTutorialBlockIsPath */
-        level->blocks[y * level->width + x].flags1 &= ~3;
+    {
+        /* Through a block pointer: the original addresses flags1 from the
+         * block's own address (lea, then [eax + 8]). */
+        NERPs_Block* block = &level->blocks[y * level->width + x];
+
+        block->flags1 &= ~3;
         terrain_cell_state_update_current(&blockPos.x);
         terrain_cell_variant_flag_propagate_current(&blockPos.x);
         return 1;
+    }
     case 5: /* SetCameraGotoTutorial */
         lego_viewport_target_position_clamp(NULL, &blockPos.x, 1);
         return 1;
@@ -4559,11 +4577,9 @@ int nerpfunc_get_monster_at_tutorial(unsigned int* stack)
 }
 
 /* nerpsruntimeGlobs, defined after every function so that no function's symbol
- * counter moves (finding 538), and after the .bss the original has before
- * it: 1,720 bytes at 004ff2a0, after Message.c's .bss, which nothing in the image reads. Both are zero-initialised
- * externals, which MSVC 5.0 emits in definition order (finding 686). */
-// GLOBAL: LEGORR 0x004ff2a0
-unsigned int tutorial_script_unknown_4ff2a0[430] = { 0 }; /* never read */
+ * counter moves (finding 538). It is a zero-initialised external, which
+ * MSVC 5.0 emits in .bss (finding 686). The 1,720 bytes before it
+ * (004ff2a0) are the code-less object's before it (message_data.c). */
 // GLOBAL: LEGORR 0x004ff958
 NERPs_RuntimeGlobs nerpsruntimeGlobs = { 0 };
 

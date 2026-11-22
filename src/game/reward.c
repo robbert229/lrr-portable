@@ -78,6 +78,8 @@
 // GLOBAL: LEGORR 0x00552980
 RewardGlobs rewardGlobs;
 
+#include "gods98/maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x0045f030
 int reward_initialise(void)
 {
@@ -644,8 +646,8 @@ int reward_prepare_results(void)
         rewardGlobs.level.itemsArray[REWARD_ITEM_ROCKMONSTERS].damage;
     current->itemsArray[REWARD_ITEM_ROCKMONSTERS].lostCount =
         rewardGlobs.level.itemsArray[REWARD_ITEM_ROCKMONSTERS].lostCount;
-    current->blockCount = 0;
     current->buildingCounts = rewardGlobs.level.buildingCounts;
+    current->blockCount = 0;
     current->itemsArray[REWARD_ITEM_OXYGEN].actual =
         ((RewardLegoLevel*)g_active_level_retail)->oxygen;
     current->itemsArray[REWARD_ITEM_OXYGEN].total = 100.0f;
@@ -655,12 +657,13 @@ int reward_prepare_results(void)
         rewardGlobs.level.itemsArray[REWARD_ITEM_TIMER].total /
         current->itemsArray[REWARD_ITEM_TIMER].actual;
 
+    y = 0;
     for (x = 0; x < level->map->blockWidth; x++) {
-        for (y = 0; y < level->map->blockHeight; y++) {
+        for (; y < level->map->blockHeight; y++) {
             predug = level->blocks[y * level->width + x].predug;
-            current->blockCount++;
             pos[0] = x;
             pos[1] = y;
+            current->blockCount++;
             terrain_cell_byte_state_classify_current(pos, &crystals, &unusedA, &ore, &unusedB);
             current->itemsArray[REWARD_ITEM_CRYSTALS].total += (float)crystals;
             current->itemsArray[REWARD_ITEM_ORE].total += (float)ore;
@@ -682,6 +685,7 @@ int reward_prepare_results(void)
                     current->itemsArray[REWARD_ITEM_DIGGABLE].total - -1.0f;
             }
         }
+        y = 0;
     }
 
     current->buildingCount = current->buildingCounts.count;
@@ -698,10 +702,10 @@ int reward_prepare_results(void)
     current->itemsArray[REWARD_ITEM_FIGURES].actual =
         (float)(current->itemsArray[REWARD_ITEM_FIGURES].count -
                 current->itemsArray[REWARD_ITEM_FIGURES].startCount);
-    current->itemsArray[REWARD_ITEM_ROCKMONSTERS].actual =
-        current->itemsArray[REWARD_ITEM_ROCKMONSTERS].damage;
     current->itemsArray[REWARD_ITEM_ROCKMONSTERS].total =
         (float)(current->itemsArray[REWARD_ITEM_ROCKMONSTERS].count * 100);
+    current->itemsArray[REWARD_ITEM_ROCKMONSTERS].actual =
+        current->itemsArray[REWARD_ITEM_ROCKMONSTERS].damage;
     current->itemsArray[REWARD_ITEM_CONSTRUCTIONS].total = (float)current->buildingCount;
     current->itemsArray[REWARD_ITEM_CONSTRUCTIONS].actual =
         (float)((current->buildingCount - current->buildingGridCount) + 1);
@@ -771,7 +775,7 @@ int reward_object_count_get(const char* name, int a, int b)
 #define REWARD_SCORE(current, item, value) \
     for (i = 0; (float)i < (item).importance; i++) { \
         (current)->itemsArray[REWARD_ITEM_SCORE].actual = \
-            (value) + (current)->itemsArray[REWARD_ITEM_SCORE].actual; \
+            ((value) + (current)->itemsArray[REWARD_ITEM_SCORE].actual); \
         (current)->itemsArray[REWARD_ITEM_SCORE].total = \
             (current)->itemsArray[REWARD_ITEM_SCORE].total - -100.0f; \
     }
@@ -1392,7 +1396,10 @@ int reward_update_state(int* count, int* state, float* time)
 
     if (*time >= rewardGlobs.timer && *state == 0)
         next = 1;
-    if (*state != 0 && *time >= rewardGlobs.timer + rewardGlobs.timer &&
+    /* A float product, folded to fadd st, st: it creates the unread 2.0f
+     * of the original's pool (0049e6e4), where 2.0 pooled a double. The
+     * compare stays the original's fld [time]; fcompp. */
+    if (*state != 0 && (double)(rewardGlobs.timer * 2.0f) <= *time &&
         ((RewardLegoLevel*)level_current_owner_get())->status == 1 && *count < 10)
         next = 1;
 
@@ -1402,21 +1409,19 @@ int reward_update_state(int* count, int* state, float* time)
         if (current->items[*count - 1].soundName &&
             sound_alias_lookup(current->items[*count - 1].soundName, &sound))
             sound_request_queue_submit(sound, 0);
-        if (*count > 9) {
-            if (*state == 0) {
-                *count = 9;
+        if (*count > 9 && *state == 0) {
+            *count = 9;
+            (*state)++;
+            return *state;
+        }
+        if (*count > 9 && *state > 1) {
+            if (*count > 10) {
+                *count = 10;
                 (*state)++;
                 return *state;
             }
-            if (*count > 9 && *state > 1) {
-                if (*count > 10) {
-                    *count = 10;
-                    (*state)++;
-                    return *state;
-                }
-                for (i = 0; i < REWARD_ITEM_COUNT; i++)
-                    reward_restart_flic(&current->items[i]);
-            }
+            for (i = 0; i < REWARD_ITEM_COUNT; i++)
+                reward_restart_flic(&current->items[i]);
         }
     }
 #if !defined(_MSC_VER)
@@ -1668,7 +1673,7 @@ int reward_scroll_update(RewardScroll* scroll)
             if (label->flags & 2)
                 y = (int)label->y;
             if ((label->flags & 2) ||
-                ((float)y < scroll->area.height + scroll->top && (float)y > scroll->top))
+                ((float)y < (scroll->area.height + scroll->top) && (float)y > scroll->top))
                 font_print_f(label->font, x, y, label->text);
             break;
         }

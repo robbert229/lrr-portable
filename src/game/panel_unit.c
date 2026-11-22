@@ -398,6 +398,11 @@ void indexed_pair_get(int panelType, float* x, float* y)
     *y = panel->currPos.y;
 }
 
+/* Maths.h's inline normalise. Its 1.0f (0049e5dc) follows the 0.0f that
+ * 0045a270 stores and comes before the double 1.0 below, so the copy is
+ * compiled here. */
+#include "gods98/maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x0045a730
 void simtick_manager_tick(int panelType, float elapsed)
 {
@@ -689,8 +694,7 @@ int panel_cursor_interaction_update(float elapsed, int mouseX, int mouseY,
             }
         }
 
-        if (!clicked) return 1;
-
+        if (clicked) {
         if (*(int*)((char*)level_current_owner_get() + 0x27c) == 0) {
             media_action_feedback_sound_dispatch(0);
             switch (panelType) {
@@ -702,11 +706,13 @@ int panel_cursor_interaction_update(float elapsed, int mouseX, int mouseY,
                     panel_state_flags_toggle(0);
                     panel_state_flags_toggle(1);
                 } else if (button == 1) {
-                    *engine_shared_state_word() = (*engine_shared_state_word() & ~0x1000) | 0x2000;
+                    *engine_shared_state_word() |= 0x2000;
+                    *engine_shared_state_word() &= ~0x1000;
                     panel_item_flag16_set(PANEL_RADAR, 2, 1);
                     panel_item_flag16_set(PANEL_RADAR, 3, 1);
                 } else if (button == 4) {
-                    *engine_shared_state_word() = (*engine_shared_state_word() & ~0x2000) | 0x1000;
+                    *engine_shared_state_word() &= ~0x2000;
+                    *engine_shared_state_word() |= 0x1000;
                     panel_item_flag16_set(PANEL_RADAR, 2, 0);
                     panel_item_flag16_set(PANEL_RADAR, 3, 0);
                 }
@@ -755,6 +761,9 @@ int panel_cursor_interaction_update(float elapsed, int mouseX, int mouseY,
             }
             return 1;
         }
+            media_action_feedback_sound_dispatch(1);
+        }
+        return 1;
     } else {
         if (info_panel_check_collision(&infoReleased, mouseX, mouseY,
                                        leftButton, leftButtonLast)) {
@@ -764,9 +773,6 @@ int panel_cursor_interaction_update(float elapsed, int mouseX, int mouseY,
         }
         return 0;
     }
-
-    media_action_feedback_sound_dispatch(1);
-    return 1;
 }
 
 // FUNCTION: LEGORR 0x0045b310
@@ -778,6 +784,7 @@ int panel_button_collision_check(int* outPanel, int* outButton, int mouseX,
     int found = 0;
     unsigned int panelType;
     unsigned int i;
+    PanelData* panel;
     PanelButton* button;
     int inside;
 
@@ -792,13 +799,18 @@ int panel_button_collision_check(int* outPanel, int* outButton, int mouseX,
     }
 
     for (panelType = 0; panelType < PANEL_TYPE_COUNT; panelType++) {
-        if (panelGlobs.panelTable[panelType].flags & PANEL_FLAG_OPEN) {
+        /* The original takes the panel's address once per panel (`ebx`)
+         * for its flags, button count and button list.
+         * panel_button_point_inside's argument stays spelled out below and
+         * shares that address; written as `panel` it scores lower. */
+        panel = &panelGlobs.panelTable[panelType];
+        if (panel->flags & PANEL_FLAG_OPEN) {
             if (overPanel != NULL && panelType != 1 && panelType != 2 &&
                 !legacy_panel_slot_coordinate_hit_test(panelType, mouseX, mouseY)) {
                 *overPanel = 1;
             }
-            for (i = 0; i < panelGlobs.panelTable[panelType].buttonCount; i++) {
-                button = &panelGlobs.panelTable[panelType].buttonList[i];
+            for (i = 0; i < panel->buttonCount; i++) {
+                button = &panel->buttonList[i];
                 inside = 0;
                 if (!found) {
                     if (panelType == PANEL_CAMERA_CONTROL && i == 3) {
@@ -814,9 +826,9 @@ int panel_button_collision_check(int* outPanel, int* outButton, int mouseX,
                     if (leftButton) {
                         if (panelGlobs.selectedButton == PANEL_MAX_BUTTONS) {
                             if (!leftButtonLast) {
+                                panelGlobs.selectedPanel = panelType;
                                 panelGlobs.selectedButton = i;
                                 found = 1;
-                                panelGlobs.selectedPanel = panelType;
                                 *outButton = i;
                                 button->flags = (button->flags & ~PANEL_BUTTON_FLAG_HIGHLIGHT) | PANEL_BUTTON_FLAG_PRESSED;
                             } else {
@@ -840,16 +852,19 @@ int panel_button_collision_check(int* outPanel, int* outButton, int mouseX,
                             found = 1;
                             *outButton = i;
                             button->flags = (button->flags & ~PANEL_BUTTON_FLAG_PRESSED) | PANEL_BUTTON_FLAG_HIGHLIGHT;
-                        } else if (panelType == panelGlobs.selectedPanel && i == panelGlobs.selectedButton) {
-                            *outButton = i;
-                            if (button->flags & PANEL_BUTTON_FLAG_TOGGLE) {
-                                if (button->flags & PANEL_BUTTON_FLAG_TOGGLED) button->flags &= ~PANEL_BUTTON_FLAG_TOGGLED;
-                                else button->flags |= PANEL_BUTTON_FLAG_TOGGLED;
-                            }
-                            if (outClicked != NULL) *outClicked = 1;
-                            button->flags = (button->flags & ~PANEL_BUTTON_FLAG_PRESSED) | PANEL_BUTTON_FLAG_HIGHLIGHT;
-                            found = 1;
                         } else {
+                            /* The original's released-click branch falls
+                             * through into the found = 1 it shares with the
+                             * other buttons. */
+                            if (panelType == panelGlobs.selectedPanel && i == panelGlobs.selectedButton) {
+                                *outButton = i;
+                                if (button->flags & PANEL_BUTTON_FLAG_TOGGLE) {
+                                    if (button->flags & PANEL_BUTTON_FLAG_TOGGLED) button->flags &= ~PANEL_BUTTON_FLAG_TOGGLED;
+                                    else button->flags |= PANEL_BUTTON_FLAG_TOGGLED;
+                                }
+                                if (outClicked != NULL) *outClicked = 1;
+                                button->flags = (button->flags & ~PANEL_BUTTON_FLAG_PRESSED) | PANEL_BUTTON_FLAG_HIGHLIGHT;
+                            }
                             found = 1;
                         }
                     }
@@ -1229,7 +1244,9 @@ void mission_crystal_quota_setup(BlockFile* config, const char* gameName,
             // STRING: LEGORR 0x004a89f8
             "Reward",
             // STRING: LEGORR 0x004a8a00
-            "Quota", "Crystals", NULL)) != NULL) {
+            "Quota",
+            // STRING: LEGORR 0x004a8a08
+            "Crystals", NULL)) != NULL) {
         str = block_get_strptr(config, string_path_join(gameName, levelName, "Reward", "Quota", "Crystals", NULL));
     } else {
         str = "";

@@ -18,6 +18,10 @@ project(lrr-portable VERSION 0.1.0 LANGUAGES CXX)
 # original was (ADR 0005). Other builds compile those sources as C++.
 if(LRR_CLASSIC_MSVC5)
   enable_language(C)
+  # The toolchain file's LINK.EXE on the toolchain's own runtime (finding 694).
+  if(LRR_MSVC5_LINK)
+    set(CMAKE_LINKER "${LRR_MSVC5_LINK}")
+  endif()
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
@@ -32,9 +36,21 @@ set(MOVIES "auto" CACHE STRING "Movie runtime support (auto, enabled, disabled)"
 set_property(CACHE MOVIES PROPERTY STRINGS auto enabled disabled)
 option(LRR_CLASSIC_MSVC5 "Use CMake linker flags compatible with MSVC 5.0" OFF)
 option(LRR_RECCMP "Generate a link PDB for Reccmp comparisons" OFF)
+option(LRR_ORIGINAL_UNIT_FLAGS
+  "Compile each unit with the original's debug-info and /Gy choice and link with /OPT:ICF (finding 697)" OFF)
 
 if(LRR_RECCMP AND NOT LRR_CLASSIC_MSVC5)
   message(FATAL_ERROR "LRR_RECCMP requires LRR_CLASSIC_MSVC5")
+endif()
+if(LRR_ORIGINAL_UNIT_FLAGS AND NOT LRR_CLASSIC_MSVC5)
+  message(FATAL_ERROR "LRR_ORIGINAL_UNIT_FLAGS requires LRR_CLASSIC_MSVC5")
+endif()
+# Reccmp maps each annotation through the PDB's line numbers, and a unit
+# without /Zi has none: its functions leave the report (finding 697). The
+# gate therefore keeps /Zi and /OPT:NOICF; only the identity build (ReproBit)
+# takes the original's per-unit choices.
+if(LRR_ORIGINAL_UNIT_FLAGS AND LRR_RECCMP)
+  message(FATAL_ERROR "LRR_ORIGINAL_UNIT_FLAGS drops /Zi, which Reccmp needs")
 endif()
 
 if(LRR_CLASSIC_MSVC5)
@@ -167,6 +183,61 @@ if(LRR_CLASSIC_MSVC5)
   # configuration's /O2, and /Ob0 after its /Ob1, as plain /Od gives: no
   # inline expansion, so Maths.h's inline functions are called (finding 692).
   set(LRR_UNOPTIMISED_UNITS "${SRC_ROOT}/game/camera_control.c")
+  # The original's per-unit compile choices (finding 697). LINK 5.0 folds two
+  # identical COMDATs only when their COFF line-number counts agree too, so a
+  # function of a unit without debug information (no line numbers) folds
+  # only with others like it, LIBC's among them, and never with a /Zi unit's.
+  # - Without /Zi: gods98's units except Files.c, and NERPs.c, RadarMap.c and
+  #   Water.c. LIBC's _matherr, operator delete and _fpclear fold into
+  #   00456210, 0045daf0 and 00484c90, and Flic_GetWidth into 004897d0;
+  #   Water.c's and Maths.c's code is the no-debug code.
+  # - Without /Gy (/O2 spelled out without it; MSVC 5.0 ignores /Gy-):
+  #   AITask.c and Container.c, which keep their identical small functions
+  #   apart from Files.c's. Files.c keeps /Gy: /OPT:REF removed its
+  #   unreferenced File_Flush (finding 667), and Mesh.c's mesh_parse_lwo
+  #   changes without it.
+  set(LRR_NO_DEBUG_INFO_UNITS "")
+  foreach(_rel IN ITEMS
+      gods98/movie_unit.cpp gods98/container.c gods98/viewports.c
+      gods98/utils.c gods98/main.c gods98/config.c gods98/maths.c
+      gods98/font.c gods98/sound3d.c gods98/directdraw.c
+      gods98/images_unit.c gods98/avi_player.cpp gods98/input_unit.c
+      gods98/mesh_unit.c gods98/flic_unit.c gods98/textwindow.c gods98/keys.c
+      gods98/draw.c gods98/lws.c gods98/soundsys.c gods98/g98_024.c
+      gods98/animclone.c gods98/g98_026.c gods98/dxerror.c
+      gods98/file_list_streams.c gods98/g98_029.c gods98/wad.c gods98/lwo.c
+      gods98/rnc.c gods98/init.c
+      game/tutorial_script.c game/radarmap.c game/water.c)
+    list(APPEND LRR_NO_DEBUG_INFO_UNITS "${SRC_ROOT}/${_rel}")
+  endforeach()
+  set(LRR_NO_GY_UNITS "${SRC_ROOT}/game/aitask.c" "${SRC_ROOT}/gods98/container.c")
+  if(LRR_ORIGINAL_UNIT_FLAGS)
+    # /Zi and /O2 move from the configuration's flags to each target's
+    # COMPILE_OPTIONS, which lrr_original_unit_flags() replaces per unit.
+    # Their place after /Ob1 /DNDEBUG does not change the code.
+    foreach(_lang IN ITEMS C CXX)
+      foreach(_flag IN ITEMS /Zi /O2)
+        string(REPLACE "${_flag}" "" CMAKE_${_lang}_FLAGS_RELWITHDEBINFO
+          "${CMAKE_${_lang}_FLAGS_RELWITHDEBINFO}")
+      endforeach()
+    endforeach()
+    add_compile_options(/Zi /O2)
+  endif()
+  function(lrr_original_unit_flags target src)
+    if(NOT LRR_ORIGINAL_UNIT_FLAGS)
+      return()
+    endif()
+    set(_opts "")
+    if(NOT src IN_LIST LRR_NO_DEBUG_INFO_UNITS)
+      list(APPEND _opts /Zi)
+    endif()
+    if(src IN_LIST LRR_NO_GY_UNITS)
+      list(APPEND _opts /Og /Oi /Ot /Oy /Ob1 /Gs /Gf)
+    else()
+      list(APPEND _opts /O2)
+    endif()
+    set_property(TARGET ${target} PROPERTY COMPILE_OPTIONS ${_opts})
+  endfunction()
   set(LRR_LINK_OBJECTS "")
   set(LRR_LINK_LATE_SOURCES "")
   set(LRR_LINK_LATE_TARGETS "")
@@ -192,6 +263,7 @@ if(LRR_CLASSIC_MSVC5)
     set(_target "link_${_pos}_${_stem}")
     add_library(${_target} OBJECT ${_src})
     target_include_directories(${_target} PRIVATE ${LRR_LINK_INCLUDES_${_lib}})
+    lrr_original_unit_flags(${_target} "${_src}")
     if(_src IN_LIST LRR_UNOPTIMISED_UNITS)
       target_compile_options(${_target} PRIVATE /Od /Ob0)
     endif()
@@ -242,6 +314,7 @@ if(LRR_CLASSIC_MSVC5)
     get_filename_component(_stem "${_src}" NAME_WE)
     add_library(late_${_stem} STATIC ${_src})
     target_include_directories(late_${_stem} PRIVATE ${LRR_LINK_INCLUDES_${_lib}})
+    lrr_original_unit_flags(late_${_stem} "${_src}")
     list(APPEND LRR_LINK_LATE_LIBRARIES late_${_stem})
   endforeach()
   # The port tail as one library (ADR 0006 addendum of 2026-11-13, finding
@@ -367,18 +440,74 @@ if(LRR_RECCMP)
   target_link_options(program PRIVATE "/MAP:${CMAKE_BINARY_DIR}/LegoRR.map")
 endif()
 if(LRR_CLASSIC_MSVC5)
+  # The original's operator delete is 0045daf0, which C code also calls as a
+  # plain function (ui_render_record_free). LINK 5.0 has no /ALTERNATENAME,
+  # so a section-less object gives that function the C++ name too, as a weak
+  # external (finding 696). It adds nothing to the image. The alias
+  # characteristic resolves references from command-line objects such as
+  # movie_unit.cpp's to the default too; with nolibrary, LINK would search
+  # the libraries for them and take LIBC's delete.obj.
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  set(_lrr_weak_delete "${CMAKE_BINARY_DIR}/weak_operator_delete.obj")
+  add_custom_command(OUTPUT "${_lrr_weak_delete}"
+    COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/coff_weak_external.py" --search=alias
+      "${_lrr_weak_delete}" "??3@YAXPAX@Z=_ui_render_record_free"
+      # Flic.c's do-nothing functions, which the original's linker folded
+      # into one body each (flic_unit.h).
+      "_Flic_Palette64=_flic_opcode25_success_stub"
+      "_Flic_DeltaByte=_flic_opcode25_success_stub"
+      "_Flic_Black=_flic_opcode25_success_stub"
+      "_FlicBRunDepackBytePerPixel=_flic_opcode25_success_stub"
+      "_FlicBRunDepackHiColorFlic=_flic_opcode25_success_stub"
+      "_FlicCopyHiColorFlic=_flic_opcode27_fallback_noop"
+      "_FlicCopyBytePerPixel=_flic_opcode27_fallback_noop"
+      "_FlicCopyHiColor=_flic_opcode27_fallback_noop"
+      "_FlicDeltaWordBytePerPixel=_flic_opcode27_fallback_noop"
+      "_FlicDeltaWordHiColorDZ=_flic_opcode27_fallback_noop"
+      "_FlicDeltaWordHiColorFlic=_flic_opcode27_fallback_noop"
+      "_Flic_Unpack=_flh_magic_uu_noop"
+      # FrontEnd.c's four data frees, folded into steering.c's
+      # optional_resource_destroy (frontend_unit_imports.h).
+      "_front_menu_item_free_trigger=_optional_resource_destroy"
+      "_front_menu_item_free_text_input=_optional_resource_destroy"
+      "_front_menu_item_free_slider=_optional_resource_destroy"
+      "_front_menu_item_free_real_slider=_optional_resource_destroy"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/tools/coff_weak_external.py"
+    VERBATIM)
+  set_source_files_properties("${_lrr_weak_delete}" PROPERTIES
+    EXTERNAL_OBJECT TRUE GENERATED TRUE)
+  target_sources(program PRIVATE "${_lrr_weak_delete}")
   # The DirectX libraries the toolchain lacks, rebuilt from source (finding
   # 574). Each target's full path takes the place the link order gives the
   # library's name, so LINK reads them in the same order and never searches
   # the toolchain's own dinput.lib or dsound.lib.
   add_subdirectory(cross/msvc5-importlibs)
   set(_lrr_link_libraries "")
+  # The toolchain root for the libraries searched twice: the toolchain file's
+  # LRR_MSVC5_ROOT, or, where a caller configures with its own toolchain file
+  # (ReproBit's import), the root above the compiler's wine/x86/cl.
+  set(_lrr_toolchain_root "${LRR_MSVC5_ROOT}")
+  if(NOT _lrr_toolchain_root)
+    get_filename_component(_lrr_cl_dir "${CMAKE_C_COMPILER}" DIRECTORY)
+    get_filename_component(_lrr_cl_root "${_lrr_cl_dir}/../.." ABSOLUTE)
+    if(EXISTS "${_lrr_cl_root}/lib/kernel32.lib")
+      set(_lrr_toolchain_root "${_lrr_cl_root}")
+    endif()
+  endif()
   foreach(_lib IN LISTS LRR_LINK_LIBRARIES)
     list(FIND LRR_IMPORTLIB_TARGETS "${_lib}" _index)
     if(_index GREATER -1)
       math(EXPR _index "${_index} + 1")
       list(GET LRR_IMPORTLIB_TARGETS ${_index} _lib)
       string(REPLACE "+" ";" _lib "${_lib}")
+    endif()
+    # A library also searched earlier (LRR_LINK_FIRST_LIBRARIES): LINK
+    # searches a name once, so the second search names the file (finding
+    # 694).
+    list(FIND LRR_LINK_FIRST_LIBRARIES "${_lib}" _index)
+    if(_index GREATER -1 AND _lrr_toolchain_root)
+      set(_lib "${_lrr_toolchain_root}/lib/${_lib}")
     endif()
     list(APPEND _lrr_link_libraries "${_lib}")
   endforeach()
@@ -391,7 +520,10 @@ if(LRR_CLASSIC_MSVC5)
   # gods98's members do, so LINK pulls them in its second pass; listed
   # first, their commons come before gods98's, as in the original (finding
   # 690).
-  target_link_libraries(program PRIVATE ${LRR_LINK_LATE_LIBRARIES} unit_gods98)
+  # kernel32.lib's first search comes before the gods98 members load, so it
+  # pulls only the explicit objects' imports (finding 694).
+  target_link_libraries(program PRIVATE ${LRR_LINK_LATE_LIBRARIES}
+    ${LRR_LINK_FIRST_LIBRARIES} unit_gods98)
   target_link_libraries(program PRIVATE ${LRR_LINK_LIBRARIES})
   target_link_libraries(program PRIVATE ${LRR_LINK_TAIL_LIBRARY})
   # No /ENTRY: LINK infers WinMainCRTStartup from WinMain and pulls
@@ -407,7 +539,14 @@ if(LRR_CLASSIC_MSVC5)
   # that nothing references: LegoObject.c's 00438390, unreferenced in the
   # original as well. (004907c0 is LIBC cvt.obj's static __shift, which LIBC
   # links and calls; tools/reccmp_map_statics.py names it, finding 643.)
-  target_link_options(program PRIVATE "/OPT:REF" "/OPT:NOICF"
+  # The identity build folds identical COMDATs as the original's link did
+  # (finding 697); the gate keeps them apart, since every unit there has /Zi.
+  if(LRR_ORIGINAL_UNIT_FLAGS)
+    set(_lrr_icf "/OPT:ICF")
+  else()
+    set(_lrr_icf "/OPT:NOICF")
+  endif()
+  target_link_options(program PRIVATE "/OPT:REF" "${_lrr_icf}"
     "/INCLUDE:_legoobject_global_animation_state_get")
 else()
   # The frame-loop object in gods98 calls into game, while game itself uses

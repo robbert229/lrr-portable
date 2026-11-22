@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 import tempfile
 import unittest
@@ -100,8 +101,14 @@ class CommittedListTest(unittest.TestCase):
     def test_matching_libraries_put_libc_after_kernel32(self):
         # Finding 574: kernel32's descriptor comes first, and LIBC follows it
         # so that RtlUnwind's thunk is pulled after the DirectX thunks.
-        libs = lo.libraries((lo.ROOT / lo.LIST).read_text(encoding="utf-8"))
-        self.assertEqual(libs[:3], ["kernel32.lib", "libc.lib", "oldnames.lib"])
+        # Finding 694: kernel32.lib is searched first before the gods98
+        # library (LRR_LINK_FIRST_LIBRARIES), and again before user32.lib.
+        text = (lo.ROOT / lo.LIST).read_text(encoding="utf-8")
+        first = re.search(r"^set\(LRR_LINK_FIRST_LIBRARIES ([^)]*)\)", text, re.M)
+        self.assertEqual(first.group(1).split(), ["kernel32.lib"])
+        libs = lo.libraries(text)
+        self.assertEqual(libs[:2], ["libc.lib", "oldnames.lib"])
+        self.assertEqual(libs[libs.index("user32.lib") - 1], "kernel32.lib")
 
 
     def test_late_members_link_after_the_libraries(self):
@@ -196,6 +203,19 @@ class CheckTest(unittest.TestCase):
         late = "lrr_link(unit LATE-001 gods98 gods98/late.c)"
         self.assertEqual(self.errors(self.lines + [late]), "")
         self.assertIn("wrong segment", self.errors([self.lines[0], self.lines[1], late, self.lines[2]]))
+
+    def test_data_entry_precedes_its_unit_and_has_no_code(self):
+        # A code-less original object (message_data.c): placed by the unit
+        # it precedes, whose entry must follow it, and without functions.
+        (self.root / "src/game/data.c").write_text("unsigned int unread[4] = { 0 };\n")
+        data = "lrr_link(data GAME-001 game game/data.c)"
+        self.assertEqual(self.errors([data, *self.lines]), "")
+        entries = lo.parse(data + "\n")
+        self.assertEqual(lo.entry_address(entries[0], {"GAME-001": 0x401000}), 0x401000)
+        self.assertIn("immediately before unit GAME-001", self.errors([self.lines[0], data, *self.lines[1:]]))
+        self.assertIn("not a game or gods98 unit", self.errors([data.replace("GAME-001", "BAD"), *self.lines]))
+        (self.root / "src/game/data.c").write_text("// FUNCTION: LEGORR 0x00401010\n")
+        self.assertIn("code-less object has no functions", self.errors([data, *self.lines]))
 
     def test_stale_median_order_and_segments(self):
         self.assertIn("set it to 00402010", self.errors([self.lines[0], self.lines[1].replace("00402010", "00402011"), self.lines[2]]))

@@ -272,7 +272,7 @@ void water_update(Lego_Level* level, float elapsedGame)
         if (pool->flags & WATER_FLAG_FILLED) filling = 0;
 
         if (filling || draining) {
-            ratio = (pool->level - pool->startLevel) / level->digDepth;
+            ratio = (pool->level - pool->startLevel) / (level->digDepth);
             if (filling) {
                 pool->flags &= ~WATER_FLAG_DRAINED;
                 pool->level += (activeCount * elapsedGame * 0.3f) / (ratio + 1.0f);

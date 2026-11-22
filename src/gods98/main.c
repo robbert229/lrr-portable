@@ -48,6 +48,7 @@
 #include "main_imports.h"
 #define LEGORRR_MAIN_GLOBS_OWNER
 #include "gods98/main_globs.h"
+#include "gods98/d3drmdef_consts.h"
 
 #define MAIN_MAXRENDERSTATES        200
 
@@ -536,8 +537,7 @@ unsigned int render_feature_flags_get(void)
 // FUNCTION: LEGORR 0x00477f80
 int window_runtime_display_caps_query(void)
 {
-    HDC hdc = GetDC((HWND)g_platform_cursor_window_handle);
-    return GetDeviceCaps(hdc, BITSPIXEL);
+    return GetDeviceCaps(GetDC((HWND)g_platform_cursor_window_handle), BITSPIXEL);
 }
 
 // FUNCTION: LEGORR 0x00477fa0
@@ -615,7 +615,8 @@ void renderer_window_mode_apply(int fullScreen, int xPos, int yPos,
                      rect.right - rect.left, rect.bottom - rect.top, SWP_NOZORDER);
         ShowCursor(FALSE);
     } else {
-        GetWindowRect(GetDesktopWindow(), &rect);
+        HWND desktop = GetDesktopWindow();
+        GetWindowRect(desktop, &rect);
         SetWindowPos((HWND)g_platform_cursor_window_handle, NULL, rect.left, rect.top,
                      rect.right - rect.left, rect.bottom - rect.top, SWP_NOZORDER);
         SetCursor(NULL);
@@ -752,9 +753,11 @@ int main_init_app(HINSTANCE hInstance)
             SetFocus((HWND)g_platform_cursor_window_handle);
             return TRUE;
         } else {
-            // STRING: LEGORR 0x004aae00
-            // STRING: LEGORR 0x004aae20
-            MessageBoxA(NULL, "Unable to Create Main Window", "Fatal Error", MB_OK);
+            MessageBoxA(NULL,
+                        // STRING: LEGORR 0x004aae00
+                        "Unable to Create Main Window",
+                        // STRING: LEGORR 0x004aae20
+                        "Fatal Error", MB_OK);
         }
     } else {
         // STRING: LEGORR 0x004aade0
@@ -837,7 +840,9 @@ LRESULT window_game_window_procedure_retail(HWND hWnd, UINT message,
     case WM_KEYUP:
     case WM_SYSKEYDOWN:
     case WM_MOUSEMOVE:
+        return 0;
     case WM_ENTERMENULOOP:
+        return 0;
     case WM_EXITMENULOOP:
         return 0;
 
@@ -1093,3 +1098,5 @@ int audio_mixer_control_init(float* leftVolume, float* rightVolume, int set)
 }
 
 #endif /* !LEGORRR_BACKEND_MINIWIN */
+
+#include "main_tail.h"

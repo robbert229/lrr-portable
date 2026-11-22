@@ -20,9 +20,9 @@ static __inline TerrainMapVector3* water_flow_point(TerrainMapVector3* r,
                                                     const TerrainMapVector3* dir,
                                                     float dist)
 {
-    r->x = ((a->x + b->x) * 0.5f) + (dir->x * dist);
-    r->y = ((a->y + b->y) * 0.5f) + (dir->y * dist);
-    r->z = ((a->z + b->z) * 0.5f) + (dir->z * dist);
+    r->x = (((a->x + b->x)) * 0.5f) + (dir->x * dist);
+    r->y = (((a->y + b->y)) * 0.5f) + (dir->y * dist);
+    r->z = (((a->z + b->z)) * 0.5f) + (dir->z * dist);
     return r;
 }
 

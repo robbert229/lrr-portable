@@ -55,3 +55,8 @@ unsigned char* level_map_slot_get(unsigned int slot)
         return handles[slot].ptr;
     return NULL;
 }
+
+/* Maths.h's inline normalise: the unread 1.0f at 0049ea70, the last word of
+ * the unit's .rdata. No code of the unit creates a literal, so the copy
+ * is compiled at the end, after every function. */
+#include "maths_normalise_head.h"

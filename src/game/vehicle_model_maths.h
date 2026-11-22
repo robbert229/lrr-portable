@@ -26,18 +26,18 @@ static __inline float vehicle_vector3d_modulus(const Vehicle_Vector3F* v)
 static __inline Vehicle_Vector3F* vehicle_vector3d_add(
     Vehicle_Vector3F* r, const Vehicle_Vector3F* a, const Vehicle_Vector3F* b)
 {
-    r->x = a->x + b->x;
-    r->y = a->y + b->y;
-    r->z = a->z + b->z;
+    r->x = (a->x + b->x);
+    r->y = (a->y + b->y);
+    r->z = (a->z + b->z);
     return r;
 }
 
 static __inline Vehicle_Vector3F* vehicle_vector3d_subtract(
     Vehicle_Vector3F* r, const Vehicle_Vector3F* a, const Vehicle_Vector3F* b)
 {
-    r->x = a->x - b->x;
-    r->y = a->y - b->y;
-    r->z = a->z - b->z;
+    r->x = (a->x - b->x);
+    r->y = (a->y - b->y);
+    r->z = (a->z - b->z);
     return r;
 }
 
@@ -72,9 +72,9 @@ static __inline Vehicle_Vector3F* vehicle_ray_end_point(
 static __inline Vehicle_Vector3F* vehicle_vector3d_cross_product(
     Vehicle_Vector3F* r, const Vehicle_Vector3F* a, const Vehicle_Vector3F* b)
 {
-    r->x = a->z * b->y - a->y * b->z;
-    r->y = a->x * b->z - a->z * b->x;
-    r->z = a->y * b->x - a->x * b->y;
+    r->x = (a->z * b->y) - (a->y * b->z);
+    r->y = (a->x * b->z) - (a->z * b->x);
+    r->z = (a->y * b->x) - (a->x * b->y);
     return r;
 }
 

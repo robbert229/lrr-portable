@@ -31,14 +31,14 @@ float collision_polyline_point_distance(const CollisionPoint2F* point,
                                         const CollisionPoint2F* first,
                                         const CollisionPoint2F* second,
                                         unsigned int count);         /* 00408b00 */
-void collision_project_onto_line(const CollisionPoint2F* start,
-                                 const CollisionPoint2F* end,
-                                 const CollisionPoint2F* point,
-                                 CollisionPoint2F* out);             /* 00408b60 */
-void collision_project_onto_direction(const CollisionPoint2F* origin,
-                                      const CollisionPoint2F* direction,
-                                      const CollisionPoint2F* point,
-                                      CollisionPoint2F* out);        /* 00408bf0 */
+CollisionPoint2F* collision_project_onto_line(const CollisionPoint2F* start,
+                                              const CollisionPoint2F* end,
+                                              const CollisionPoint2F* point,
+                                              CollisionPoint2F* out);             /* 00408b60 */
+CollisionPoint2F* collision_project_onto_direction(const CollisionPoint2F* origin,
+                                                   const CollisionPoint2F* direction,
+                                                   const CollisionPoint2F* point,
+                                                   CollisionPoint2F* out);        /* 00408bf0 */
 
 #ifdef __cplusplus
 }

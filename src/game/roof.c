@@ -19,6 +19,16 @@
 #include <stdlib.h>
 
 #include "crt/vc5names.h"
+
+/* The original's Standard.h includes the Windows and DirectX headers. As
+ * in mesh_unit.c and config.c, the unit includes <windows.h> in the
+ * matching build only. Without it the unit has about 470 fewer symbol
+ * counter units before Roof_Update than the original's code needs, and
+ * MSVC 5.0 homes the normalisation's reciprocal (finding 538). */
+#if defined(_MSC_VER) && _MSC_VER == 1100
+#include <windows.h>
+#endif
+
 #include "roof.h"
 #include "roof_imports.h"
 

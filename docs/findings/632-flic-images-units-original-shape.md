@@ -248,15 +248,22 @@ Natively nothing changes: the port serves every name.
 
 ## What is left
 
-- **`00484610` Flic_DoChunk (44.87%) and `00484880` Flic_Copy (61.11%).**
-  Both call the linker-folded do-nothing functions from separate branches
-  (`00484b90` from three `case`s, `00484c90` from three `if`s). The
-  original called different functions there that `/OPT:ICF` later folded,
-  so its compiler kept the branches apart; this build calls one name, and
-  MSVC merges the identical tails, which shifts the jump table and the
-  registers. Tried: casts of the callee, `return` against `retval`, eight
-  branch shapes. Calling two stand-in functions raised `00484610` to 72%,
-  but adds code the original does not have, so it is not used.
+- **`00484610` Flic_DoChunk (44.87%) and `00484880` Flic_Copy (61.11%):
+  resolved, both 100%.** Both call the linker-folded do-nothing functions
+  from separate branches (`00484b90` from three `case`s, `00484c90` from
+  three `if`s). The original called different functions there that its
+  linker folded, so its compiler kept the branches apart; this build called
+  one name, and MSVC merged the identical tails. The unit now calls
+  OpenLRR's names for them (`Flic_Palette64`, `Flic_DeltaByte`,
+  `Flic_Black`; `FlicCopyHiColorFlic`, `FlicCopyBytePerPixel`,
+  `FlicCopyHiColor`), and Flic_Brun, Flic_Delta and the `UU` case
+  (`Flic_Unpack`, `00456210`) do the same. The matching build declares the
+  names in `flic_unit.h` and defines none of them; weak externals with the
+  alias characteristic (`tools/coff_weak_external.py`, finding 696) resolve
+  each to the one body, so the link map lists every name at that address.
+  Flic_DoChunk also takes OpenLRR's separate cases for 15/25 and 7/27,
+  which the original's jump table has as separate entries with merged
+  targets. Elsewhere each name is a macro for the one body.
 - **`00483c80` Flic_Setup (89%).** The original keeps the file name on the
   stack and `0` in `ebp`; this build keeps the name in `ebp`. The chained
   `fsXsize = ddsd.dwWidth = width` raised it from 61%; the permuter and four

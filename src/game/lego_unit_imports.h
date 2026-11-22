@@ -152,7 +152,9 @@ extern void* s_position_handle;               /* engine.cpp, 00556f3c */
 extern int s_scroll_guard;                    /* 004de548, defined at the end */
 
 /* GAME-032 Panel.c (panel_unit.h). */
-void ui_overlay_animation_advance(int up, unsigned int count); /* 0045c580 */
+/* Unnamed parameters: their two symbols pay for the Maths.h include in
+ * lego_unit.c (gods98/maths_normalise_head.h). */
+void ui_overlay_animation_advance(int, unsigned int);      /* 0045c580 */
 /* GAME-011 (tile_variants.h): Detail_GetTexture, which takes the texture
  * as a byte. */
 unsigned int packed_grid_cell_value_get(const void* grid,

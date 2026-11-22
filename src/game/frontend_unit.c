@@ -841,17 +841,19 @@ void front_menu_item_free_menu_item(Front_MenuItem* item)
         case Front_MenuItem_Cycle:
             front_menu_item_free_cycle((Front_CycleData*)item->itemData);
             break;
-        case Front_MenuItem_Trigger:
-            optional_resource_destroy(item->itemData);
-            break;
+        /* The original lays TextInput's case out before Trigger's (its jump
+         * table's second entry points past its third). */
         case Front_MenuItem_TextInput:
-            optional_resource_destroy(item->itemData);
+            front_menu_item_free_text_input(item->itemData);
+            break;
+        case Front_MenuItem_Trigger:
+            front_menu_item_free_trigger(item->itemData);
             break;
         case Front_MenuItem_Slider:
-            optional_resource_destroy(item->itemData);
+            front_menu_item_free_slider(item->itemData);
             break;
         case Front_MenuItem_RealSlider:
-            optional_resource_destroy(item->itemData);
+            front_menu_item_free_real_slider(item->itemData);
             break;
         case Front_MenuItem_Select:
             front_menu_item_free_select((Front_SelectData*)item->itemData);
@@ -1143,16 +1145,17 @@ int front_menu_item_select_test_string_collision(Front_Menu* menu,
         return -3;
     }
     for (i = 0; i < select->visibleCount; i++) {
-        index = select->scrollStart + i;
-        if (index >= select->selItemCount) {
+        if (select->scrollStart + i >= select->selItemCount) {
             break;
         }
+        index = select->scrollStart + i;
         selItem = &select->selItemList[index];
         if (selItem->flags & 4) {
             if (front_maths_is_point_inside_rect_centered(
                     FRONT_MSX, FRONT_MSY,
-                    item->x1 + select->x1 + selItem->xPos + frontGlobs_scrollOffsetX + menu->xPos,
-                    select->yStep * i + item->y1 + select->y1 + selItem->yPos +
+                    item->x1 + select->x1 + select->selItemList[index].xPos +
+                        frontGlobs_scrollOffsetX + menu->xPos,
+                    select->yStep * i + item->y1 + select->y1 + select->selItemList[index].yPos +
                         frontGlobs_scrollOffsetY + menu->yPos,
                     select->widths[0][index], select->heights[0][index],
                     menu->autoCenter)) {
@@ -1577,13 +1580,13 @@ void front_menu_item_draw_slider(Front_SliderData* slider, unsigned int x, unsig
     Point2F dest;
     float pct;
 
+    pct = (float)((value * 100) / range);
     src.x = 0.0f;
     src.y = 0.0f;
-    dest.x = (float)x;
-    dest.y = (float)y;
-    pct = (float)((value * 100) / range);
     src.width = pct;
     src.height = 20.0f;
+    dest.x = (float)x;
+    dest.y = (float)y;
     image_display_scaled(slider->imageBarOn, &src, &dest, NULL);
 
     src.x = pct;
@@ -1605,7 +1608,9 @@ void front_menu_item_draw_slider(Front_SliderData* slider, unsigned int x, unsig
         image_display_scaled(slider->imageCapRight, NULL, &dest, NULL);
     }
     if (slider->imageMinusLo != NULL && slider->imageMinusHi != NULL) {
-        dest.x = (float)x - (float)(int)(slider->imageMinusLo->width + 4);
+        /* The width is converted as a signed int: (float)(int)(width + 4)
+         * compiles as an unsigned conversion. */
+        dest.x = (float)x - (float)((int)slider->imageMinusLo->width + 4);
         dest.y = (float)y;
         if (front_maths_is_point_inside_rect(FRONT_MSX, FRONT_MSY, (int)dest.x, (int)dest.y,
                                              slider->imageMinusLo->width,
@@ -1698,9 +1703,12 @@ void front_menu_update_overlays(Front_Menu* menu)
             s_overlayTriggered = 0;
         }
     } else {
+        /* The original reads playRandom before the overlay test; startFrame
+         * holds it, since a new local shifts 0x004177e0's symbol phase. */
         overlay = menu->overlays;
+        startFrame = menu->playRandom;
         if (overlay != NULL) {
-            if (menu->playRandom == 1) {
+            if (startFrame == 1) {
                 count = front_menu_should_random_play() ? front_menu_get_overlay_count(menu) : 0;
                 if (count != 0) {
                     for (index = (unsigned int)rand() % count; index > 0; index--) {
@@ -1764,8 +1772,11 @@ void front_menu_item_draw_save_image(Front_Menu* menu, int selIndex,
                                      Front_SelectData* select, int bigSize)
 {
     struct Image* image;
-    char* stringParts[2];
-    char buff[20];
+    /* The original's frame: five split parts (only two are read) and a key
+     * buffer for "pos1".."pos5" whose size is not a multiple of four, which
+     * puts it below the points (5 to 7 bytes give the same frame). */
+    char* stringParts[5];
+    char buff[5];
     char* str;
     Point2F dest;
     Point2F size;
@@ -1915,17 +1926,17 @@ void front_menu_draw_load_save_text(Front_Menu** menu)
 // FUNCTION: LEGORR 0x00412af0
 void front_menu_draw_menu_image(Front_Menu* menu, int light)
 {
-    Area2F src;
-    Point2F dest;
-
     if (light) {
         if (menu->menuImage != NULL) {
+            Area2F src;
+            Point2F dest;
+
             if (menu->flags & 1) {
                 image_display_scaled(menu->menuImage, NULL, (Point2F*)menu->imagePos, NULL);
                 return;
             }
-            src.y = -(float)frontGlobs_scrollOffsetY;
             src.x = -(float)frontGlobs_scrollOffsetX;
+            src.y = -(float)frontGlobs_scrollOffsetY;
             src.width = 640.0f;
             src.height = 480.0f;
             dest.x = 0.0f;
@@ -1934,6 +1945,9 @@ void front_menu_draw_menu_image(Front_Menu* menu, int light)
         }
     } else {
         if (menu->menuImageDark != NULL) {
+            Area2F src;
+            Point2F dest;
+
             if (menu->flags & 1) {
                 image_display_scaled(menu->menuImageDark, NULL, (Point2F*)menu->imagePos, NULL);
                 return;
@@ -1966,7 +1980,6 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
     int selIndex;
     int imageIndex;
     int pointerType;
-    int width;
     float timer;
     float elapsedTime;
     float currTime;
@@ -1974,7 +1987,6 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
     float camPos[3];
     float camDir[3];
     float camUp[3];
-    Point2F dest;
     char buff[128];
     Front_CycleData* cycle;
     Front_SelectItem* selItem;
@@ -2009,9 +2021,6 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
     if (s_overlayIndex >= 0) {
         nextMenu = origMenu;
     }
-    x = menu->xPos;
-    y = menu->yPos;
-
     if (frontGlobs_rockWipeAnim != NULL && (frontGlobs_rockWipeFlags & FRONT_ROCKWIPE_ANIMATING)) {
         viewport_clear((struct Viewport*)view, 1);
         ddiscene_scene_object_attach_or_unlink(frontGlobs_rockWipeAnim, legoGlobs_rootCont);
@@ -2029,11 +2038,15 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
     }
     front_menu_item_draw_select_text_window(&menu, &nextMenu, &origMenu);
 
+    x = menu->xPos;
+    y = menu->yPos;
+
     if (menu->displayTitle) {
-        width = formatted_text_printf_width(menu->menuFont, front_util_replace_text_spaces(menu->fullName));
         /* The original computes both positions before the second
-         * ReplaceTextSpaces call, so they are statements (finding 672). */
-        itemX = s_display_w / 2 - ((unsigned int)width >> 1);
+         * ReplaceTextSpaces call, so they are statements (finding 672);
+         * the width call sits inside the X expression, with no local. */
+        itemX = s_display_w / 2 -
+                (formatted_text_printf_width(menu->menuFont, front_util_replace_text_spaces(menu->fullName)) / 2);
         itemY = menu->anchoredY + y;
         font_print_f(menu->menuFont, itemX, itemY, front_util_replace_text_spaces(menu->fullName));
     }
@@ -2219,6 +2232,7 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
                 itemX = item->x1 + menu->xPos;
                 itemY = item->y1 + menu->yPos;
                 if ((image = item->imageHi) != NULL) {
+                    Point2F dest;
                     dest.x = (float)itemX;
                     dest.y = (float)itemY;
                     image_display_scaled(image, NULL, &dest, NULL);
@@ -2228,6 +2242,7 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
                 itemX = item->x1 + menu->xPos;
                 itemY = item->y1 + menu->yPos;
                 if ((image = item->imageLo) != NULL) {
+                    Point2F dest;
                     dest.x = (float)itemX;
                     dest.y = (float)itemY;
                     image_display_scaled(image, NULL, &dest, NULL);
@@ -2270,7 +2285,10 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
         ddiscene_scene_object_attach_or_unlink(frontGlobs_rockWipeAnim, NULL);
         timer = (float)ddiscene_object_frame_position_get(frontGlobs_rockWipeAnim);
         currTime = (float)main_time_get();
-        elapsedTime = (currTime - frontGlobs_rockWipeLastUpdateTime) * 0.001f * 25.0f;
+        /* Seconds times 25 frames: written left to right, MSVC folds
+         * 0.001f * 25.0f into one 0.025 literal; the original multiplies
+         * by 0.001 and then by 25 (two .rdata literals). */
+        elapsedTime = 25.0f * ((currTime - frontGlobs_rockWipeLastUpdateTime) * 0.001f);
         elapsedTime = elapsedTime + elapsedTime;
         if (elapsedTime > 3.0f) {
             elapsedTime = 3.0f;
@@ -2397,7 +2415,9 @@ void front_run_screen_menu(Front_Menu* menu)
     unsigned int currTime;
     void* level;
     char buff[128];
+    Front_Menu* currMenu;
 
+    currMenu = menu;
     transition = 0;
     menuTransition = 0;
     elapsed = 1.0f;
@@ -2415,24 +2435,24 @@ void front_run_screen_menu(Front_Menu* menu)
     g_front_save_menu_open = 1;
     frontGlobs_overlayImage = NULL;
     lastTime = timeGetTime();
-    while (!menu->closed) {
+    while (!currMenu->closed) {
         if (!transition) {
-            nextMenu = front_menu_update(elapsed, menu, NULL);
+            nextMenu = front_menu_update(elapsed, currMenu, NULL);
         } else {
-            front_menu_update(elapsed, menu, &menuTransition);
+            front_menu_update(elapsed, currMenu, &menuTransition);
         }
-        if (menu == frontGlobs_mainMenuSet->menus[0] && nextMenu != menu) {
+        if (currMenu == frontGlobs_mainMenuSet->menus[0] && nextMenu != currMenu) {
             frontGlobs_f_557028 = -1;
             save_menu_refresh_target(FRONT_FLOAT_ARG(elapsed), -1);
         }
-        front_menu_update_mouse_position(menu, elapsed);
+        front_menu_update_mouse_position(currMenu, elapsed);
         tooltip_update(s_renderer_word_a, s_renderer_word_b, elapsed);
         sfx_update(elapsed);
         main_loop_frame_pump(0);
         currTime = timeGetTime();
         elapsed = (float)(currTime - lastTime) * 0.025f;
         lastTime = currTime;
-        if (!transition && nextMenu != menu) {
+        if (!transition && nextMenu != currMenu) {
             front_rock_wipe_play();
             transition = 1;
             if (frontGlobs_rockWipeAnim == NULL) {
@@ -2440,7 +2460,7 @@ void front_run_screen_menu(Front_Menu* menu)
             }
         }
         if (transition && menuTransition) {
-            if (menu->menuImage != nextMenu->menuImage && frontGlobs_overlayImage != NULL) {
+            if (currMenu->menuImage != nextMenu->menuImage && frontGlobs_overlayImage != NULL) {
                 flic_close(frontGlobs_overlayImage);
                 Mem_Free(frontGlobs_overlayImage);
                 sound_stream_stop_and_release(0);
@@ -2450,7 +2470,7 @@ void front_run_screen_menu(Front_Menu* menu)
             }
             frontGlobs_scrollOffsetY = 0;
             frontGlobs_scrollOffsetX = 0;
-            menu = nextMenu;
+            currMenu = nextMenu;
             transition = 0;
             menuTransition = 0;
         }
@@ -2459,11 +2479,12 @@ void front_run_screen_menu(Front_Menu* menu)
     if (nextMenu == frontGlobs_saveMenuSet->menus[0] && s_saveSlotToWrite >= 0) {
         if (reward_current_level_get() != NULL &&
             *(void**)((char*)(level = reward_current_level_get()) + 4) != NULL) {
-            sprintf(buff, "%s\\%d.dat",
-                    block_get_str_copy(legoGlobs_config,
-                                       string_path_join(s_engine_config_root, s_menuSaveImage,
-                                                        "Path", NULL)),
-                    s_saveSlotToWrite);
+            char* path;
+
+            /* The original reads the path before pushing the slot number. */
+            path = block_get_str_copy(legoGlobs_config,
+                                      string_path_join(s_engine_config_root, s_menuSaveImage, "Path", NULL));
+            sprintf(buff, "%s\\%d.dat", path, s_saveSlotToWrite);
             front_image_save_bmp_adapter((char*)level + 8, buff);
         }
     }
@@ -2831,7 +2852,7 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
                                              front_menu_item_create_image_item(
                                                  "", loFont, hiFont, stringParts[3],
                                                  stringParts[4], atoi(stringParts[1]), atoi(stringParts[2]),
-                                                 Front_MenuItem_Next, autoCenter, stringParts[5],
+                                                 Front_MenuItem_Next, autoCenter, stringParts[6],
                                                  menuSet->menus[k]));
                 } else if (numParts == 6) {
                     k = atoi(stringParts[4] + 4) - 1;
@@ -2913,15 +2934,23 @@ int front_is_intros_enabled(void)
 // FUNCTION: LEGORR 0x00414d30
 void front_callback_slider_brightness(int brightness)
 {
-    float level;
-    float spot;
+    /* The original keeps the two levels in memory (levels[1] is the point
+     * light's) and computes the top spotlight's level a second time for its
+     * own call: that gives its stores, its argument copy and the umbra's
+     * reload. An array rather than two floats or an anonymous struct keeps
+     * 0x004177e0's symbol phase (period 8). */
+    float levels[2];
+    float top;
 
-    level = (float)brightness * 0.1f;
-    spot = level * 0.8f - -0.2f;
-    render_object_set_packed_rgba_from_float_channels(legoGlobs_spotlightTop, level, level, level, 1.0f);
-    render_object_set_packed_rgba_from_float_channels((void*)(uintptr_t)legoGlobs_f_5560f8, spot, spot, spot, 1.0f);
-    light_interface_call_slot_40(legoGlobs_spotlightTop, FRONT_FLOAT_ARG(level * 1.5f - -0.5f));
-    light_interface_call_slot_3c(legoGlobs_spotlightTop, FRONT_FLOAT_ARG(level * 0.8f - -0.2f));
+    levels[0] = (float)brightness * 0.1f;
+    top = (float)brightness * 0.1f;
+    levels[1] = top * 0.8f - -0.2f;
+    render_object_set_packed_rgba_from_float_channels(legoGlobs_spotlightTop, top, top, top, 1.0f);
+    render_object_set_packed_rgba_from_float_channels((void*)(uintptr_t)legoGlobs_f_5560f8,
+                                                      levels[1], levels[1], levels[1], 1.0f);
+    light_interface_call_slot_40(legoGlobs_spotlightTop, FRONT_FLOAT_ARG(levels[0] * 1.5f - -0.5f));
+    light_interface_call_slot_3c(legoGlobs_spotlightTop,
+                                 FRONT_FLOAT_ARG((float)(levels[0] + 0.0) * 0.8f - -0.2f));
 }
 
 // FUNCTION: LEGORR 0x00414de0
@@ -3525,11 +3554,13 @@ void front_play_intro_splash(const char* imageKey, int skippable, const char* ti
     char* imageName;
     struct Image* image;
 
-    seconds = (float)atof(block_get_strptr(legoGlobs_config,
-                                           string_path_join(s_engine_config_root, "Main", timeKey, NULL))
-                              ? block_get_strptr(legoGlobs_config,
-                                                 string_path_join(s_engine_config_root, "Main", timeKey, NULL))
-                              : "");
+    /* The + 0.0 keeps the result on the x87 stack until 0.0f is loaded for
+     * the test, as the original stores it after that load. */
+    seconds = (float)(atof(block_get_strptr(legoGlobs_config,
+                                            string_path_join(s_engine_config_root, "Main", timeKey, NULL))
+                               ? block_get_strptr(legoGlobs_config,
+                                                  string_path_join(s_engine_config_root, "Main", timeKey, NULL))
+                               : "") + 0.0);
     if (0.0f == seconds) {
         seconds = 3.0f;
     }
@@ -4106,13 +4137,19 @@ const char* front_get_selected_level(void)
         if (index != -1) {
             return frontGlobs_missionLevels.idNames[index];
         }
+        return NULL;
     } else if (front_is_tutorial_selected()) {
         index = front_level_link_get_set_index(frontGlobs_startTutorialLink, frontGlobs_mainMenuValues[5]);
         if (index != -1) {
             return frontGlobs_tutorialLevels.idNames[index];
         }
+        return NULL;
     }
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
+    /* The original falls off the end when neither is selected, with the
+     * failed test's zero in eax; C++ needs a return. */
     return NULL;
+#endif
 }
 
 // FUNCTION: LEGORR 0x00416dd0
@@ -4246,7 +4283,6 @@ Front_LevelLink* front_level_set_load_level_links(Front_LevelSet* levelSet, cons
                                                                       // STRING: LEGORR 0x004a26e8
                                                                       "LevelLinks", NULL));
                     link->setIndex = index;
-                    i = 0;
                     if (linksString != NULL) {
                         count = sound_variant_split(linksString, stringParts, ",");
                         if (count == 0) {
@@ -4256,11 +4292,13 @@ Front_LevelLink* front_level_set_load_level_links(Front_LevelSet* levelSet, cons
                         for (i = 0; i < count; i++) {
                             link->linkLevels[i] = front_level_set_load_level_links(levelSet, stringParts[i]);
                         }
+                        link->linkCount = i;
+                        return link;
                     } else {
                         link->linkLevels = NULL;
+                        link->linkCount = 0;
+                        return link;
                     }
-                    link->linkCount = i;
-                    return link;
                 }
             failed:
                 free(link);
@@ -4424,8 +4462,10 @@ void front_callback_select_mission_item(float elapsed, int selectIndex)
             }
         }
     } else {
-        front_util_print_f(font, s_display_w / 2 - (int)formatted_text_printf_width(font, levelName) / 2,
-                           390, levelName);
+        /* The x position is computed before the call's other arguments;
+         * a new local for it shifts 0x004177e0's symbol phase. */
+        selectIndex = s_display_w / 2 - (int)formatted_text_printf_width(font, levelName) / 2;
+        front_util_print_f(font, selectIndex, 390, levelName);
     }
 
     if (saveData != NULL && (saveData->missionsTable[link->setIndex].flags & 1) &&

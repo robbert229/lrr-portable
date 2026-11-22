@@ -54,19 +54,15 @@ typedef struct DrawGlobs {
     uint32_t flags;               /* +0x48 00540830 */
 } DrawGlobs;
 
-/* The .rdata block opens with the {1, 2, 4, -1} header table at 0049ea10
- * (d3drmdef.h, finding 524), which is not reproduced: the toolchain's
- * DirectX 3 d3drm.h moves the symbol counter so that Draw_Pixel24 and
- * viewport_subrectangle_set fall (finding 646). 0049ea2c is the double's
- * alignment. */
-// GLOBAL: LEGORR 0x0049ea20
-static const float s_draw_zero = 0.0f;
-// GLOBAL: LEGORR 0x0049ea24
-static const float s_draw_one = 1.0f;
-// GLOBAL: LEGORR 0x0049ea28
-static const float s_draw_two_pi = 6.28318548f;
-// GLOBAL: LEGORR 0x0049ea30
-static const double s_draw_255 = 255.0;
+/* The .rdata block opens with the {1, 2, 4, -1} table at 0049ea10:
+ * d3drmdef.h's four consts (finding 524), defined at the end of the file
+ * behind d3drmdef_consts.h. MSVC 5.0 emits a unit's named statics first,
+ * so the table still opens the block. The literal pool follows in the
+ * order the code creates it: viewport_subrectangle_set's 0.0f (its
+ * immediate stores create it, its compares read it), the line clips'
+ * 1.0f, the circle's 2 pi and the colour packer's 255.0 double, with
+ * 0049ea2c the double's alignment. As named statics the four took a
+ * second 0.0f for the stores. */
 
 extern DrawGlobs drawGlobs; /* defined at the end of the file */
 
@@ -104,8 +100,8 @@ void viewport_subrectangle_set(const Area2F* window)
     drawGlobs.clipStart.x = 0.0f;
     drawGlobs.clipStart.y = 0.0f;
     if (window) {
-        if (window->x > s_draw_zero) drawGlobs.clipStart.x = window->x;
-        if (window->y > s_draw_zero) drawGlobs.clipStart.y = window->y;
+        if (window->x > 0.0f) drawGlobs.clipStart.x = window->x;
+        if (window->y > 0.0f) drawGlobs.clipStart.y = window->y;
     }
 
     memset(&desc, 0, sizeof(desc));
@@ -179,8 +175,8 @@ void surface_fill_pixel_spans(Area2F* rectList, uint32_t count, float r,
             end.y = rect.y + rect.height;
             if (rect.x < drawGlobs.clipStart.x) rect.x = drawGlobs.clipStart.x;
             if (rect.y < drawGlobs.clipStart.y) rect.y = drawGlobs.clipStart.y;
-            if (end.x >= drawGlobs.clipEnd.x) end.x = drawGlobs.clipEnd.x - s_draw_one;
-            if (end.y >= drawGlobs.clipEnd.y) end.y = drawGlobs.clipEnd.y - s_draw_one;
+            if (end.x >= drawGlobs.clipEnd.x) end.x = drawGlobs.clipEnd.x - 1.0f;
+            if (end.y >= drawGlobs.clipEnd.y) end.y = drawGlobs.clipEnd.y - 1.0f;
             endX = (int32_t)end.x;
             endY = (int32_t)end.y;
             for (y = (int32_t)rect.y; y < endY; y++) {
@@ -215,8 +211,8 @@ void surface_fill_pixel_span_records(DrawRect* rectList, uint32_t count,
             end.y = rect.y + rect.height;
             if (rect.x < drawGlobs.clipStart.x) rect.x = drawGlobs.clipStart.x;
             if (rect.y < drawGlobs.clipStart.y) rect.y = drawGlobs.clipStart.y;
-            if (end.x >= drawGlobs.clipEnd.x) end.x = drawGlobs.clipEnd.x - s_draw_one;
-            if (end.y >= drawGlobs.clipEnd.y) end.y = drawGlobs.clipEnd.y - s_draw_one;
+            if (end.x >= drawGlobs.clipEnd.x) end.x = drawGlobs.clipEnd.x - 1.0f;
+            if (end.y >= drawGlobs.clipEnd.y) end.y = drawGlobs.clipEnd.y - 1.0f;
             endX = (int32_t)end.x;
             endY = (int32_t)end.y;
             for (y = (int32_t)rect.y; y < endY; y++) {
@@ -236,7 +232,7 @@ void surface_draw_circle_pixels(Point2F* pos, uint32_t radius,
                                 int effect)
 {
     DrawSurface* surf = DRAW_BACK_SURFACE();
-    float step = s_draw_two_pi / (float)dotCount;
+    float step = 6.28318548f / (float)dotCount;
     uint32_t colour;
     uint32_t loop;
     uint32_t x, y;
@@ -259,11 +255,11 @@ uint32_t surface_color_pack_to_pixel(float r, float g, float b)
     uint32_t colour = 0;
 
     if (drawGlobs.bpp != 8) {
-        colour = ((uint32_t)(r * s_draw_255) >> (8 - drawGlobs.redBits))
+        colour = ((uint32_t)(r * 255.0) >> (8 - drawGlobs.redBits))
                  << (drawGlobs.greenBits + drawGlobs.blueBits);
-        colour |= ((uint32_t)(g * s_draw_255) >> (8 - drawGlobs.greenBits))
+        colour |= ((uint32_t)(g * 255.0) >> (8 - drawGlobs.greenBits))
                   << drawGlobs.blueBits;
-        colour |= (uint32_t)(b * s_draw_255) >> (8 - drawGlobs.blueBits);
+        colour |= (uint32_t)(b * 255.0) >> (8 - drawGlobs.blueBits);
     }
     return colour;
 }
@@ -424,7 +420,7 @@ static void Draw_Pixel16HalfTrans(int32_t x, int32_t y, uint32_t value)
 
     *addr = (uint16_t)(
         (((((colour >> 1) & greenHalf) & 0x7fe0) + (((pixel >> 1) & greenHalf) & 0x7fe0)) & drawGlobs.greenMask) |
-        ((((colour >> 1) & blueHalf) + ((pixel >> 1) & blueHalf)) & drawGlobs.blueMask) |
+        (((((uint16_t)value >> 1) & blueHalf) + ((*addr >> 1) & blueHalf)) & drawGlobs.blueMask) |
         ((((colour >> 1) & 0x7800) + ((pixel >> 1) & 0x7800)) & drawGlobs.redMask));
 }
 
@@ -452,3 +448,6 @@ static void Draw_Pixel32(int32_t x, int32_t y, uint32_t value)
 unsigned int draw_unknown_5405e0[130] = { 0 }; /* never read */
 // GLOBAL: LEGORR 0x005407e8
 DrawGlobs drawGlobs = { 0 };
+
+/* d3drmdef.h's table, which opens the unit's .rdata (see above). */
+#include "gods98/d3drmdef_consts.h"

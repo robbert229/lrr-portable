@@ -93,13 +93,13 @@ void objective_load_objective_text(struct BlockRec* config,
     textArea.x = left;
     beginArea.y = OBJECTIVE_DATA(level)->imagePos[1] - -220.0f;
     textArea.y = OBJECTIVE_DATA(level)->imagePos[1] - -60.0f;
-    msgArea.x = OBJECTIVE_DATA(level)->imagePos[0] - -40.0f;
-    msgArea.y = OBJECTIVE_DATA(level)->imagePos[1] - -34.0f;
     beginArea.width = 320.0f;
     beginArea.height = 20.0f;
     textArea.width = 390.0f;
-    inLevelSection = 0;
     textArea.height = 180.0f;
+    msgArea.x = OBJECTIVE_DATA(level)->imagePos[0] - -40.0f;
+    msgArea.y = OBJECTIVE_DATA(level)->imagePos[1] - -34.0f;
+    inLevelSection = 0;
     msgArea.width = 422.0f;
     msgArea.height = 21.0f;
     beginNext = 0;
@@ -297,6 +297,11 @@ void objective_load_objective_text(struct BlockRec* config,
     }
 }
 
+/* Maths.h's inline normalise. Its 1.0f (0049e598, unread) follows
+ * objective_load_objective_text's 0.5f in the original's pool and comes
+ * before this function's 25.0f, so the copy is compiled here. */
+#include "gods98/maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x00457d40
 void objective_load_level(struct BlockRec* config, const char* gameName,
                           const char* levelName, Lego_Level* level,
@@ -304,13 +309,13 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
 {
     int objType;
     unsigned int objID;
+    int blockPos[2];
     char* argv[60];
     char buff[1024];
     int hitTimeFail = 0;
     const char* str;
     char* s;
     int argc;
-    unsigned int r, g, b;
     unsigned int crystals;
     float timer;
 
@@ -344,13 +349,13 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
         OBJECTIVE_DATA(level)->imagePos[0] = (float)atoi(argv[1]);
         OBJECTIVE_DATA(level)->imagePos[1] = (float)atoi(argv[2]);
         if (argc == 6 && OBJECTIVE_DATA(level)->image) {
-            r = atoi(argv[3]);
-            g = atoi(argv[4]);
-            b = atoi(argv[5]);
+            float r, g, b;
+
+            r = (float)((unsigned int)atoi(argv[3]) / 255);
+            g = (float)((unsigned int)atoi(argv[4]) / 255);
+            b = (float)((unsigned int)atoi(argv[5]) / 255);
             image_surface_blit_transformed((struct TextureSurface*)OBJECTIVE_DATA(level)->image,
-                                           (float)(r / 255), (float)(g / 255),
-                                           (float)(b / 255), (float)(r / 255),
-                                           (float)(g / 255), (float)(b / 255));
+                                           r, g, b, r, g, b);
         }
         free(s);
     }
@@ -368,32 +373,31 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
         OBJECTIVE_DATA(level)->achievedImagePos[0] = (float)atoi(argv[1]);
         OBJECTIVE_DATA(level)->achievedImagePos[1] = (float)atoi(argv[2]);
         if (argc == 6 && OBJECTIVE_DATA(level)->achievedImage) {
-            r = atoi(argv[3]);
-            g = atoi(argv[4]);
-            b = atoi(argv[5]);
+            float r, g, b;
+
+            r = (float)((unsigned int)atoi(argv[3]) / 255);
+            g = (float)((unsigned int)atoi(argv[4]) / 255);
+            b = (float)((unsigned int)atoi(argv[5]) / 255);
             /* The original sets the briefing image's transparency here. */
             image_surface_blit_transformed((struct TextureSurface*)OBJECTIVE_DATA(level)->image,
-                                           (float)(r / 255), (float)(g / 255),
-                                           (float)(b / 255), (float)(r / 255),
-                                           (float)(g / 255), (float)(b / 255));
+                                           r, g, b, r, g, b);
         }
         free(s);
     }
 
-    if ((s = block_get_str_copy(config, string_path_join(gameName, levelName,
-                                                         // STRING: LEGORR 0x004a81ac
-                                                         "ObjectiveAcheivedAVI",
-                                                         NULL)))) {
-        argc = sound_variant_split(s, argv, ",");
+    if ((str = block_get_str_copy(config, string_path_join(gameName, levelName,
+                                                           // STRING: LEGORR 0x004a81ac
+                                                           "ObjectiveAcheivedAVI",
+                                                           NULL)))) {
+        argc = sound_variant_split((char*)str, argv, ",");
         OBJECTIVE_DATA(level)->achievedVideoName = string_duplicate(argv[0]);
         if (argc == 3) {
             OBJECTIVE_DATA(level)->achievedVideoPos[0] = (float)atoi(argv[1]);
             OBJECTIVE_DATA(level)->achievedVideoPos[1] = (float)atoi(argv[2]);
-            free(s);
         } else {
             OBJECTIVE_DATA(level)->noAchievedVideoPos = 1;
-            free(s);
         }
+        free((void*)str);
     }
 
     sprintf(buff,
@@ -452,7 +456,6 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
                                                          // STRING: LEGORR 0x004a811c
                                                          "BlockObjective",
                                                          NULL)))) {
-        int blockPos[2];
         s = string_duplicate(str);
         sound_variant_split(s, argv, ",");
         blockPos[0] = atoi(argv[0]);
@@ -732,20 +735,23 @@ void objective_update(void* textWnd, Lego_Level* level, float elapsedGame,
     int setQueueMode;
     int type;
     int completed;
-    int playMusic = 0;
-    int showTextWindows = 0;
-    int showing = 0;
+    int playMusic;
+    int showTextWindows;
+    int showing;
 
     setQueueMode = 0;
+    showTextWindows = 0;
+    showing = 0;
+    playMusic = 0;
 
     if ((unsigned int)s_application_mode > 3)
         objective_stop_showing_objective();
 
     if (objectiveGlobs.flags & OBJECTIVE_FLAG_BRIEFING) {
-        showing = 1;
         lego_transition_control(0, 1);
         type = 0;
         showTextWindows = 1;
+        showing = 1;
         if (objectiveGlobs.flags & OBJECTIVE_FLAG_STATUSREAD) {
             if (objectiveGlobs.flags & OBJECTIVE_FLAG_SHOWBRIEFINGADVISOR)
                 advisor_request_admit(0, 1);
@@ -755,7 +761,6 @@ void objective_update(void* textWnd, Lego_Level* level, float elapsedGame,
         text_display_message(0x16, 0, 0);
     } else if (objectiveGlobs.flags & OBJECTIVE_FLAG_COMPLETED) {
         if (teleporter_service_all(0x40b)) {
-            playMusic = 1;
             lego_transition_control(0, 1);
             objective_osf_store_adapter();
             if (!OBJECTIVE_DATA(level)->achievedVideoPlayed) {
@@ -774,6 +779,7 @@ void objective_update(void* textWnd, Lego_Level* level, float elapsedGame,
                 objectiveGlobs.flags &= ~OBJECTIVE_FLAG_STATUSREAD;
             }
             showing = 1;
+            playMusic = 1;
         }
     } else if (objectiveGlobs.flags & OBJECTIVE_FLAG_FAILED) {
         if (teleporter_service_all(0x40b)) {

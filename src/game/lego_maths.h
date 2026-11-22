@@ -29,42 +29,46 @@ static __inline LegoVector3FC* lego_C_vector3_subtract(LegoVector3FC* r,
                                                       const LegoVector3FC* a,
                                                       const LegoVector3FC* b)
 {
-    r->x = a->x - b->x;
-    r->y = a->y - b->y;
-    r->z = a->z - b->z;
+    r->x = (a->x - b->x);
+    r->y = (a->y - b->y);
+    r->z = (a->z - b->z);
     return r;
 }
 
 /* Lego.h's block macros: the current level's block at (bx, by) and its
- * flag tests. */
+ * flag tests. lego_C_block_at and the wall test read the level through a
+ * local, as 00426520 shows: MSVC then reloads the level's width for each
+ * lookup instead of sharing it across tests, and the wall test's two flag
+ * reads share one block. The other tests index the blocks themselves,
+ * which keeps one lookup for each test (the bounds test's width, and
+ * flags1 and flags2 of the reinforced test). */
 static __inline Lego_Block* lego_C_block_at(int bx, int by)
 {
-    return &LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
-        [legoGlobs_currLevel->width * by + bx];
+    Lego_Level* level = legoGlobs_currLevel;
+    return &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx];
 }
 
 static __inline int lego_C_block_is_wall(unsigned int bx, unsigned int by)
 {
-    return (bx < legoGlobs_currLevel->width - 1 &&
-            by < legoGlobs_currLevel->height - 1)
-               ? ((lego_C_block_at(bx, by)->flags1 & 0x10) &&
-                  !(lego_C_block_at(bx, by)->flags1 & 8))
+    Lego_Level* level = legoGlobs_currLevel;
+    return (bx < level->width - 1 && by < level->height - 1)
+               ? ((LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx].flags1 & 0x10) &&
+                  !(LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx].flags1 & 8))
                : 0;
 }
 
 static __inline uint32_t lego_C_block_flag4(unsigned int bx, unsigned int by)
 {
-    return (bx < legoGlobs_currLevel->width - 1 &&
-            by < legoGlobs_currLevel->height - 1)
-               ? (lego_C_block_at(bx, by)->flags1 & 4)
+    return (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1)
+               ? (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[legoGlobs_currLevel->width * by + bx].flags1 & 4)
                : 0;
 }
 
 static __inline int lego_C_block_is_reinforced(unsigned int bx,
                                                unsigned int by)
 {
-    return (lego_C_block_at(bx, by)->flags1 & 0x400) ||
-           (lego_C_block_at(bx, by)->flags2 & 4);
+    return (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[legoGlobs_currLevel->width * by + bx].flags1 & 0x400) ||
+           (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[legoGlobs_currLevel->width * by + bx].flags2 & 4);
 }
 
 static __inline uint32_t lego_C_block_flag20000000(int bx, int by)
@@ -72,7 +76,7 @@ static __inline uint32_t lego_C_block_flag20000000(int bx, int by)
     return (bx < 0 || by < 0 || bx >= (int)legoGlobs_currLevel->width ||
             by >= (int)legoGlobs_currLevel->height)
                ? 0
-               : (lego_C_block_at(bx, by)->flags1 & 0x20000000);
+               : (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[legoGlobs_currLevel->width * by + bx].flags1 & 0x20000000);
 }
 
 
@@ -111,9 +115,9 @@ static __inline LegoVector3FG* lego_G_vector3d_add(LegoVector3FG* r,
                                                    const LegoVector3FG* a,
                                                    const LegoVector3FG* b)
 {
-    r->x = a->x + b->x;
-    r->y = a->y + b->y;
-    r->z = a->z + b->z;
+    r->x = (a->x + b->x);
+    r->y = (a->y + b->y);
+    r->z = (a->z + b->z);
     return r;
 }
 
@@ -121,9 +125,9 @@ static __inline LegoVector3FG* lego_G_vector3d_add(LegoVector3FG* r,
 static __inline LegoVector3FG* lego_G_vector3d_subtract(
     LegoVector3FG* r, const LegoVector3FG* a, const LegoVector3FG* b)
 {
-    r->x = a->x - b->x;
-    r->y = a->y - b->y;
-    r->z = a->z - b->z;
+    r->x = (a->x - b->x);
+    r->y = (a->y - b->y);
+    r->z = (a->z - b->z);
     return r;
 }
 

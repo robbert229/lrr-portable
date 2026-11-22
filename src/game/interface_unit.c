@@ -81,6 +81,7 @@
 #include "tutorial_script.h"
 #include "crt/crt.h"
 #include "crt/vc5names.h"
+#include "gods98/maths_normalise_head.h"
 #include "gods98/config.h"
 #include "gods98/draw.h"
 #include "gods98/font_api.h"
@@ -1347,7 +1348,7 @@ void interface_update_advisor(int type, int objType, int objIndex,
                 if (!(interfaceGlobs.flags & INTERFACE_FLAG_IN)) {
                     pos.x = interfaceGlobs.slideInPosition.x;
                 }
-                pos.y = (float)height * 0.5f + pos.y;
+                pos.y = ((float)height * 0.5f) + pos.y;
             }
 
             advisor_action_position_get(interfaceGlobs.advisorType,
@@ -1656,22 +1657,41 @@ void position_tracker_box_draw(const float bounds[4])
 {
     const Area2F* area = (const Area2F*)bounds;
     Point2F list[5];
+    float left, top, right, bottom;
 
 #ifdef INTERFACE_PORT
     position_tracker_box_draw_port(bounds);
     return;
 #endif
     if (!(lego_flags1 & 0x100000)) {
-        list[0].x = list[3].x = list[4].x = area->x - 1.0f;
-        list[0].y = list[1].y = list[4].y = area->y - 1.0f;
-        list[2].y = list[3].y = (area->height + area->y) - -1.0f;
-        list[1].x = list[2].x = (area->x + area->width) - -1.0f;
+        left = area->x - 1.0f;
+        top = area->y - 1.0f;
+        bottom = (area->height + area->y) - -1.0f;
+        right = (area->x + area->width) - -1.0f;
+        list[2].x = right;
+        list[2].y = bottom;
+        list[1].x = right;
+        list[1].y = top;
+        list[3].x = left;
+        list[3].y = bottom;
+        list[4].x = left;
+        list[4].y = top;
+        list[0] = list[4];
         surface_draw_polyline(list, list + 1, 4, 0.0f, 1.0f, 0.0f, 0);
 
-        list[0].x = list[3].x = list[4].x = area->x - 2.0f;
-        list[0].y = list[1].y = list[4].y = area->y - 2.0f;
-        list[2].y = list[3].y = (area->height + area->y) - -2.0f;
-        list[1].x = list[2].x = (area->x + area->width) - -2.0f;
+        left = area->x - 2.0f;
+        top = area->y - 2.0f;
+        bottom = (area->height + area->y) - -2.0f;
+        right = (area->x + area->width) - -2.0f;
+        list[2].x = right;
+        list[2].y = bottom;
+        list[1].x = right;
+        list[1].y = top;
+        list[3].x = left;
+        list[3].y = bottom;
+        list[4].x = left;
+        list[4].y = top;
+        list[0] = list[4];
         surface_draw_polyline(list, list + 1, 4, 0.0f, 1.0f, 0.0f, 0);
     }
 }
@@ -2256,17 +2276,19 @@ int interface_do_action(int type)
         case 16:
         case 17:
             command_context_post_to_hud(9, NULL);
-            return 1;
+            break;
         case 18:
             if (!(entity_stats_word_get(LEGOOBJ(obj)) & 0x2000000) &&
                 !(obj->flags4 & 0x40)) {
                 command_context_post_to_hud(11, NULL);
-                return 1;
+            } else {
+                command_context_post_to_hud(10, NULL);
             }
-            command_context_post_to_hud(10, NULL);
-            return 1;
+            break;
+        default:
+            goto done;
         }
-        break;
+        return 1;
     case 1:
         interface_spawn_request_enqueue(2, 0);
         selection_clear_request_and_hud_reset();
@@ -2636,6 +2658,7 @@ int interface_do_action(int type)
         break;
     }
 
+done:
     selection_clear_request_and_hud_reset();
     return 1;
     /* The original sends its three failure returns to one shared
@@ -2986,17 +3009,18 @@ int interface_get_dependency_at_point(int x, int y, float areaX, float areaY,
     unsigned int i;
     Image* image;
     float fx;
-    float left;
+    Point2F pos;
     unsigned int width;
     unsigned int height;
 
     if ((interfaceGlobs.flags & INTERFACE_FLAG_DEPENDENCIES) &&
-        (dependencies_get_requirements(interfaceGlobs.dependencyObjType, interfaceGlobs.dependencyObjIndex, 0, &list, &count), count != 0)) {
-        areaX -= 15.0f;
+        (dependencies_get_requirements(interfaceGlobs.dependencyObjType, interfaceGlobs.dependencyObjIndex, 0, &list, &count), count > 0)) {
+        pos.x = areaX - 15.0f;
+        pos.y = areaY;
         fx = (float)(unsigned int)x;
-        if (fx >= areaX && fx <= areaX - -15.0f &&
-            (float)(unsigned int)y >= areaY &&
-            (float)(unsigned int)y <= areaY - -40.0f) {
+        if (fx >= pos.x && fx <= (pos.x - -15.0f) &&
+            (float)(unsigned int)y >= pos.y &&
+            (float)(unsigned int)y <= pos.y - -40.0f) {
             *type = 20;
             return 1;
         }
@@ -3014,10 +3038,10 @@ int interface_get_dependency_at_point(int x, int y, float areaX, float areaY,
                 width = 20;
                 height = 40;
             }
-            left = areaX - (float)width;
-            if (fx >= left && fx <= left + (float)width &&
-                (float)(unsigned int)y >= areaY &&
-                (float)(unsigned int)y <= (float)height + areaY) {
+            pos.x -= (float)width;
+            if (fx >= pos.x && fx <= (pos.x + (float)width) &&
+                (float)(unsigned int)y >= pos.y &&
+                (float)(unsigned int)y <= (float)height + pos.y) {
                 *type = 20;
                 return 1;
             }
@@ -3030,10 +3054,10 @@ int interface_get_dependency_at_point(int x, int y, float areaX, float areaY,
                 width = 40;
                 height = 40;
             }
-            areaX = left - (float)width;
-            if (fx >= areaX && fx <= areaX + (float)width &&
-                areaY <= (float)(unsigned int)y &&
-                (float)(unsigned int)y <= (float)height + areaY) {
+            pos.x -= (float)width;
+            if (fx >= pos.x && fx <= (pos.x + (float)width) &&
+                (float)(unsigned int)y >= pos.y &&
+                (float)(unsigned int)y <= (float)height + pos.y) {
                 *type = list[i].objType;
                 *objType = list[i].objIndex;
                 *objIndex = list[i].level;

@@ -13,21 +13,21 @@
 static __inline float steering_vector3d_dot(const SteeringVector3* a,
                                             const SteeringVector3* b)
 {
-    return a->x * b->x + a->y * b->y + a->z * b->z;
+    return (a->x * b->x) + (a->y * b->y) + (a->z * b->z);
 }
 
 static __inline float steering_vector3d_modulus(const SteeringVector3* v)
 {
-    return (float)sqrt(steering_vector3d_dot(v, v));
+    return (float)sqrt((v->x * v->x) + (v->y * v->y) + (v->z * v->z));
 }
 
 static __inline SteeringVector3* steering_vector3d_add(SteeringVector3* r,
                                                        const SteeringVector3* a,
                                                        const SteeringVector3* b)
 {
-    r->x = a->x + b->x;
-    r->y = a->y + b->y;
-    r->z = a->z + b->z;
+    r->x = (a->x + b->x);
+    r->y = (a->y + b->y);
+    r->z = (a->z + b->z);
     return r;
 }
 
@@ -35,9 +35,9 @@ static __inline SteeringVector3* steering_vector3d_subtract(SteeringVector3* r,
                                                             const SteeringVector3* a,
                                                             const SteeringVector3* b)
 {
-    r->x = a->x - b->x;
-    r->y = a->y - b->y;
-    r->z = a->z - b->z;
+    r->x = (a->x - b->x);
+    r->y = (a->y - b->y);
+    r->z = (a->z - b->z);
     return r;
 }
 
@@ -53,7 +53,8 @@ static __inline SteeringVector3* steering_vector3d_scale(SteeringVector3* r,
 
 static __inline SteeringVector3* steering_vector3d_normalise(SteeringVector3* r)
 {
-    return steering_vector3d_scale(r, r, s_steering_one / steering_vector3d_modulus(r));
+    steering_vector3d_scale(r, r, s_steering_one / steering_vector3d_modulus(r));
+    return r;
 }
 
 static __inline SteeringVector3* steering_vector3d_cross(SteeringVector3* r,
@@ -62,9 +63,9 @@ static __inline SteeringVector3* steering_vector3d_cross(SteeringVector3* r,
 {
     SteeringVector3 v;
 
-    v.x = a->y * b->z - a->z * b->y;
-    v.y = a->z * b->x - a->x * b->z;
-    v.z = a->x * b->y - a->y * b->x;
+    v.x = (a->y * b->z) - (a->z * b->y);
+    v.y = (a->z * b->x) - (a->x * b->z);
+    v.z = (a->x * b->y) - (a->y * b->x);
     *r = v;
     return r;
 }

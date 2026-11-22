@@ -626,7 +626,7 @@ struct Lego_Object* construction_zone_complete_building(
     float xPos;
     float yPos;
     Lego_Object* obj;
-    ConstructionPoint2I* next;
+    ConstructionPoint2I* point;
 
     terrain_map_block_to_world(CONSTRUCTION_LEGO_GET_MAP(), zone->origin.x,
                                zone->origin.y, &xPos, &yPos);
@@ -639,10 +639,12 @@ struct Lego_Object* construction_zone_complete_building(
     }
     for (i = 0; i < zone->shapeCount; i++) {
         if (i != zone->shapeCount - 1 &&
-            zone->shapePoints[i].x == (next = &zone->shapePoints[i + 1])->x &&
-            zone->shapePoints[i].y == next->y) {
-            lego_terrain_cell_flags_set_mask20108000(zone->shapePoints[i].x,
-                                                     zone->shapePoints[i].y);
+            zone->shapePoints[i].x == (point = &zone->shapePoints[i + 1])->x &&
+            zone->shapePoints[i].y == point->y) {
+            /* The entrance's block through the pointer: the original reloads
+             * its x rather than reuse the compare's. */
+            point = &zone->shapePoints[i];
+            lego_terrain_cell_flags_set_mask20108000(point->x, point->y);
             legoobject_update_and_unregister_at_tile(obj, &zone->shapePoints[i].x);
             i++;
         } else {

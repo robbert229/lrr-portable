@@ -461,10 +461,14 @@ int Flic_FindChunk(LPFLICSTRUCT fsp)
             case FLI_PREFIX_TYPE:
                 Flic_LoadPalette64(fsp);
                 fsp->pointerposition += header->size;
+                header = (Flic_ChunkHeader*)((char*)header + header->size);
+                size += header->size;
                 break;
             case FLI_POINTERS_TYPE:
                 Flic_LoadPointers(fsp);
                 fsp->pointerposition += header->size;
+                header = (Flic_ChunkHeader*)((char*)header + header->size);
+                size += header->size;
                 break;
             case FLI_FRAME_TYPE:
                 Flic_FrameChunk(fsp);
@@ -472,10 +476,10 @@ int Flic_FindChunk(LPFLICSTRUCT fsp)
                 break;
             default:
                 fsp->pointerposition += header->size;
+                header = (Flic_ChunkHeader*)((char*)header + header->size);
+                size += header->size;
                 break;
             }
-            header = (Flic_ChunkHeader*)((char*)header + header->size);
-            size += header->size;
             if (found) {
                 fsp->pointerposition = start + size;
                 return 0;
@@ -582,28 +586,34 @@ int Flic_DoChunk(LPFLICSTRUCT fsp)
         Flic_Colour256(fsp);
         retval = 1;
         break;
+    case FLI_CHUNK_DELTA_FLC:
+        Flic_Delta(fsp);
+        retval = 1;
+        break;
     case FLI_CHUNK_COLOUR64:
-        Flic_Unsupported(fsp);
+        Flic_Palette64(fsp);
         retval = 1;
         break;
     case FLI_CHUNK_DELTA_FLI:
-        Flic_Unsupported(fsp);
+        Flic_DeltaByte(fsp);
         retval = 1;
         break;
     case FLI_CHUNK_BLACK:
-        Flic_Unsupported(fsp);
+        Flic_Black(fsp);
+        retval = 1;
+        break;
+    case FLI_CHUNK_BYTE_RUN:
+        Flic_Brun(fsp);
         retval = 1;
         break;
     case FLI_CHUNK_FLI_COPY:
         Flic_Copy(fsp);
         retval = 1;
         break;
-    case FLI_CHUNK_BYTE_RUN:
     case FLI_CHUNK_DTA_BRUN:
         Flic_Brun(fsp);
         retval = 1;
         break;
-    case FLI_CHUNK_DELTA_FLC:
     case FLI_CHUNK_DTA_LC:
         Flic_Delta(fsp);
         retval = 1;
@@ -612,7 +622,7 @@ int Flic_DoChunk(LPFLICSTRUCT fsp)
         retval = 1;
         break;
     case FLI_CHUNK_SOUND:
-        Flic_Sound(fsp);
+        Flic_Unpack(fsp);
         retval = 1;
         break;
     }
@@ -678,11 +688,11 @@ int Flic_LoadPalette64(LPFLICSTRUCT fsp)
 int Flic_Copy(LPFLICSTRUCT fsp)
 {
     if (fsp->fsBitPlanes == 16) {
-        Flic_Nothing(fsp);
+        FlicCopyHiColorFlic(fsp);
         return 1;
     }
-    if (fsp->fsDisplayMode == FLICMODE_BYTEPERPIXEL) Flic_Nothing(fsp);
-    if (fsp->fsDisplayMode == FLICMODE_HICOLOR) Flic_Nothing(fsp);
+    if (fsp->fsDisplayMode == FLICMODE_BYTEPERPIXEL) FlicCopyBytePerPixel(fsp);
+    if (fsp->fsDisplayMode == FLICMODE_HICOLOR) FlicCopyHiColor(fsp);
     return 1;
 }
 
@@ -773,7 +783,7 @@ int Flic_BrunDepack16(LPFLICSTRUCT fsp)
 int Flic_Brun(LPFLICSTRUCT fsp)
 {
     if (fsp->fsHeader.depth == 8) {
-        if (fsp->fsDisplayMode == FLICMODE_BYTEPERPIXEL) Flic_Unsupported(fsp);
+        if (fsp->fsDisplayMode == FLICMODE_BYTEPERPIXEL) FlicBRunDepackBytePerPixel(fsp);
         if (fsp->fsDisplayMode == FLICMODE_HICOLOR) {
             Flic_BrunDepack(fsp);
             return 1;
@@ -783,7 +793,7 @@ int Flic_Brun(LPFLICSTRUCT fsp)
             Flic_BrunDepack16(fsp);
             return 1;
         }
-        Flic_Unsupported(fsp);
+        FlicBRunDepackHiColorFlic(fsp);
     }
     return 1;
 }
@@ -984,21 +994,21 @@ void Flic_DeltaWord16(LPFLICSTRUCT fsp)
 int Flic_Delta(LPFLICSTRUCT fsp)
 {
     if (fsp->fsHeader.depth == 8) {
-        if (fsp->fsDisplayMode == FLICMODE_BYTEPERPIXEL) Flic_Nothing(fsp);
+        if (fsp->fsDisplayMode == FLICMODE_BYTEPERPIXEL) FlicDeltaWordBytePerPixel(fsp);
         if (fsp->fsDisplayMode == FLICMODE_HICOLOR) {
             Flic_DeltaWord(fsp);
             return 1;
         }
     } else if (fsp->fsHeader.depth == 16) {
         if (fsp->fsHeader.magic == FLI_MAGIC_FLI) {
-            Flic_Nothing(fsp);
+            FlicDeltaWordHiColorDZ(fsp);
             return 1;
         }
         if (fsp->fsHeader.magic == FLI_MAGIC_DTA16) {
             Flic_DeltaWord16(fsp);
             return 1;
         }
-        Flic_Nothing(fsp);
+        FlicDeltaWordHiColorFlic(fsp);
         return 1;
     }
     return 1;
@@ -1021,3 +1031,8 @@ int Flic_GetHeight(LPFLICSTRUCT fsp)
 #endif
 
 #endif /* !LEGORRR_BACKEND_MINIWIN */
+
+/* Maths.h's inline normalise: the unread 1.0f at 0049ea00, the last word of
+ * the unit's .rdata. No code of the unit creates a literal, so the copy
+ * is compiled at the end, after every function. */
+#include "maths_normalise_head.h"

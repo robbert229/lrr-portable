@@ -736,8 +736,8 @@ int mesh_parse_lwo(const char* basePath, Mesh* mesh,
     if (lightWaveObject->aoFileUV) {
         vertexUVs = (Mesh_Point2F*)malloc(sizeof(Mesh_Point2F) * size * 20);
         mesh_uview_mesh(lightWaveObject, vertexUVs);
+        surfTextCoords = (Mesh_Point2F*)malloc(sizeof(Mesh_Point2F) * lightWaveObject->aoSize.lwSurfaceCount * (lightWaveObject->aoSize.lwVertCount * 2));
         size = (lightWaveObject->aoSize.lwVertCount * 2);
-        surfTextCoords = (Mesh_Point2F*)malloc(sizeof(Mesh_Point2F) * lightWaveObject->aoSize.lwSurfaceCount * size);
     } else {
         surfTextCoords = (Mesh_Point2F*)malloc(sizeof(Mesh_Point2F) * size);
     }
@@ -874,7 +874,16 @@ int mesh_parse_lwo(const char* basePath, Mesh* mesh,
                     mesh_vector3d_add(&vertexNorm[lightWaveObject->aoPoly[loop].plyData[faceDataQuad[vertex]]],
                                       &vertexNorm[lightWaveObject->aoPoly[loop].plyData[faceDataQuad[vertex]]],
                                       &faceNorm[loop]);
-                    mesh_vector3d_normalise(&vertexNorm[lightWaveObject->aoPoly[loop].plyData[faceDataQuad[vertex]]]);
+                    /* Normalised by hand through a pointer and a reciprocal
+                     * local: the original keeps the modulus, then the
+                     * reciprocal, in a stack temporary here and drops its
+                     * first x with fstp st(0), which the inline normalise
+                     * of the other three branches does not do. */
+                    {
+                        Mesh_Vector3F* v = &vertexNorm[lightWaveObject->aoPoly[loop].plyData[faceDataQuad[vertex]]];
+                        float m = 1.0f / mesh_vector3d_modulus(v);
+                        mesh_vector3d_scale(v, v, m);
+                    }
 
                     /* GET VERTEX REFERENCE AND COPY TO FACE DATA */
                     surfFaceData[surfFDArraySize + surfFaceDataCount[lightWaveObject->aoPoly[loop].srfIndex]++] =
@@ -935,13 +944,17 @@ int mesh_parse_lwo(const char* basePath, Mesh* mesh,
         mesh_set_group_colour(mesh, groupID, mesh->lightWaveSurf[loop].colour.r * mesh->lightWaveSurf[loop].emissive,
                               mesh->lightWaveSurf[loop].colour.g * mesh->lightWaveSurf[loop].emissive,
                               mesh->lightWaveSurf[loop].colour.b * mesh->lightWaveSurf[loop].emissive, Mesh_Colour_Emissive);
+        /* Each specular argument in parentheses: MSVC 5.0 then evaluates
+         * them on the x87 stack, as the original does (three products, then
+         * the pushes; three `fld specular` rather than one integer copy), and
+         * the two calls share their last push (finding 661's parentheses). */
         if (mesh->lightWaveSurf[loop].flags & MESH_SFLAG_COLOURHIGHLIGHT) {
-            mesh_set_group_colour(mesh, groupID, mesh->lightWaveSurf[loop].colour.r * mesh->lightWaveSurf[loop].specular,
-                                  mesh->lightWaveSurf[loop].colour.g * mesh->lightWaveSurf[loop].specular,
-                                  mesh->lightWaveSurf[loop].colour.b * mesh->lightWaveSurf[loop].specular, Mesh_Colour_Specular);
+            mesh_set_group_colour(mesh, groupID, (mesh->lightWaveSurf[loop].colour.r * mesh->lightWaveSurf[loop].specular),
+                                  (mesh->lightWaveSurf[loop].colour.g * mesh->lightWaveSurf[loop].specular),
+                                  (mesh->lightWaveSurf[loop].colour.b * mesh->lightWaveSurf[loop].specular), Mesh_Colour_Specular);
         } else {
-            mesh_set_group_colour(mesh, groupID, mesh->lightWaveSurf[loop].specular, mesh->lightWaveSurf[loop].specular,
-                                  mesh->lightWaveSurf[loop].specular, Mesh_Colour_Specular);
+            mesh_set_group_colour(mesh, groupID, (mesh->lightWaveSurf[loop].specular), (mesh->lightWaveSurf[loop].specular),
+                                  (mesh->lightWaveSurf[loop].specular), Mesh_Colour_Specular);
         }
         mesh_set_group_material_values(mesh, groupID, mesh->lightWaveSurf[loop].power * 10.0f, Mesh_Colour_Power);
         mesh_set_group_material_values(mesh, groupID, 1.0f - mesh->lightWaveSurf[loop].transparency, Mesh_Colour_Alpha);
@@ -1143,18 +1156,18 @@ void mesh_uview_mesh(APPOBJ* lightWaveObject, Mesh_Point2F* textCoords)
                                     lightWaveObject->aoVerts = (float*)realloc(lightWaveObject->aoVerts, sizeof(Mesh_Vector3F) * (lightWaveObject->aoSize.lwVertCount + 11));
                                 }
                                 {
-                                    unsigned long index = lightWaveObject->aoPoly[polyIndex].plyData[polyVert];
-                                    unsigned long newIndex = lightWaveObject->aoSize.lwVertCount;
-                                    lightWaveObject->aoVerts[(newIndex * 3) + 0] = lightWaveObject->aoVerts[(index * 3) + 0];
-                                    lightWaveObject->aoVerts[(newIndex * 3) + 1] = lightWaveObject->aoVerts[(index * 3) + 1];
-                                    lightWaveObject->aoVerts[(newIndex * 3) + 2] = lightWaveObject->aoVerts[(index * 3) + 2];
+                                    unsigned long index = lightWaveObject->aoPoly[polyIndex].plyData[polyVert] * 3;
+                                    unsigned long newIndex = lightWaveObject->aoSize.lwVertCount * 3;
+                                    lightWaveObject->aoVerts[newIndex + 0] = lightWaveObject->aoVerts[index + 0];
+                                    lightWaveObject->aoVerts[newIndex + 1] = lightWaveObject->aoVerts[index + 1];
+                                    lightWaveObject->aoVerts[newIndex + 2] = lightWaveObject->aoVerts[index + 2];
                                 }
                                 lightWaveObject->aoPoly[polyIndex].plyData[polyVert] = (unsigned short)lightWaveObject->aoSize.lwVertCount;
                                 textCoords[lightWaveObject->aoPoly[polyIndex].plyData[polyVert]].x = u;
                                 textCoords[lightWaveObject->aoPoly[polyIndex].plyData[polyVert]].y = v;
                                 lightWaveObject->aoSize.lwVertCount++;
                                 newVertCount++;
-                                if (newVertCount > 9) newVertCount = 0;
+                                if (newVertCount >= 10) newVertCount = 0;
                             }
                             polyVert++;
                         }
@@ -2155,3 +2168,5 @@ int mesh_render_triangle_list(unsigned long matHandle, Mesh_Texture2* texture,
 #ifdef __cplusplus
 }
 #endif
+
+#include "gods98/d3drmdef_consts.h"

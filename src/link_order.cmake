@@ -16,6 +16,10 @@
 #                     the lower median original address of its FUNCTION and LIBRARY
 #                     markers (for an even count, use the lower middle), which
 #                     places it among the units
+#             data    an original object whose code the link removed
+#                     (/OPT:REF), leaving only its literals and data; it has
+#                     no unit range, and key is the unit it precedes, whose
+#                     entry must follow it
 #             tail    port-only code: the port tail (ADR 0006 decision 4);
 #                     key is "-"
 #   key       see kind; units and legacy files are in ascending key order
@@ -34,7 +38,8 @@
 # How the matching build links the entries, in this order (findings 658
 # and 690):
 #   1. explicit objects: the entries up to LRR_LINK_EXPLICIT_LAST;
-#   2. one library per late unit (LRR_LINK_LATE_MEMBERS), in list order;
+#   2. one library per late unit (LRR_LINK_LATE_MEMBERS), in list order,
+#      then LRR_LINK_FIRST_LIBRARIES (kernel32.lib; finding 694);
 #   3. one library, unit_gods98.lib, holding every later gods98 unit in list
 #      order, with LRR_LINK_MEMBER_ORDER naming one symbol of each;
 #   4. LRR_LINK_LIBRARIES;
@@ -79,7 +84,9 @@ lrr_link(unit   GAME-023 game          game/legoobject_unit.c)
 lrr_link(unit   GAME-024 game          game/lighteffects.c)
 lrr_link(unit   GAME-025 game          game/loader.c)
 lrr_link(unit   GAME-026 game          game/terrain_map.c)
+lrr_link(unit   GAME-053 game          game/meshlod.c)
 lrr_link(unit   GAME-027 game          game/message_unit.c)
+lrr_link(data   GAME-028 game          game/message_data.c)
 lrr_link(unit   GAME-028 game          game/tutorial_script.c)
 lrr_link(unit   GAME-029 game          game/objective_unit.c)
 lrr_link(unit   GAME-030 game          game/objectrecall.c)
@@ -273,7 +280,7 @@ lrr_link(legacy 0048e1e0 gods98        gods98/string.cpp)
 # whole C runtime from LIBC.LIB (issue #447, finding 643); their markers name
 # LIBC's members by symbol.
 lrr_link(legacy 00491710 gods98        crt/crt_heap.cpp portable)
-lrr_link(legacy 00493ef0 gods98        crt/crt.cpp portable)
+lrr_link(legacy 00494c70 gods98        crt/crt.cpp portable)
 lrr_link(unit   LATE-001 gods98        gods98/rnc.c)
 lrr_link(unit   LATE-002 gods98        gods98/init.c)
 
@@ -290,13 +297,24 @@ set(LRR_LINK_TAIL_LIBRARY lrr_tail)
 # Libraries of the matching build, after the objects, in the order of the
 # original's import directory, with LIBC placed so that its code precedes the
 # import thunks and RtlUnwind's thunk comes last (finding 574; ADR 0006
-# decision 1 as amended). dinput.lib, dsound.lib, amstrmid.lib and dxguid.lib
-# are rebuilt from cross/msvc5-importlibs; vfw32.lib holds the avifil32
+# decision 1 as amended). ddraw.lib, dinput.lib, dsound.lib, amstrmid.lib and
+# dxguid.lib are rebuilt from cross/msvc5-importlibs; vfw32.lib holds the avifil32
 # imports. amstrmid.lib's member precedes dxguid.lib's in the original's GUID
 # block (finding 688).
-set(LRR_LINK_LIBRARIES kernel32.lib libc.lib oldnames.lib
+#
+# The original's hint/name strings keep LINK's pull order (finding 694). Its
+# first KERNEL32 run holds only the explicit objects' imports, so
+# kernel32.lib was searched before the gods98 library: it is
+# LRR_LINK_FIRST_LIBRARIES, linked between the late libraries and
+# unit_gods98.lib. Its second run, Main.c's imports and then LIBC's, comes
+# before USER32's first run, so kernel32.lib was searched again before
+# user32.lib in LINK's first library loop: the second kernel32.lib below.
+# LINK searches a library name once, so CMakeLists.txt passes that one by
+# the toolchain's full path.
+set(LRR_LINK_FIRST_LIBRARIES kernel32.lib)
+set(LRR_LINK_LIBRARIES libc.lib oldnames.lib
   ole32.lib d3drm.lib ddraw.lib winmm.lib vfw32.lib dinput.lib dsound.lib
-  user32.lib gdi32.lib advapi32.lib amstrmid.lib dxguid.lib)
+  kernel32.lib user32.lib gdi32.lib advapi32.lib amstrmid.lib dxguid.lib)
 
 # Units the original pulled in LINK's second pass (finding 657): LATE-001
 # (rnc.c) and LATE-002 (init.c) follow the import thunks. The matching build
@@ -306,8 +324,9 @@ set(LRR_LINK_LIBRARIES kernel32.lib libc.lib oldnames.lib
 # second pass and places their code and data after LIBC's first-pass members
 # and the DirectX thunks. Their commons come before gods98's, as in the
 # original: LINK allocates the commons library by library in command-line
-# order, whatever the pass (finding 690). The original also has RtlUnwind's
-# thunk before them; here it still follows them. Every other build compiles
+# order, whatever the pass (finding 690). RtlUnwind's thunk comes before
+# them, as in the original, since kernel32.lib's second search precedes
+# user32.lib's in the first pass (finding 694). Every other build compiles
 # them as ordinary entries, and their list entries keep their place.
 set(LRR_LINK_LATE_MEMBERS gods98/rnc.c gods98/init.c)
 

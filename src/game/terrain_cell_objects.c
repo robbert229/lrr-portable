@@ -39,8 +39,11 @@ typedef struct ElectricFenceGlobs {
     unsigned int listCount;             /* 004c7e84 */
 } ElectricFenceGlobs;                   /* 0x90 bytes */
 
+/* An external, as in the original: as a static, MSVC 5.0 reuses the free
+ * list's first load across electric_fence_add_list's call. Zero-initialised,
+ * so it stays in the object's .bss rather than becoming a common. */
 // GLOBAL: LEGORR 0x004c7df8
-static ElectricFenceGlobs electricFenceGlobs;
+ElectricFenceGlobs electricFenceGlobs = { 0 };
 
 // FUNCTION: LEGORR 0x0040cdc0
 void electric_fence_initialise(ElectricFenceLevel* level)
@@ -55,6 +58,11 @@ void electric_fence_initialise(ElectricFenceLevel* level)
     electricFenceGlobs.freeList = NULL;
     electricFenceGlobs.listCount = 0;
 }
+
+/* A header inline copy whose 1.0 and 0.0 open the unit's .rdata
+ * (0049e110, 0049e114; saturate_inline.h). Above electric_fence_initialise
+ * it moves that function's symbol counter; after it, nothing changes. */
+#include "saturate_inline.h"
 
 // FUNCTION: LEGORR 0x0040ce30
 void electric_fence_shutdown(void)
@@ -330,6 +338,7 @@ int electric_fence_building_spark_callback(ElectricFenceObject* object,
     TerrainMapPoint2 dir;
     TerrainMapPoint2I blockPos;
     unsigned int direction, count, i;
+    int entrance;
     TerrainMapPoint2I* shape;
     TerrainMapPoint2I* next;
 
@@ -356,9 +365,13 @@ int electric_fence_building_spark_callback(ElectricFenceObject* object,
                 next = &shape[i + 1];
                 if (i != count - 1 && shape[i].x == next->x &&
                     shape[i].y == next->y)
-                    i++;
+                    entrance = 1;
                 else
+                    entrance = 0;
+                if (!entrance)
                     electric_fence_spark(shape[i].x, shape[i].y, 0, elapsedGame);
+                else
+                    i++;
             }
         }
     }
@@ -401,33 +414,32 @@ void electric_fence_node_update_callback(ElectricFenceNode* node,
 // FUNCTION: LEGORR 0x0040d850
 void electric_fence_spark(int bx, int by, int force, float elapsed)
 {
-    TerrainMapPoint2I DIRECTIONS[2][4] = {
-        { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } },
-        { { 0, 2 }, { 2, 0 }, { 0, -2 }, { -2, 0 } },
-    };
+    TerrainMapPoint2I DIRECTIONS_FAR[4] = { { 0, 2 }, { 2, 0 }, { 0, -2 }, { -2, 0 } };
+    TerrainMapPoint2I DIRECTIONS[4] = { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } };
     unsigned int i;
-    int x, y, x2, y2, tx, ty, adjacent, found;
+    int x, y, x2, y2, adjacent, found;
+    TerrainMapPoint2I t;
     float rate;
     ElectricFenceBlock* target;
 
     electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].flags |= 0x100;
     for (i = 0; i < 4; i++) {
         found = 0;
-        x = bx + DIRECTIONS[0][i].x;
-        y = by + DIRECTIONS[0][i].y;
+        x = bx + DIRECTIONS[i].x;
+        y = by + DIRECTIONS[i].y;
         if (level_coord_pair_within_bounds_target(
                 (const unsigned int*)electricFenceGlobs.level->map, x, y) &&
             (electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * y + x].fence != NULL ||
              (electric_fence_block_is_building(electricFenceGlobs.level, x, y, 1) &&
               !electric_fence_block_is_building(electricFenceGlobs.level, bx, by, 0)))) {
-            tx = x;
+            t.x = x;
+            t.y = y;
             found = 1;
             adjacent = 1;
-            ty = y;
         }
         if (!found) {
-            x2 = bx + DIRECTIONS[1][i].x;
-            y2 = by + DIRECTIONS[1][i].y;
+            x2 = bx + DIRECTIONS_FAR[i].x;
+            y2 = by + DIRECTIONS_FAR[i].y;
             if (level_coord_pair_within_bounds_target(
                     (const unsigned int*)electricFenceGlobs.level->map, x2, y2) &&
                 (!electric_fence_block_is_building(electricFenceGlobs.level, x, y, 0) ||
@@ -435,16 +447,16 @@ void electric_fence_spark(int bx, int by, int force, float elapsed)
                 (electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * y2 + x2].fence != NULL ||
                  (electric_fence_block_is_building(electricFenceGlobs.level, x2, y2, 1) &&
                   !electric_fence_block_is_building(electricFenceGlobs.level, bx, by, 0)))) {
+                t.x = x2;
+                t.y = y2;
                 found = 1;
                 adjacent = 0;
-                tx = x2;
-                ty = y2;
             }
         }
         if (found) {
             if (!adjacent)
-                electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * y + x].flags |= 0x100;
-            target = &electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * ty + tx];
+                electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * (by + DIRECTIONS[i].y) + bx + DIRECTIONS[i].x].flags |= 0x100;
+            target = &electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * t.y + t.x];
             if (target->fence == NULL || target->fence->timer <= 0.0f) {
                 if (!(target->flags & (1 << i))) {
                     electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].flags |=
@@ -455,11 +467,11 @@ void electric_fence_spark(int bx, int by, int force, float elapsed)
                     if (force ||
                         (rate != 0.0f &&
                          rng_thunk_draw15() % (unsigned int)(200.0f / rate) == 0))
-                        electric_fence_beam_create(bx, by, tx, ty);
+                        electric_fence_beam_create(bx, by, t.x, t.y);
                 }
-                if (!electric_fence_block_is_building(electricFenceGlobs.level, tx, ty, 0) &&
-                    !(electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * ty + tx].flags & 0x100))
-                    electric_fence_spark(tx, ty, force, elapsed);
+                if (!electric_fence_block_is_building(electricFenceGlobs.level, t.x, t.y, 0) &&
+                    !(electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * t.y + t.x].flags & 0x100))
+                    electric_fence_spark(t.x, t.y, force, elapsed);
             }
         }
     }

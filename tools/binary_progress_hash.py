@@ -14,6 +14,8 @@ MANIFEST = 'tools/binary_progress_inputs.txt'
 # The import libraries the matching build rebuilds from source (finding 574).
 IMPORTLIB_DIR = 'cross/msvc5-importlibs/'
 FIXED = ('CMakeLists.txt', 'cross/msvc5-toolchain.cmake', 'tools/reccmp.sh',
+         # LINK.EXE on the toolchain's own MSVCRT (finding 694).
+         'cross/msvc5-native-crt-link.sh', 'cross/msvc5_native_crt.py',
          'tools/clean_reccmp_report_names.py', 'tools/reccmp_full_diff.py', 'tools/reccmp_diagnostics.py', 'tools/match_listings.py',
          'tools/reccmp_map_statics.py',
          'tools/match_baseline.py', 'tools/binary_progress.py', 'tools/layout_progress.py', 'tools/identity_metrics.py',

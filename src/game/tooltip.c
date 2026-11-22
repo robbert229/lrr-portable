@@ -368,24 +368,31 @@ void tooltip_draw_box(Area2F box, ColourRGBF rgbNormal,
     unsigned int lineCount = 0;
     unsigned int i;
 
+    /* Each point is stored from its computed value, as in the original:
+     * box.x + i, box.y + i and the four far-edge terms are evaluated once
+     * (CSE) and stored from the x87 stack. Only toHi's first x and toLo's
+     * second x are copies of an element just stored (integer moves).
+     * toHi's second x still reads fromHi[lineCount - 1].x back from the
+     * array; the original adds 1 to the computed box.x + i, but written
+     * that way the function scores lower (31.91% against 46.56%). */
     for (i = 0; i < toolTipGlobs.borderSize; i++) {
         fromHi[lineCount].x = box.x + i;
         fromHi[lineCount].y = box.y + i;
         toHi[lineCount].x = fromHi[lineCount].x;
         toHi[lineCount].y = (box.y + box.height) - 2.0f - i;
-        fromLo[lineCount].x = fromHi[lineCount].x;
+        fromLo[lineCount].x = box.x + i;
         fromLo[lineCount].y = (box.y + box.height) - 1.0f - i;
         toLo[lineCount].x = (box.x + box.width) - 2.0f - i;
-        toLo[lineCount].y = fromLo[lineCount].y;
+        toLo[lineCount].y = (box.y + box.height) - 1.0f - i;
         lineCount++;
         fromHi[lineCount].x = (box.x + box.width) - 1.0f - i;
-        fromHi[lineCount].y = fromHi[lineCount - 1].y;
+        fromHi[lineCount].y = box.y + i;
         toHi[lineCount].x = fromHi[lineCount - 1].x - -1.0f;
-        toHi[lineCount].y = fromHi[lineCount].y;
-        fromLo[lineCount].x = fromHi[lineCount].x;
-        fromLo[lineCount].y = fromLo[lineCount - 1].y;
+        toHi[lineCount].y = box.y + i;
+        fromLo[lineCount].x = (box.x + box.width) - 1.0f - i;
+        fromLo[lineCount].y = (box.y + box.height) - 1.0f - i;
         toLo[lineCount].x = fromLo[lineCount].x;
-        toLo[lineCount].y = fromHi[lineCount].y - -1.0f;
+        toLo[lineCount].y = (box.y + i) - -1.0f;
         lineCount++;
     }
 
@@ -400,6 +407,10 @@ void tooltip_draw_box(Area2F box, ColourRGBF rgbNormal,
         surface_draw_polyline(fromLo, toLo, lineCount, rgbShadow.red, rgbShadow.green, rgbShadow.blue, DRAW_EFFECT_NONE);
     }
 }
+
+/* Images.h's inline size getters (tooltip_images.h), included before their
+ * only user so that the functions above keep their symbol counter. */
+#include "tooltip_images.h"
 
 // FUNCTION: LEGORR 0x0046bc30
 void tooltip_draw(ToolTip* toolTip, unsigned int mouseX, unsigned int mouseY)
@@ -427,8 +438,8 @@ void tooltip_draw(ToolTip* toolTip, unsigned int mouseX, unsigned int mouseY)
 
     height = width = (toolTipGlobs.borderSize + toolTipGlobs.offset) * 2;
     if (toolTip->flags & TOOLTIP_FLAG_IMAGE) {
-        width += toolTip->image->width;
-        height += toolTip->image->height;
+        width += tooltip_image_get_width(toolTip->image);
+        height += tooltip_image_get_height(toolTip->image);
     }
     else {
         width += (toolTip->textWidth > (unsigned int)toolTip->iconsWidth) ? toolTip->textWidth : toolTip->iconsWidth;
@@ -444,9 +455,9 @@ void tooltip_draw(ToolTip* toolTip, unsigned int mouseX, unsigned int mouseY)
         else box.x = (float)mouseX;
     }
     box.y = (float)(toolTipGlobs.offsetY + mouseY);
-    box.height = (float)height;
-    if (box.y + box.height > (float)toolTipGlobs.appHeight) box.y = (float)(mouseY - height) - 1.0f;
+    if (box.y + (float)height > (float)toolTipGlobs.appHeight) box.y = (float)(mouseY - height) - 1.0f;
     box.width = (float)width;
+    box.height = (float)height;
 
     tooltip_draw_box(box, rgbNormal, rgbHighlight, rgbShadow, 0);
 
@@ -460,16 +471,19 @@ void tooltip_draw(ToolTip* toolTip, unsigned int mouseX, unsigned int mouseY)
         x = 0;
         rowHeight = 0;
         font_print_f(toolTipGlobs.font,
-                     (int)(toolTipGlobs.offset + (box.x + toolTipGlobs.borderSize)),
+                     (int)(toolTipGlobs.borderSize + (box.x + toolTipGlobs.offset)),
                      (int)(box.y + toolTipGlobs.borderSize + toolTipGlobs.offset),
                      "%s", toolTip->textBuffer);
         for (i = 0; i < toolTip->iconCount; i++) {
             if (toolTip->iconList[i]) {
-                pos.x = x + (box.x + toolTipGlobs.borderSize + toolTipGlobs.offset);
-                pos.y = mouseX + (box.y + toolTipGlobs.borderSize + toolTipGlobs.offset);
+                pos.x = box.x + toolTipGlobs.borderSize + toolTipGlobs.offset;
+                pos.y = box.y + toolTipGlobs.borderSize + toolTipGlobs.offset;
+                pos.x += x;
+                pos.y += mouseX;
                 image_display_scaled(toolTip->iconList[i], NULL, &pos, NULL);
-                if ((int)toolTip->iconList[i]->height > (int)rowHeight) rowHeight = toolTip->iconList[i]->height;
-                x += toolTip->iconList[i]->width;
+                if (tooltip_image_get_height(toolTip->iconList[i]) > (int)rowHeight)
+                    rowHeight = tooltip_image_get_height(toolTip->iconList[i]);
+                x += tooltip_image_get_width(toolTip->iconList[i]);
             }
             else {
                 mouseX += rowHeight;

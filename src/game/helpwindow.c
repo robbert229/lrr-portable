@@ -24,6 +24,7 @@
 #include "crt/vc5names.h"
 #include "helpwindow.h"
 #include "helpwindow_imports.h"
+#include "gods98/maths_normalise_head.h"
 
 /* The unit's functions have C linkage in the native C++ compile too. */
 #ifdef __cplusplus
@@ -103,7 +104,7 @@ typedef struct HelpWindow_Globs {
 } HelpWindow_Globs;                             /* 0xd6c */
 
 // GLOBAL: LEGORR 0x004db8e8
-static HelpWindow_Globs helpwindowGlobs;
+HelpWindow_Globs helpwindowGlobs = { 0 };
 
 // FUNCTION: LEGORR 0x00418190
 void help_window_set_font(struct Font* font)

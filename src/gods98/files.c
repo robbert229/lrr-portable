@@ -57,7 +57,6 @@ typedef struct File_Globs {
     FileLoadCallback loadCallback;     /* 005343ac */
     void* loadCallbackData;            /* 005343b0 */
     unsigned char cdLetter;            /* 005343b4 */
-    int basePathSet;                   /* 005343b8 */
 } File_Globs;
 
 // GLOBAL: LEGORR 0x004aaf00
@@ -65,6 +64,13 @@ static int currWadHandle = -1;
 
 // GLOBAL: LEGORR 0x005339a0
 static File_Globs fileGlobs;
+
+/* Outside File_Globs: File_SetBaseSearchPath's failure store is scheduled
+ * ahead of basePath's memset, which MSVC 5.0 does only for a separate
+ * object. A zero-initialised external, so it follows the statics in .bss
+ * (finding 691). */
+// GLOBAL: LEGORR 0x005343b8
+int fileBasePathSet = 0;
 
 /* File_CheckRedundantFiles's file list: common symbols. */
 // GLOBAL: LEGORR 0x005769e0
@@ -208,11 +214,11 @@ int file_set_base_search_path(const char* basePath)
         len = strlen(basePath);
         if (len <= 1024 && len != 0) {
             strcpy(fileGlobs.basePath, basePath);
-            return fileGlobs.basePathSet = 1;
+            return fileBasePathSet = 1;
         }
     }
     memset(fileGlobs.basePath, 0, sizeof(fileGlobs.basePath));
-    return fileGlobs.basePathSet = 0;
+    return fileBasePathSet = 0;
 }
 
 // FUNCTION: LEGORR 0x0047f600
@@ -357,18 +363,16 @@ int file_read(void* buffer, int size, int count, File* f)
 {
     FileSys fs;
     int length;
-    int read;
     int amount;
 
     fs = file_get_system(f);
     switch (fs) {
     case FileSystem_Wad:
         length = wad_file_length(f->stream.wad->hFile);
-        read = size * count;
-        if (read + f->stream.wad->streamPos > length)
+        if (size * count + f->stream.wad->streamPos > length)
             amount = length - f->stream.wad->streamPos;
         else
-            amount = read;
+            amount = size * count;
         memcpy(buffer,
                (char*)wad_file_data(f->stream.wad->hFile) +
                    f->stream.wad->streamPos,
@@ -678,7 +682,7 @@ char* file_get_wad_name(char* fName)
     int baseLen;
     char c;
 
-    if (fileGlobs.basePathSet) {
+    if (fileBasePathSet) {
         len = strlen(fName);
         baseLen = strlen(fileGlobs.basePath);
         if (len <= baseLen) return fName;
@@ -843,3 +847,13 @@ void file_check_file(const char* fName)
         if (_strcmpi(fName, fileRedundantList[i]) == 0) return;
     }
 }
+
+#include "files_tail.h"
+
+/* Maths.h's inline normalise: the unread 1.0f at 0049e9c8, the first word
+ * of the unit's .rdata. */
+#include "maths_normalise_head.h"
+
+/* A removed Files.h helper's unread 0.0f (0049e9cc), the last word of the
+ * unit's .rdata. */
+#include "files_progress_tail.h"

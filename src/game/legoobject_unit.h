@@ -452,9 +452,9 @@ static __inline LegoObjJ_Vector3F* legoobject_vector3_add(LegoObjJ_Vector3F* r,
                                                          LegoObjJ_Vector3F* a,
                                                          LegoObjJ_Vector3F* b)
 {
-    r->x = a->x + b->x;
-    r->y = a->y + b->y;
-    r->z = a->z + b->z;
+    r->x = (a->x + b->x);
+    r->y = (a->y + b->y);
+    r->z = (a->z + b->z);
     return r;
 }
 
@@ -492,9 +492,9 @@ typedef struct LegoObjK_SearchData {
  * legoobject_vector3d_modulus (it needs <math.h>). */
 static __inline float* legoobject_vector3d_subtract(float* r, float* a, float* b)
 {
-    r[0] = a[0] - b[0];
-    r[1] = a[1] - b[1];
-    r[2] = a[2] - b[2];
+    r[0] = (a[0] - b[0]);
+    r[1] = (a[1] - b[1]);
+    r[2] = (a[2] - b[2]);
     return r;
 }
 int legoobject_damage_hurt_sound_submit(Lego_Object* obj, float elapsed, float damage); /* 0043fb40 */
@@ -564,9 +564,9 @@ float legoobject_world_z_callback_lake(float x, float y, struct TerrainMap* map)
 static __inline LegoObjL_Vector3F* legoobject_vector3d_add(LegoObjL_Vector3F* r,
     LegoObjL_Vector3F* a, LegoObjL_Vector3F* b)
 {
-    r->x = a->x + b->x;
-    r->y = a->y + b->y;
-    r->z = a->z + b->z;
+    r->x = (a->x + b->x);
+    r->y = (a->y + b->y);
+    r->z = (a->z + b->z);
     return r;
 }
 /* Point2F and Maths_Vector2DSubtract, _Modulus, _Scale, _Normalise and
@@ -584,7 +584,7 @@ static __inline LegoObjM_Point2F* legoobject_vector2d_subtract(LegoObjM_Point2F*
 }
 static __inline float legoobject_vector2d_modulus(LegoObjM_Point2F* v)
 {
-    return (float)sqrt(v->x * v->x + v->y * v->y);
+    return (float)sqrt((v->x * v->x) + (v->y * v->y));
 }
 static __inline LegoObjM_Point2F* legoobject_vector2d_scale(LegoObjM_Point2F* r,
     LegoObjM_Point2F* a, float f)
@@ -601,15 +601,15 @@ static __inline LegoObjM_Point2F* legoobject_vector2d_normalise(LegoObjM_Point2F
 }
 static __inline float legoobject_vector2d_dot(LegoObjM_Point2F* a, LegoObjM_Point2F* b)
 {
-    return a->x * b->x + a->y * b->y;
+    return (a->x * b->x) + (a->y * b->y);
 }
 /* Maths_Vector3DSubtract and Maths_Vector3DModulus (Maths.h inlines). */
 static __inline LegoObjL_Vector3F* legoobject_m_vector3d_subtract(LegoObjL_Vector3F* r,
     LegoObjL_Vector3F* a, LegoObjL_Vector3F* b)
 {
-    r->x = a->x - b->x;
-    r->y = a->y - b->y;
-    r->z = a->z - b->z;
+    r->x = (a->x - b->x);
+    r->y = (a->y - b->y);
+    r->z = (a->z - b->z);
     return r;
 }
 static __inline float legoobject_m_vector3d_modulus(LegoObjL_Vector3F* v)
@@ -641,7 +641,7 @@ static __inline float* legoobject_n_vector2d_subtract(float* r, float* a, float*
     return r;
 }
 #define legoobject_n_vector2d_modulus(v) \
-    ((float)sqrt((v)[0] * (v)[0] + (v)[1] * (v)[1]))
+    ((float)sqrt(((v)[0] * (v)[0]) + ((v)[1] * (v)[1])))
 /* r = origin + ray * dist on Point2F, an inline vector function of the
  * same kind (00444460 expands it in place). */
 static __inline float* legoobject_vector2d_ray_end_point(float* r, float* origin,

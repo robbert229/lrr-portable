@@ -169,6 +169,12 @@ void credits_play(const char* textFile, struct TextureSurface* font,
     }
 }
 
+/* A header inline copy whose 1.0 and 0.0 open the unit's .rdata
+ * (saturate_inline.h). The original would include the header with the
+ * others, but above credits_play it moves MSVC's symbol counter and costs
+ * that function; nothing after credits_play changes. */
+#include "saturate_inline.h"
+
 // FUNCTION: LEGORR 0x0040a3d0
 void damage_font_cleanup(void)
 {
@@ -284,9 +290,9 @@ void damage_font_set_damage_number(DamageFont_Data* data, unsigned int damage)
         indexed_record_flag6c_bit0_set(data->mesh, i, FALSE);
         damage = (damage - damage % 10) / 10;
     }
+    digitCount++;
     animated_texture_frame_surface_set(data->mesh, i,
                                        damageFontGlobs.fontTextMinus);
-    digitCount++;
     for (i = digitCount; i < 4; i++) {
         indexed_record_flag6c_bit0_set(data->mesh, i, TRUE);
     }

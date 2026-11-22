@@ -175,6 +175,11 @@ void loader_display_loading_bar(const char* section)
     }
 }
 
+/* Maths.h's inline normalise. Its 1.0f (0049e4d4) follows the -1.0f that
+ * loader_display_loading_bar stores and comes before the 0.0f stored
+ * below, so the copy is compiled here. */
+#include "gods98/maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x0044dec0
 void loader_file_load_callback(const char* filename, unsigned int fileSize, void* data)
 {

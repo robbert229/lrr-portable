@@ -789,6 +789,18 @@ bytes up to the next symbol, so a large static without a map symbol is counted
 to the symbol before it. Read sizes from the COFF objects when that matters.
 The tool does not change `binary-progress.json`.
 
+## Import slot order (`iat_order.py`)
+
+`iat_order.py` models how LINK 5.0 orders the slots within each DLL's import
+address table (finding 694). `slots ORIGINAL REBUILT` prints the slots that
+agree, per DLL. `predict LOG --crt microsoft|wine [--exe EXE]` applies the
+rule to a `/VERBOSE` link log: Microsoft's MSVCRT 5.00 `qsort` (the matching
+build's linker since finding 694) or Wine's builtin one, keyed on the DLL
+name. With `--exe` it compares the prediction with an image and exits 1 on a
+difference. To try a change in pull order, relink from `link.txt` with
+`/VERBOSE` in a scratch directory (finding 574's recipe) and predict from
+its log; the relink takes about a minute.
+
 ## Image-end guard (`pe_audit.py --image-end-only`)
 
 The original image ends at `0x771000`, and its mapped functions use
@@ -883,6 +895,17 @@ its roots:
 With `--json FILE` it writes the table and the per-function report, which
 names each function's root functions. Tests:
 `tools/tests/test_opt_ref_link.py`, in `make tools-test`.
+
+## Weak externals (`coff_weak_external.py`)
+
+`python3 tools/coff_weak_external.py OUT WEAK=DEFAULT ...` writes an i386
+COFF object with no sections, only weak externals: LINK resolves a reference
+to `WEAK` to `DEFAULT` and does not search the libraries for `WEAK`. LINK 5.0
+has no `/ALTERNATENAME`, so this is how the matching build gives one function
+two names. `CMakeLists.txt` builds `weak_operator_delete.obj` with it, which
+aliases the global `operator delete` (`??3@YAXPAX@Z`) to
+`_ui_render_record_free` (`0045daf0`, finding 696). Tests:
+`tools/tests/test_coff_weak_external.py`.
 
 ## Native code in winapi links (`winapi_link_audit.py`)
 
@@ -1270,16 +1293,84 @@ outside relocated fields, unchanged, as `reference/grind/<addr>.obj`.
 
 Beside it, `<addr>.json` is the grind plan for that function: its
 translation unit from `reprobit/build-plan.json`, its decorated symbol, and
-an `extern_runs` search over `--counts` (default 1–64) declarations. Grind
+an `extern_runs` search over `--counts` declarations; the default is the 64
+lengths (grind's limit) centred on the pad count found, from 1 at least, so
+a 162-pad reference searches runs of 131–194. Grind
 seats those after the unit's final `#include`, or at the unit's start
 (`placement: prefix`) when an `#include` follows the function, as in
 `terrain_map.c` and `frontend_unit.c`. That is not where the pads go, so the
 two counts differ (0x479a30: 3 pads, a run of 19).
 
 A function no pad count reproduces gets no files: its remaining difference
-is not a phase. Neither does one whose unpadded unit already gives the
+is not a phase. With `--synthetic`, such a function gets a *synthetic*
+reference instead: the unpadded compile with that body replaced by the
+original's bytes, outside relocated fields, at the original's length when
+it differs (below), and a plan over runs of 1–32 declarations (a phase-sensitive unit
+may need a longer run before its donor compiles like the seed). Grind can then author a
+`retail_exact_donor_rewriting` record when the donor holds the original's
+instructions in another order (robbert229/reprobit#19), or a
+`retail_exact_region_resize_rewriting` record when proved regions of
+another length reach it (robbert229/reprobit#24). Neither does one whose unpadded unit already gives the
 original's body, since its difference lies elsewhere and grind would find
-the donor identical to the seed. Output goes under `reference/` only, which
+the donor identical to the seed.
+
+The synthetic body's relocations sit at the original's own address fields,
+not the compile's, so a function whose instruction layout differs from the
+compile's still gets a faithful reference (`explain_synthetic_reference`):
+
+- `ia32_fields.py` decodes both bodies with ReproBit's opcode tables (its
+  tests check the lengths against the fork's `ia32_decode.py`). The
+  original's address fields are its ModRM `disp32`, `moffs32` and `imm32`
+  operands whose value lies in the original image, its `rel32` branches out
+  of the function (and calls to itself), and its jump-table entries, which
+  follow its code end as the compile's follow the compile's.
+- The instruction shapes (opcode, addressing form, field kinds; no registers,
+  displacements or immediates) are aligned by longest common subsequence. A
+  field's candidates are the compile's relocations at the same operand of
+  the instructions it pairs with in some longest alignment, else at an
+  operand of the same kind between its aligned neighbours, else at that
+  operand of any instruction of its shape.
+- Candidates are narrowed until each field has one: a symbol resolves to
+  one address (address minus addend), an address to one symbol plus addend,
+  and a function Reccmp pairs (`build-reccmp`'s report and map,
+  `known_addresses`) to its original address. The compile's relocations
+  and the original's fields must then correspond one to one.
+- An external target keeps the compile's addend; an internal one (a jump
+  table, a case label) takes the original's offset in the function.
+
+The original's bytes are its whole slot: from its address to the next
+function the Reccmp report lists (`function_starts`, `original_slot`).
+Its procedure ends before the slot's fill: MSVC 5.0's NOPs when the
+compile's COMDAT is padded to 16, else the linker's int3 (a compile whose
+procedure is itself a multiple of 16 takes the slot's own fill). When that
+procedure size, or its padded length, differs from the compile's, the
+reference carries the original's everywhere the object states it:
+
+- the FPO record's `cbProcSize`, the CodeView procedure's `cbProc`, the
+  function's aux TotalSize and the `.ef` value hold the original's
+  procedure size;
+- a different padded length resizes the section: its header and its
+  section symbol's Length, with every file pointer past its raw data (the
+  other sections, relocation and line tables, the symbol table, each
+  function's line pointer) moved by the difference;
+- offsets inside the function follow the alignment: the entry stays at 0,
+  each line row and the CodeView debug range go to the original instruction
+  their compiled one pairs with (one in an unpaired run goes to the run's
+  first original instruction), switch tables keep their place after the
+  code, and each `$L` label moves to where the original's own fields put it
+  (an unreferenced label follows the alignment), so internal relocations
+  keep their zero addends.
+
+It refuses, and prints why, when a field has no candidate or several, the
+checks contradict each other, or one side has a field the other lacks; and,
+for a length change, when the function shares its section, the compile's
+records disagree on its size or state a code offset of their own, the slot
+ends in 16 or more bytes of fill or is not padded to 16, the original's
+code does not end in a `ret` or jump (up to 3 bytes before its tables), fill
+after a `ret` or jump reaches a 16-byte boundary inside the slot (another
+function would start there), or the switch tables differ in length. When the
+sizes agree, the object is the compile with the original's bytes outside
+its relocated fields, as before, byte for byte. Output goes under `reference/` only, which
 is never committed. Exit status: 0 when every address has a reference or
 needs none, 1 when one has no pad count, 2 on errors. Never run it while a
 build compiles the tree.

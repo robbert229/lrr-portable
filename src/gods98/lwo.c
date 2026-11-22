@@ -28,6 +28,7 @@
 #define LEGORRR_LWO_UNIT 1
 #include "lwo.h"
 #include "files.h"
+#include "gods98/d3drmdef_consts.h"
 
 /* Big-endian to host. The original spells the 16-bit swap two ways; each
  * use takes the one whose code matches (see finding 601). */
@@ -343,6 +344,10 @@ int lwo_surface_names_read(File* file, LWSIZE* size, LWSURFLIST** list,
  * flag-name tables as initialised arrays, `setVal` then `surf` tested
  * separately, and Lwt.h's LWSVALUE/LWSPVALUE swaps (finding 677); the
  * sub-chunk length is swapped as an unsigned short sum (finding 682). */
+/* Maths.h's inline normalise. Its unread 1.0f (0049eaec) comes before the
+ * 1/256 of lwo_surface_settings_read. */
+#include "maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x0048c820
 int lwo_surface_settings_read(File* file, LWSIZE* size, LWSURFACE** surf,
                               int csize, int verbose)
