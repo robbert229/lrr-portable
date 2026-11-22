@@ -146,8 +146,8 @@ inline void crt_splitpath(const char* path, char* drive, char* dir,
 }
 #define _splitpath crt_splitpath
 
-/* _vsprintf: the host's vsprintf with VC5 LIBC's handling of the two
- * formats where hosts differ. VC5 has no "b" conversion: it drops the "%"
+/* _vsprintf: the host's vsprintf with VC5 LIBC's handling of two formats
+ * where hosts differ; other conversions VC5 lacks still reach the host. VC5 has no "b" conversion: it drops the "%"
  * and any flags, width, precision and size before the "b", prints the "b"
  * as text and takes no argument. glibc prints the argument in binary and
  * the UCRT aborts. A "%" whose specification runs into the end of the

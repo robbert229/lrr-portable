@@ -8,7 +8,8 @@
  * The original's VC5 LIBC has no "b" conversion: it prints the "b" as text
  * and takes no argument. glibc prints the argument in binary and the UCRT
  * aborts, so the units' vsprintf (crt/vc5names.h) handles "%b" itself and
- * the panel shows the same text on every host.
+ * the panel shows the same text on every host. test_vc5_vsprintf checks
+ * that vsprintf on its own.
  *
  * The test links with --wrap for the image loader, the image draw and the
  * panel calls other than the print, so the units reach the stubs below. */
@@ -18,7 +19,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "crt/vc5names.h"
 #include "game/info_unit.h"
 #include "game/panel_unit.h"
 #include "gods98/textwindow_record.h"
@@ -60,19 +60,6 @@ extern "C" void __wrap_indexed_text_metrics_pair_get(int, uint32_t* x, uint32_t*
 }
 extern "C" int __wrap_sound_submit_with_global_cooldown(int, int*) { return 0; }
 
-/* The units' vsprintf, as a unit calls it. */
-static char s_formatted[256];
-static int format(const char* msg, ...)
-{
-    va_list args;
-    int len;
-
-    va_start(args, msg);
-    len = vsprintf(s_formatted, msg, args);
-    va_end(args);
-    return len;
-}
-
 int main()
 {
     static char ring[TEXTWINDOW_MAXSTRINGLEN];
@@ -81,16 +68,6 @@ int main()
     int type;
 
     s_image = (Image*)calloc(1, sizeof(Image) + 64);
-
-    /* VC5's "%b": the b as text, no argument taken, whatever the flags,
-     * width, precision or size. */
-    CHECK(format("a%bc", (uintptr_t)s_image) == 3 && strcmp(s_formatted, "abc") == 0, "%b prints a b");
-    CHECK(format("%b %s", "next") == 6 && strcmp(s_formatted, "b next") == 0, "%b takes no argument");
-    CHECK(format("%d%b", 7) == 2 && strcmp(s_formatted, "7b") == 0, "%b after another conversion");
-    CHECK(format("%-08.3b|%lb|%I64b|%hb", (uintptr_t)s_image) == 7 && strcmp(s_formatted, "b|b|b|b") == 0,
-          "%b with flags, width, precision and size");
-    CHECK(format("%%b %5.1s%%", "xy") == 9 && strcmp(s_formatted, "%b     x%") == 0, "%%b stays text");
-    CHECK(format("100%") >= 0, "a lone % at the end");
 
     /* The info panel's TextWindow. */
     memset(&window, 0, sizeof(window));

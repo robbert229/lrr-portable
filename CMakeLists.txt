@@ -304,6 +304,11 @@ if(BUILD_TESTING)
     add_test(NAME ${name} COMMAND ${name}_test)
     set_tests_properties(${name} PROPERTIES LABELS ${name})
   endforeach()
+  # The units' vsprintf prints "%b" as VC5 LIBC does, on every host.
+  add_executable(vc5_vsprintf_test src/crt/test_vc5_vsprintf.cpp)
+  target_include_directories(vc5_vsprintf_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+  add_test(NAME vc5_vsprintf COMMAND vc5_vsprintf_test)
+  set_tests_properties(vc5_vsprintf PROPERTIES LABELS crt)
   # FrontEnd.c's random menu overlay roll on a simulated clock: the unit's
   # calls to main_time_get reach the test's __wrap_main_time_get.
   if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang" AND NOT APPLE AND NOT WIN32)
