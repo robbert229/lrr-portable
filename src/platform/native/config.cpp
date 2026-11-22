@@ -37,6 +37,26 @@ constexpr LRR_DisplayConfig kDefaultDisplay = {false, 640, 480, ""};
 
 LRR_DisplayConfig g_display = kDefaultDisplay;
 
+constexpr LRR_TrainingSave kDefaultTrainingSave = LRR_TRAINING_SAVE_PROMPT;
+
+LRR_TrainingSave g_trainingSave = kDefaultTrainingSave;
+
+const char* TrainingSaveName(LRR_TrainingSave value)
+{
+    return value == LRR_TRAINING_SAVE_OFF ? "off" : "prompt";
+}
+
+/* "off" (or false/no/0) keeps the original; anything else prompts. */
+LRR_TrainingSave ParseTrainingSave(const char* value)
+{
+    if (value != NULL &&
+        (SDL_strcasecmp(value, "off") == 0 || SDL_strcasecmp(value, "false") == 0 ||
+         SDL_strcasecmp(value, "no") == 0 || SDL_strcmp(value, "0") == 0)) {
+        return LRR_TRAINING_SAVE_OFF;
+    }
+    return LRR_TRAINING_SAVE_PROMPT;
+}
+
 /* The directory that holds the configuration file and, by default, the
  * saves; "" when the host has none. */
 std::string PreferencePath()
@@ -67,6 +87,8 @@ dictionary* DefaultConfig(const std::string& prefPath)
     iniparser_set(dict, LRR_CONFIG_XRES, std::to_string(kDefaultDisplay.width).c_str());
     iniparser_set(dict, LRR_CONFIG_YRES, std::to_string(kDefaultDisplay.height).c_str());
     iniparser_set(dict, LRR_CONFIG_DEVICE, kDefaultDisplay.device);
+    iniparser_set(dict, LRR_CONFIG_TWEAKS_SECTION, NULL);
+    iniparser_set(dict, LRR_CONFIG_TRAININGSAVE, TrainingSaveName(kDefaultTrainingSave));
 
 #ifdef __3DS__
     N3DS_SetupDefaultConfigOverrides(dict);
@@ -162,6 +184,8 @@ bool LRR_LoadConfig(const char* iniPath)
     g_display.width = iniparser_getint(dict, LRR_CONFIG_XRES, g_display.width);
     g_display.height = iniparser_getint(dict, LRR_CONFIG_YRES, g_display.height);
     SDL_strlcpy(g_display.device, iniparser_getstring(dict, LRR_CONFIG_DEVICE, ""), sizeof(g_display.device));
+    g_trainingSave = ParseTrainingSave(
+        iniparser_getstring(dict, LRR_CONFIG_TRAININGSAVE, TrainingSaveName(kDefaultTrainingSave)));
     iniparser_freedict(dict);
 
 #ifdef __EMSCRIPTEN__
@@ -173,4 +197,9 @@ bool LRR_LoadConfig(const char* iniPath)
 const LRR_DisplayConfig* LRR_GetDisplayConfig()
 {
     return &g_display;
+}
+
+LRR_TrainingSave LRR_GetTrainingSave()
+{
+    return g_trainingSave;
 }
