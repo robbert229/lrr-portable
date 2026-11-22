@@ -74,9 +74,12 @@ as a hardware device, which is what `-best` looks for (see the
 which adds each platform's renderer backends: SDL GPU, plus OpenGL 1.x and
 OpenGL ES 2 and 3 when CMake finds their libraries, DirectX 9 on Windows, and
 Citro3D, GXM and Glide on 3DS, Vita and DOS. On the desktop the software
-renderer is still the device the game picks, and so far it is the only
-backend that draws the level. For a headless run, use SDL's offscreen driver
-and have miniwin write each presented frame to a file:
+renderer is still the device the game picks. The SDL GPU backend also draws
+the level (immediate mode, viewport rectangles and rectangle clears; ADR
+0008, step 6): select it with `3d device = Miniwin driver (SDL3 GPU HAL)` in
+`LegoRR.ini`. It needs a Vulkan, Metal or Direct3D 12 device. For a headless
+run, use SDL's offscreen driver and have miniwin write each presented frame
+to a file:
 
 ```sh
 cd /path/to/game
@@ -101,6 +104,30 @@ units directly (bezier, steering, animation_object, draw, registry) or
 miniwin (miniwin_dx6), on synthetic data only. Passing tests establishes the
 behavior covered by those tests; gameplay comparison against the original is
 a separate check.
+
+The miniwin rendering tests (`miniwin_immediate`, `_viewports`,
+`_textures`, `_lights` and `_fog`) draw with the software renderer. Their
+`_sdlgpu` twins run the same checks on the SDL GPU backend, and
+`miniwin_backends` draws one scene on both backends and compares them pixel
+by pixel, with the tolerance its source describes. These need an SDL GPU
+device that can draw on SDL's offscreen video driver, and are skipped
+without one, as on CI. Mesa's lavapipe is such a device without a GPU:
+
+```sh
+VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+  ctest --test-dir build -L sdlgpu --output-on-failure
+```
+
+A GPU driver that cannot present to an offscreen surface (NVIDIA's, for
+one) runs them on the desktop instead:
+`MINIWIN_TEST_DEVICE="SDL3 GPU HAL" MINIWIN_TEST_VIDEO_DRIVER=wayland
+build/miniwin_immediate_test`, and `MINIWIN_TEST_VIDEO_DRIVER=wayland
+build/miniwin_backends_test`.
+
+The SDL GPU backend's shaders are HLSL in miniwin's
+`shaders/src`, compiled into the headers in `shaders/generated`.
+`tools/miniwin-shaders/regenerate.sh` regenerates them on Linux with
+SDL_shadercross and vkd3d-utils; its header lists what it needs.
 
 ## Continuous integration
 

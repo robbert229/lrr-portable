@@ -1,0 +1,1001 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sat, 21 Nov 2026 19:31:32 -0800
+Subject: [PATCH] refactor(miniwin): share immediate mode's transform and
+ lighting between backends
+
+Move the software backend's per-vertex work for DrawIndexedPrimitive
+(transforms, back-face culling, Direct3D lighting with the scene's
+prepared lights, vertex fog) and the decoding of the device's render,
+light and texture stage states into immediatemode.cpp, so that a GPU
+backend can light and cull exactly as the software backend does and only
+rasterize differently. The software backend's results are unchanged.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/CMakeLists.txt b/miniwin/CMakeLists.txt
+index 4c05a0e..b3cadc8 100644
+--- a/miniwin/CMakeLists.txt
++++ b/miniwin/CMakeLists.txt
+@@ -29,6 +29,7 @@ add_library(miniwin STATIC EXCLUDE_FROM_ALL
+   src/d3drm/d3drmviewport.cpp
+   src/d3drm/d3drmrenderer.cpp
+   src/internal/meshutils.cpp
++  src/internal/immediatemode.cpp
+ )
+ 
+ target_compile_definitions(miniwin PRIVATE
+diff --git a/miniwin/src/d3drm/backends/software/renderer.cpp b/miniwin/src/d3drm/backends/software/renderer.cpp
+index 1cb72f0..54320e3 100644
+--- a/miniwin/src/d3drm/backends/software/renderer.cpp
++++ b/miniwin/src/d3drm/backends/software/renderer.cpp
+@@ -84,47 +84,7 @@ Direct3DRMSoftwareRenderer::~Direct3DRMSoftwareRenderer()
+ 
+ void Direct3DRMSoftwareRenderer::PushLights(const SceneLight* lights, size_t count)
+ {
+-	// Fold ambient lights into a single base color and pre-normalize the
+-	// directional light vectors so per-vertex lighting does no sqrt for them.
+-	m_preparedLights.clear();
+-	m_ambientR = 0.0f;
+-	m_ambientG = 0.0f;
+-	m_ambientB = 0.0f;
+-
+-	for (size_t i = 0; i < count; ++i) {
+-		const SceneLight& light = lights[i];
+-
+-		if (light.positional == 0.0f && light.directional == 0.0f) {
+-			m_ambientR += light.color.r;
+-			m_ambientG += light.color.g;
+-			m_ambientB += light.color.b;
+-			continue;
+-		}
+-
+-		PreparedLight prepared;
+-		prepared.color = light.color;
+-		prepared.spot = light.positional == 1.0f && light.directional == 1.0f;
+-		prepared.range = light.range;
+-		for (int a = 0; a < 3; ++a) {
+-			prepared.attenuation[a] = light.attenuation[a];
+-		}
+-		// D3DRM hands its spot to Direct3D as theta = umbra, phi = penumbra
+-		// and falloff 0. Direct3D's theta and phi are full cone angles, and
+-		// with falloff 0 the spot is at full strength anywhere inside phi.
+-		prepared.cosPenumbra = std::cos(light.penumbra * 0.5f);
+-		if (light.directional == 1.0f) {
+-			prepared.spotDirection = Normalize(light.direction);
+-		}
+-		if (light.directional == 1.0f && !prepared.spot) {
+-			prepared.positional = false;
+-			prepared.vec = Normalize({-light.direction.x, -light.direction.y, -light.direction.z});
+-		}
+-		else {
+-			prepared.positional = true;
+-			prepared.vec = light.position;
+-		}
+-		m_preparedLights.push_back(prepared);
+-	}
++	m_lights.Prepare(lights, count);
+ }
+ 
+ void Direct3DRMSoftwareRenderer::SetFrustumPlanes(const Plane* frustumPlanes)
+@@ -289,30 +249,6 @@ inline static void BlendRGBA(Uint8* p, int r, int g, int b, int a)
+ 	p[3] = static_cast<Uint8>(outA > 255 ? 255 : outA);
+ }
+ 
+-float Direct3DRMSoftwareRenderer::LightReach(
+-	const PreparedLight& light,
+-	const D3DVECTOR& worldPos,
+-	D3DVECTOR& toLight
+-) const
+-{
+-	D3DVECTOR d = {light.vec.x - worldPos.x, light.vec.y - worldPos.y, light.vec.z - worldPos.z};
+-	float distance = std::sqrt(DotProduct(d, d));
+-	if (distance > light.range) {
+-		return 0.0f;
+-	}
+-	toLight = distance > 0.0f ? D3DVECTOR{d.x / distance, d.y / distance, d.z / distance} : D3DVECTOR{0, 0, 0};
+-	float denominator =
+-		light.attenuation[0] + light.attenuation[1] * distance + light.attenuation[2] * distance * distance;
+-	float reach = denominator > 0.0f ? 1.0f / denominator : 1.0f;
+-	if (light.spot) {
+-		float rho = -DotProduct(toLight, light.spotDirection);
+-		if (rho <= light.cosPenumbra) {
+-			return 0.0f;
+-		}
+-	}
+-	return reach;
+-}
+-
+ void Direct3DRMSoftwareRenderer::ApplyLighting(
+ 	const D3DVECTOR& position,
+ 	const D3DVECTOR& oNormal,
+@@ -322,15 +258,15 @@ void Direct3DRMSoftwareRenderer::ApplyLighting(
+ )
+ {
+ 	FColor spec = {0, 0, 0, 0};
+-	FColor diffuse = {m_ambientR, m_ambientG, m_ambientB, 0};
++	FColor diffuse = {m_lights.ambientR, m_lights.ambientG, m_lights.ambientB, 0};
+ 
+ 	D3DVECTOR normal = Normalize(TransformNormal(oNormal, m_normalMatrix));
+ 
+ 	bool haveWorldPos = false;
+ 	D3DVECTOR worldPos;
+ 
+-	for (size_t i = 0; i < m_preparedLights.size(); ++i) {
+-		const PreparedLight& light = m_preparedLights[i];
++	for (size_t i = 0; i < m_lights.lights.size(); ++i) {
++		const PreparedLight& light = m_lights.lights[i];
+ 
+ 		D3DVECTOR lightVec;
+ 		float reach = 1.0f;
+@@ -385,13 +321,6 @@ inline D3DVECTOR Subtract(const D3DVECTOR& a, const D3DVECTOR& b)
+ 	return {a.x - b.x, a.y - b.y, a.z - b.z};
+ }
+ 
+-inline bool IsBackface(const D3DVECTOR& v0, const D3DVECTOR& v1, const D3DVECTOR& v2)
+-{
+-	D3DVECTOR normal = CrossProduct(Subtract(v1, v0), Subtract(v2, v0));
+-
+-	return DotProduct(normal, v0) >= 0.0f;
+-}
+-
+ // Rasterizer vertex: screen position, vertex color and perspective UVs.
+ struct SWVertexXY {
+ 	float x, y, z;
+@@ -825,21 +754,7 @@ SDL_Surface* Direct3DRMSoftwareRenderer::ConvertTexture(Direct3DRMTextureImpl* t
+ 		keyed = false;
+ 		return nullptr;
+ 	}
+-	keyed = SDL_SurfaceHasColorKey(surface->m_surface);
+-	if (texture->m_decalTransparency) {
+-		keyed = true;
+-		const Uint8 r = (texture->m_decalTransparentColor >> 16) & 0xff;
+-		const Uint8 g = (texture->m_decalTransparentColor >> 8) & 0xff;
+-		const Uint8 b = texture->m_decalTransparentColor & 0xff;
+-		for (int y = 0; y < converted->h; ++y) {
+-			Uint8* px = static_cast<Uint8*>(converted->pixels) + y * converted->pitch;
+-			for (int x = 0; x < converted->w; ++x, px += 4) {
+-				if (px[0] == r && px[1] == g && px[2] == b) {
+-					px[3] = 0;
+-				}
+-			}
+-		}
+-	}
++	keyed = KeyImmediateTexture(texture, converted);
+ 	SDL_LockSurface(converted);
+ 	return converted;
+ }
+@@ -990,9 +905,9 @@ void Direct3DRMSoftwareRenderer::SubmitDraw(
+ 		};
+ 		D3DVECTOR camDir = Normalize(Subtract(cameraPos, modelOrigin));
+ 
+-		m_halfway.resize(m_preparedLights.size());
+-		for (size_t i = 0; i < m_preparedLights.size(); ++i) {
+-			const PreparedLight& light = m_preparedLights[i];
++		m_halfway.resize(m_lights.lights.size());
++		for (size_t i = 0; i < m_lights.lights.size(); ++i) {
++			const PreparedLight& light = m_lights.lights[i];
+ 			D3DVECTOR towardLight = light.positional ? Normalize(Subtract(light.vec, modelOrigin)) : light.vec;
+ 			m_halfway[i] = Normalize({camDir.x + towardLight.x, camDir.y + towardLight.y, camDir.z + towardLight.z});
+ 		}
+@@ -1225,33 +1140,6 @@ void Direct3DRMSoftwareRenderer::DrawImmediateClipped(const SWLitVertex (&v)[3],
+ 	});
+ }
+ 
+-// Direct3D's fog factor at view depth z: 1 leaves the colour, 0 is all fog.
+-static float FogFactor(DWORD mode, float start, float end, float density, float z)
+-{
+-	float f = 1.0f;
+-	switch (static_cast<D3DFOGMODE>(mode)) {
+-	case D3DFOG_LINEAR:
+-		f = end != start ? (end - z) / (end - start) : (z < start ? 1.0f : 0.0f);
+-		break;
+-	case D3DFOG_EXP:
+-		f = std::exp(-density * z);
+-		break;
+-	case D3DFOG_EXP2:
+-		f = std::exp(-(density * z) * (density * z));
+-		break;
+-	default:
+-		break;
+-	}
+-	return std::min(1.0f, std::max(0.0f, f));
+-}
+-
+-static float FloatState(DWORD bits)
+-{
+-	float value;
+-	SDL_memcpy(&value, &bits, sizeof(value));
+-	return value;
+-}
+-
+ static bool ImmediateDepthTest(DWORD func, float z, float stored)
+ {
+ 	switch (static_cast<D3DCMPFUNC>(func)) {
+@@ -1542,7 +1430,7 @@ void Direct3DRMSoftwareRenderer::DrawImmediateTriangle(
+ 				}
+ 				else {
+ 					float oow = w[0] * oneOverW[0] + w[1] * oneOverW[1] + w[2] * oneOverW[2];
+-					f = FogFactor(state.fogMode, state.fogStart, state.fogEnd, state.fogDensity, 1.0f / oow);
++					f = ImmediateFogFactor(state.fogMode, state.fogStart, state.fogEnd, state.fogDensity, 1.0f / oow);
+ 				}
+ 				r = f * r + (1.0f - f) * state.fogR;
+ 				g = f * g + (1.0f - f) * state.fogG;
+@@ -1578,60 +1466,6 @@ void Direct3DRMSoftwareRenderer::DrawImmediateTriangle(
+ 	}
+ }
+ 
+-void Direct3DRMSoftwareRenderer::LightImmediateVertex(
+-	const D3DVECTOR& position,
+-	const D3DVECTOR& oNormal,
+-	const D3DMATERIAL& material,
+-	const D3DVECTOR& eye,
+-	bool specular,
+-	SDL_Color& color,
+-	SDL_Color& specularColor
+-)
+-{
+-	D3DVECTOR normal = Normalize(TransformNormal(oNormal, m_normalMatrix));
+-	D3DVECTOR worldPos = TransformPoint(position, m_worldMatrix);
+-	D3DVECTOR toEye = Normalize(Subtract(eye, worldPos));
+-
+-	FColor diffuse = {
+-		material.emissive.r + m_ambientR * material.ambient.r,
+-		material.emissive.g + m_ambientG * material.ambient.g,
+-		material.emissive.b + m_ambientB * material.ambient.b,
+-		0
+-	};
+-	FColor spec = {0, 0, 0, 0};
+-	for (const PreparedLight& light : m_preparedLights) {
+-		D3DVECTOR lightVec = light.vec;
+-		float reach = 1.0f;
+-		if (light.positional) {
+-			reach = LightReach(light, worldPos, lightVec);
+-			if (reach <= 0.0f) {
+-				continue;
+-			}
+-		}
+-		float dotNL = DotProduct(normal, lightVec);
+-		if (dotNL <= 0.0f) {
+-			continue;
+-		}
+-		diffuse.r += reach * dotNL * light.color.r * material.diffuse.r;
+-		diffuse.g += reach * dotNL * light.color.g * material.diffuse.g;
+-		diffuse.b += reach * dotNL * light.color.b * material.diffuse.b;
+-		if (specular && material.power > 0.0f) {
+-			D3DVECTOR halfway = Normalize({lightVec.x + toEye.x, lightVec.y + toEye.y, lightVec.z + toEye.z});
+-			float dotNH = DotProduct(normal, halfway);
+-			if (dotNH > 0.0f) {
+-				float power = reach * std::pow(dotNH, material.power);
+-				spec.r += power * light.color.r * material.specular.r;
+-				spec.g += power * light.color.g * material.specular.g;
+-				spec.b += power * light.color.b * material.specular.b;
+-			}
+-		}
+-	}
+-
+-	auto toByte = [](float c) { return static_cast<Uint8>(std::min(255.0f, std::max(0.0f, c * 255.0f + 0.5f))); };
+-	color = {toByte(diffuse.r), toByte(diffuse.g), toByte(diffuse.b), toByte(material.diffuse.a)};
+-	specularColor = {toByte(spec.r), toByte(spec.g), toByte(spec.b), 0};
+-}
+-
+ // Each vertex is lit as Direct3D lights it, from the scene's lights and the
+ // current material; texture stage 0 then combines that with the texture.
+ HRESULT Direct3DRMSoftwareRenderer::SubmitImmediate(const ImmediateDraw& draw)
+@@ -1641,37 +1475,13 @@ HRESULT Direct3DRMSoftwareRenderer::SubmitImmediate(const ImmediateDraw& draw)
+ 	}
+ 	const ImmediateState& st = *draw.state;
+ 
+-	D3DRMMATRIX4D modelView;
+-	MultiplyMatrix(modelView, draw.world, draw.view);
+-	memcpy(m_worldMatrix, draw.world, sizeof(D3DRMMATRIX4D));
+-	NormalMatrix(m_normalMatrix, draw.world);
+-	m_specular = false;
+-
+-	auto toByte = [](float c) { return static_cast<Uint8>(std::min(255.0f, std::max(0.0f, c * 255.0f + 0.5f))); };
+-	Appearance appearance = {};
+-	appearance.color = {
+-		toByte(draw.material.diffuse.r),
+-		toByte(draw.material.diffuse.g),
+-		toByte(draw.material.diffuse.b),
+-		toByte(draw.material.diffuse.a)
+-	};
+-	appearance.shininess = draw.material.power;
+-	appearance.textureId = NO_TEXTURE_ID;
+-	appearance.flat = st.Render(D3DRENDERSTATE_SHADEMODE) == static_cast<DWORD>(D3DSHADE_FLAT);
+-
+ 	ImmediatePixelState pixelState;
+-	pixelState.zEnable = st.Render(D3DRENDERSTATE_ZENABLE) != 0;
+-	pixelState.zWrite = st.Render(D3DRENDERSTATE_ZWRITEENABLE) != 0;
+-	pixelState.zFunc = st.Render(D3DRENDERSTATE_ZFUNC);
+-	pixelState.blend = st.Render(D3DRENDERSTATE_ALPHABLENDENABLE) != 0;
+-	pixelState.srcBlend = st.Render(D3DRENDERSTATE_SRCBLEND);
+-	pixelState.destBlend = st.Render(D3DRENDERSTATE_DESTBLEND);
++	static_cast<ImmediateShading&>(pixelState) = DecodeImmediateShading(st);
+ 	pixelState.texels = nullptr;
+ 	if (draw.texture) {
+ 		Uint32 textureId = GetTextureId(draw.texture, false, 1.0f, 1.0f);
+ 		const TextureCache& cache = m_textures[textureId];
+-		if (cache.cached && st.textureStageState[0][static_cast<DWORD>(D3DTSS_COLOROP)] !=
+-								static_cast<DWORD>(D3DTOP_DISABLE)) {
++		if (cache.cached && pixelState.colorOp != static_cast<DWORD>(D3DTOP_DISABLE)) {
+ 			pixelState.texels = static_cast<const Uint8*>(cache.cached->pixels);
+ 			pixelState.texWidth = cache.cached->w;
+ 			pixelState.texHeight = cache.cached->h;
+@@ -1679,129 +1489,10 @@ HRESULT Direct3DRMSoftwareRenderer::SubmitImmediate(const ImmediateDraw& draw)
+ 			pixelState.keyed = cache.keyed;
+ 		}
+ 	}
+-	pixelState.colorKeyEnable = st.Render(D3DRENDERSTATE_COLORKEYENABLE) != 0;
+-	pixelState.linear = st.Render(D3DRENDERSTATE_TEXTUREMAG) != static_cast<DWORD>(D3DFILTER_NEAREST);
+-	const DWORD* tss = st.textureStageState[0];
+-	pixelState.colorOp = tss[static_cast<DWORD>(D3DTSS_COLOROP)];
+-	pixelState.colorArg1 = tss[static_cast<DWORD>(D3DTSS_COLORARG1)];
+-	pixelState.colorArg2 = tss[static_cast<DWORD>(D3DTSS_COLORARG2)];
+-	pixelState.alphaOp = tss[static_cast<DWORD>(D3DTSS_ALPHAOP)];
+-	pixelState.alphaArg1 = tss[static_cast<DWORD>(D3DTSS_ALPHAARG1)];
+-	pixelState.alphaArg2 = tss[static_cast<DWORD>(D3DTSS_ALPHAARG2)];
+-	pixelState.specular = st.Render(D3DRENDERSTATE_SPECULARENABLE) != 0;
+-	pixelState.fog = ImmediatePixelState::Fog::None;
+-	DWORD vertexFogMode = st.lightState[static_cast<DWORD>(D3DLIGHTSTATE_FOGMODE)];
+-	float vertexFogStart = FloatState(st.lightState[static_cast<DWORD>(D3DLIGHTSTATE_FOGSTART)]);
+-	float vertexFogEnd = FloatState(st.lightState[static_cast<DWORD>(D3DLIGHTSTATE_FOGEND)]);
+-	float vertexFogDensity = FloatState(st.lightState[static_cast<DWORD>(D3DLIGHTSTATE_FOGDENSITY)]);
+-	if (st.Render(D3DRENDERSTATE_FOGENABLE)) {
+-		D3DCOLOR fogColor = st.Render(D3DRENDERSTATE_FOGCOLOR);
+-		pixelState.fogR = ((fogColor >> 16) & 0xff) / 255.0f;
+-		pixelState.fogG = ((fogColor >> 8) & 0xff) / 255.0f;
+-		pixelState.fogB = (fogColor & 0xff) / 255.0f;
+-		pixelState.fogMode = st.Render(D3DRENDERSTATE_FOGTABLEMODE);
+-		if (pixelState.fogMode != static_cast<DWORD>(D3DFOG_NONE)) {
+-			pixelState.fog = ImmediatePixelState::Fog::Table;
+-			pixelState.fogStart = FloatState(st.Render(D3DRENDERSTATE_FOGTABLESTART));
+-			pixelState.fogEnd = FloatState(st.Render(D3DRENDERSTATE_FOGTABLEEND));
+-			pixelState.fogDensity = FloatState(st.Render(D3DRENDERSTATE_FOGTABLEDENSITY));
+-		}
+-		else if (vertexFogMode != static_cast<DWORD>(D3DFOG_NONE)) {
+-			pixelState.fog = ImmediatePixelState::Fog::Vertex;
+-		}
+-	}
+-	const DWORD cull = st.Render(D3DRENDERSTATE_CULLMODE);
+-
+-	// The eye in world space, for the specular half vector (LOCALVIEWER).
+-	D3DVECTOR eye = {0, 0, 0};
+-	{
+-		const D3DRMMATRIX4D& v = draw.view;
+-		D3DVECTOR t = {v[3][0], v[3][1], v[3][2]};
+-		eye = {
+-			-(t.x * v[0][0] + t.y * v[0][1] + t.z * v[0][2]),
+-			-(t.x * v[1][0] + t.y * v[1][1] + t.z * v[1][2]),
+-			-(t.x * v[2][0] + t.y * v[2][1] + t.z * v[2][2])
+-		};
+-	}
+-
+-	const DWORD vertexCount = draw.vertexCount;
+-	m_transformedPositions.resize(vertexCount);
+-	for (DWORD i = 0; i < vertexCount; ++i) {
+-		const D3DVERTEX& v = draw.vertices[i];
+-		m_transformedPositions[i] = TransformPoint({v.x, v.y, v.z}, modelView);
+-	}
+-	m_vertexColors.resize(vertexCount);
+-	m_vertexSpeculars.resize(vertexCount);
+-	m_vertexLit.assign(vertexCount, 0);
+-
+-	auto lightVertex = [&](WORD i) {
+-		if (!m_vertexLit[i]) {
+-			m_vertexLit[i] = 1;
+-			const D3DVERTEX& v = draw.vertices[i];
+-			LightImmediateVertex(
+-				{v.x, v.y, v.z},
+-				{v.nx, v.ny, v.nz},
+-				draw.material,
+-				eye,
+-				pixelState.specular,
+-				m_vertexColors[i],
+-				m_vertexSpeculars[i]
+-			);
+-			if (pixelState.fog == ImmediatePixelState::Fog::Vertex) {
+-				float f = FogFactor(
+-					vertexFogMode,
+-					vertexFogStart,
+-					vertexFogEnd,
+-					vertexFogDensity,
+-					m_transformedPositions[i].z
+-				);
+-				m_vertexSpeculars[i].a = static_cast<Uint8>(f * 255.0f + 0.5f);
+-			}
+-		}
+-	};
+ 
+-	for (DWORD t = 0; t + 2 < draw.indexCount; t += 3) {
+-		const WORD i0 = draw.indices[t];
+-		const WORD i1 = draw.indices[t + 1];
+-		const WORD i2 = draw.indices[t + 2];
+-		const D3DVECTOR& p0 = m_transformedPositions[i0];
+-		const D3DVECTOR& p1 = m_transformedPositions[i1];
+-		const D3DVECTOR& p2 = m_transformedPositions[i2];
+-
+-		// Counter-clockwise on screen is IsBackface's test (D3DCULL_CCW).
+-		if (cull == static_cast<DWORD>(D3DCULL_CCW) && IsBackface(p0, p1, p2)) {
+-			continue;
+-		}
+-		if (cull == static_cast<DWORD>(D3DCULL_CW) && IsBackface(p0, p2, p1)) {
+-			continue;
+-		}
+-
+-		lightVertex(i0);
+-		SDL_Color c0 = m_vertexColors[i0], c1, c2;
+-		if (appearance.flat) {
+-			c1 = c2 = c0; // flat shading takes the first vertex's colour
+-		}
+-		else {
+-			lightVertex(i1);
+-			lightVertex(i2);
+-			c1 = m_vertexColors[i1];
+-			c2 = m_vertexColors[i2];
+-		}
+-		SDL_Color s0 = m_vertexSpeculars[i0], s1, s2;
+-		if (appearance.flat) {
+-			s1 = s2 = s0;
+-		}
+-		else {
+-			s1 = m_vertexSpeculars[i1];
+-			s2 = m_vertexSpeculars[i2];
+-		}
+-		SWLitVertex tri[3] = {
+-			{p0, {draw.vertices[i0].tu, draw.vertices[i0].tv}, c0, s0},
+-			{p1, {draw.vertices[i1].tu, draw.vertices[i1].tv}, c1, s1},
+-			{p2, {draw.vertices[i2].tu, draw.vertices[i2].tv}, c2, s2},
+-		};
+-		DrawImmediateClipped(tri, pixelState);
+-	}
++	m_transformer.Run(draw, m_lights, pixelState, [&](const SWLitVertex(&triangle)[3]) {
++		DrawImmediateClipped(triangle, pixelState);
++	});
+ 	return DD_OK;
+ }
+ 
+diff --git a/miniwin/src/internal/d3drmrenderer_software.h b/miniwin/src/internal/d3drmrenderer_software.h
+index ed4819a..8ee51c4 100644
+--- a/miniwin/src/internal/d3drmrenderer_software.h
++++ b/miniwin/src/internal/d3drmrenderer_software.h
+@@ -3,6 +3,7 @@
+ #include "d3drmrenderer.h"
+ #include "d3drmtexture_impl.h"
+ #include "ddraw_impl.h"
++#include "immediatemode.h"
+ 
+ #include <SDL3/SDL.h>
+ #include <cstddef>
+@@ -30,12 +31,7 @@ struct MeshCache {
+ // Vertex after transform + lighting: rasterizer input.  Carrying the lit
+ // color through clipping (linear interpolation) avoids re-lighting split
+ // vertices and the normal renormalization that required.
+-struct SWLitVertex {
+-	D3DVECTOR position;
+-	TexCoord texCoord;
+-	SDL_Color color;
+-	SDL_Color specular;
+-};
++using SWLitVertex = ImmediateLitVertex;
+ 
+ class Direct3DRMSoftwareRenderer : public Direct3DRMRenderer {
+ public:
+@@ -78,23 +74,13 @@ class Direct3DRMSoftwareRenderer : public Direct3DRMRenderer {
+ 		const Appearance& appearance
+ 	);
+ 	void DrawTriangleClipped(const SWLitVertex (&v)[3], const Appearance& appearance);
+-	// Immediate mode: the device's z, blend and cull states per pixel.
+-	struct ImmediatePixelState {
+-		bool zEnable, zWrite, blend;
+-		DWORD zFunc, srcBlend, destBlend;
+-		// Stage 0. texels is nullptr when untextured, and the stage then
+-		// passes the diffuse colour through.
++	// Immediate mode: the draw's decoded states, and stage 0's texels
++	// (nullptr when untextured, and the stage then passes the diffuse colour
++	// through).
++	struct ImmediatePixelState : ImmediateShading {
+ 		const Uint8* texels;
+ 		int texWidth, texHeight, texPitch;
+-		bool keyed, colorKeyEnable, linear;
+-		DWORD colorOp, colorArg1, colorArg2, alphaOp, alphaArg1, alphaArg2;
+-		bool specular; // SPECULARENABLE: add the vertex specular after stage 0
+-		// Fog, blended in last: per vertex (the factor rides in the
+-		// specular alpha, as in Direct3D) or per pixel from the view depth.
+-		enum class Fog { None, Vertex, Table } fog;
+-		DWORD fogMode; // D3DFOGMODE, for table fog
+-		float fogStart, fogEnd, fogDensity;
+-		float fogR, fogG, fogB;
++		bool keyed;
+ 	};
+ 	void DrawImmediateClipped(const SWLitVertex (&v)[3], const ImmediatePixelState& state);
+ 	void DrawImmediateTriangle(
+@@ -111,38 +97,10 @@ class Direct3DRMSoftwareRenderer : public Direct3DRMRenderer {
+ 		SDL_Color& color,
+ 		SDL_Color& specular
+ 	);
+-	// Direct3D's lighting of a D3DFVF_VERTEX with a D3DMATERIAL: emissive,
+-	// plus ambient light times the material's ambient, plus each light's
+-	// diffuse and (when wanted) specular.
+-	void LightImmediateVertex(
+-		const D3DVECTOR& position,
+-		const D3DVECTOR& normal,
+-		const D3DMATERIAL& material,
+-		const D3DVECTOR& eye,
+-		bool specular,
+-		SDL_Color& color,
+-		SDL_Color& specularColor
+-	);
+ 	void AddTextureDestroyCallback(Uint32 id, IDirect3DRMTexture* texture);
+ 	SDL_Surface* ConvertTexture(Direct3DRMTextureImpl* texture, bool& keyed) const;
+ 	void AddMeshDestroyCallback(Uint32 id, IDirect3DRMMesh* mesh);
+ 
+-	// Per-frame light data prepared once in PushLights so the per-vertex
+-	// lighting loop does no normalization.
+-	struct PreparedLight {
+-		D3DVECTOR vec; // normalized direction to light (directional) or position (positional)
+-		D3DVECTOR spotDirection; // unit direction the spot shines in
+-		FColor color;
+-		bool positional;
+-		bool spot;
+-		float range;
+-		float attenuation[3];
+-		float cosPenumbra; // the spot lights at full strength inside it, nothing outside
+-	};
+-	// How much of a positional light reaches worldPos (range, attenuation
+-	// and spot cone), and the unit vector from worldPos toward the light.
+-	float LightReach(const PreparedLight& light, const D3DVECTOR& worldPos, D3DVECTOR& toLight) const;
+-
+ 	D3DLightingModel m_lightingModel;
+ 
+ 	SDL_Surface* m_renderedImage = nullptr;
+@@ -150,12 +108,10 @@ class Direct3DRMSoftwareRenderer : public Direct3DRMRenderer {
+ 	SDL_Texture* m_uploadBuffer = nullptr;
+ 	SDL_Renderer* m_renderer;
+ 	const SDL_PixelFormatDetails* m_format;
+-	std::vector<PreparedLight> m_preparedLights;
++	PreparedLights m_lights; // prepared once in PushLights
++	ImmediateTransformer m_transformer;
+ 	std::vector<D3DVECTOR> m_halfway;
+ 	bool m_specular = false;
+-	float m_ambientR = 0.0f;
+-	float m_ambientG = 0.0f;
+-	float m_ambientB = 0.0f;
+ 	std::vector<TextureCache> m_textures;
+ 	std::vector<MeshCache> m_meshs;
+ 	D3DVALUE m_front;
+diff --git a/miniwin/src/internal/immediatemode.cpp b/miniwin/src/internal/immediatemode.cpp
+new file mode 100644
+index 0000000..01b838d
+--- /dev/null
++++ b/miniwin/src/internal/immediatemode.cpp
+@@ -0,0 +1,273 @@
++#include "immediatemode.h"
++
++#include "ddsurface_impl.h"
++
++#include <algorithm>
++#include <cmath>
++
++void PreparedLights::Prepare(const SceneLight* sceneLights, size_t count)
++{
++	// Fold ambient lights into a single base color and pre-normalize the
++	// directional light vectors so per-vertex lighting does no sqrt for them.
++	lights.clear();
++	ambientR = 0.0f;
++	ambientG = 0.0f;
++	ambientB = 0.0f;
++
++	for (size_t i = 0; i < count; ++i) {
++		const SceneLight& light = sceneLights[i];
++
++		if (light.positional == 0.0f && light.directional == 0.0f) {
++			ambientR += light.color.r;
++			ambientG += light.color.g;
++			ambientB += light.color.b;
++			continue;
++		}
++
++		PreparedLight prepared;
++		prepared.color = light.color;
++		prepared.spot = light.positional == 1.0f && light.directional == 1.0f;
++		prepared.range = light.range;
++		for (int a = 0; a < 3; ++a) {
++			prepared.attenuation[a] = light.attenuation[a];
++		}
++		// D3DRM hands its spot to Direct3D as theta = umbra, phi = penumbra
++		// and falloff 0. Direct3D's theta and phi are full cone angles, and
++		// with falloff 0 the spot is at full strength anywhere inside phi.
++		prepared.cosPenumbra = std::cos(light.penumbra * 0.5f);
++		if (light.directional == 1.0f) {
++			prepared.spotDirection = Normalize(light.direction);
++		}
++		if (light.directional == 1.0f && !prepared.spot) {
++			prepared.positional = false;
++			prepared.vec = Normalize({-light.direction.x, -light.direction.y, -light.direction.z});
++		}
++		else {
++			prepared.positional = true;
++			prepared.vec = light.position;
++		}
++		lights.push_back(prepared);
++	}
++}
++
++float LightReach(const PreparedLight& light, const D3DVECTOR& worldPos, D3DVECTOR& toLight)
++{
++	D3DVECTOR d = {light.vec.x - worldPos.x, light.vec.y - worldPos.y, light.vec.z - worldPos.z};
++	float distance = std::sqrt(DotProduct(d, d));
++	if (distance > light.range) {
++		return 0.0f;
++	}
++	toLight = distance > 0.0f ? D3DVECTOR{d.x / distance, d.y / distance, d.z / distance} : D3DVECTOR{0, 0, 0};
++	float denominator =
++		light.attenuation[0] + light.attenuation[1] * distance + light.attenuation[2] * distance * distance;
++	float reach = denominator > 0.0f ? 1.0f / denominator : 1.0f;
++	if (light.spot) {
++		float rho = -DotProduct(toLight, light.spotDirection);
++		if (rho <= light.cosPenumbra) {
++			return 0.0f;
++		}
++	}
++	return reach;
++}
++
++float ImmediateFogFactor(DWORD mode, float start, float end, float density, float z)
++{
++	float f = 1.0f;
++	switch (static_cast<D3DFOGMODE>(mode)) {
++	case D3DFOG_LINEAR:
++		f = end != start ? (end - z) / (end - start) : (z < start ? 1.0f : 0.0f);
++		break;
++	case D3DFOG_EXP:
++		f = std::exp(-density * z);
++		break;
++	case D3DFOG_EXP2:
++		f = std::exp(-(density * z) * (density * z));
++		break;
++	default:
++		break;
++	}
++	return std::min(1.0f, std::max(0.0f, f));
++}
++
++bool KeyImmediateTexture(const Direct3DRMTextureImpl* texture, SDL_Surface* rgba32)
++{
++	auto surface = static_cast<DirectDrawSurfaceImpl*>(texture->m_surface);
++	bool keyed = SDL_SurfaceHasColorKey(surface->m_surface);
++	if (texture->m_decalTransparency) {
++		keyed = true;
++		const Uint8 r = (texture->m_decalTransparentColor >> 16) & 0xff;
++		const Uint8 g = (texture->m_decalTransparentColor >> 8) & 0xff;
++		const Uint8 b = texture->m_decalTransparentColor & 0xff;
++		for (int y = 0; y < rgba32->h; ++y) {
++			Uint8* px = static_cast<Uint8*>(rgba32->pixels) + y * rgba32->pitch;
++			for (int x = 0; x < rgba32->w; ++x, px += 4) {
++				if (px[0] == r && px[1] == g && px[2] == b) {
++					px[3] = 0;
++				}
++			}
++		}
++	}
++	return keyed;
++}
++
++float ImmediateFloatState(DWORD bits)
++{
++	float value;
++	SDL_memcpy(&value, &bits, sizeof(value));
++	return value;
++}
++
++ImmediateShading DecodeImmediateShading(const ImmediateState& st)
++{
++	ImmediateShading s = {};
++	s.zEnable = st.Render(D3DRENDERSTATE_ZENABLE) != 0;
++	s.zWrite = st.Render(D3DRENDERSTATE_ZWRITEENABLE) != 0;
++	s.zFunc = st.Render(D3DRENDERSTATE_ZFUNC);
++	s.blend = st.Render(D3DRENDERSTATE_ALPHABLENDENABLE) != 0;
++	s.srcBlend = st.Render(D3DRENDERSTATE_SRCBLEND);
++	s.destBlend = st.Render(D3DRENDERSTATE_DESTBLEND);
++	s.cull = st.Render(D3DRENDERSTATE_CULLMODE);
++	s.flat = st.Render(D3DRENDERSTATE_SHADEMODE) == static_cast<DWORD>(D3DSHADE_FLAT);
++	s.colorKeyEnable = st.Render(D3DRENDERSTATE_COLORKEYENABLE) != 0;
++	s.linear = st.Render(D3DRENDERSTATE_TEXTUREMAG) != static_cast<DWORD>(D3DFILTER_NEAREST);
++	const DWORD* tss = st.textureStageState[0];
++	s.colorOp = tss[static_cast<DWORD>(D3DTSS_COLOROP)];
++	s.colorArg1 = tss[static_cast<DWORD>(D3DTSS_COLORARG1)];
++	s.colorArg2 = tss[static_cast<DWORD>(D3DTSS_COLORARG2)];
++	s.alphaOp = tss[static_cast<DWORD>(D3DTSS_ALPHAOP)];
++	s.alphaArg1 = tss[static_cast<DWORD>(D3DTSS_ALPHAARG1)];
++	s.alphaArg2 = tss[static_cast<DWORD>(D3DTSS_ALPHAARG2)];
++	s.specular = st.Render(D3DRENDERSTATE_SPECULARENABLE) != 0;
++	s.fog = ImmediateShading::Fog::None;
++	s.vertexFogMode = st.lightState[static_cast<DWORD>(D3DLIGHTSTATE_FOGMODE)];
++	s.vertexFogStart = ImmediateFloatState(st.lightState[static_cast<DWORD>(D3DLIGHTSTATE_FOGSTART)]);
++	s.vertexFogEnd = ImmediateFloatState(st.lightState[static_cast<DWORD>(D3DLIGHTSTATE_FOGEND)]);
++	s.vertexFogDensity = ImmediateFloatState(st.lightState[static_cast<DWORD>(D3DLIGHTSTATE_FOGDENSITY)]);
++	if (st.Render(D3DRENDERSTATE_FOGENABLE)) {
++		D3DCOLOR fogColor = st.Render(D3DRENDERSTATE_FOGCOLOR);
++		s.fogR = ((fogColor >> 16) & 0xff) / 255.0f;
++		s.fogG = ((fogColor >> 8) & 0xff) / 255.0f;
++		s.fogB = (fogColor & 0xff) / 255.0f;
++		s.fogMode = st.Render(D3DRENDERSTATE_FOGTABLEMODE);
++		if (s.fogMode != static_cast<DWORD>(D3DFOG_NONE)) {
++			s.fog = ImmediateShading::Fog::Table;
++			s.fogStart = ImmediateFloatState(st.Render(D3DRENDERSTATE_FOGTABLESTART));
++			s.fogEnd = ImmediateFloatState(st.Render(D3DRENDERSTATE_FOGTABLEEND));
++			s.fogDensity = ImmediateFloatState(st.Render(D3DRENDERSTATE_FOGTABLEDENSITY));
++		}
++		else if (s.vertexFogMode != static_cast<DWORD>(D3DFOG_NONE)) {
++			s.fog = ImmediateShading::Fog::Vertex;
++		}
++	}
++	return s;
++}
++
++static D3DVECTOR Subtract(const D3DVECTOR& a, const D3DVECTOR& b)
++{
++	return {a.x - b.x, a.y - b.y, a.z - b.z};
++}
++
++bool IsBackface(const D3DVECTOR& v0, const D3DVECTOR& v1, const D3DVECTOR& v2)
++{
++	D3DVECTOR normal = CrossProduct(Subtract(v1, v0), Subtract(v2, v0));
++	return DotProduct(normal, v0) >= 0.0f;
++}
++
++void ImmediateTransformer::Begin(const ImmediateDraw& draw, const PreparedLights& lights, const ImmediateShading& shading)
++{
++	m_draw = &draw;
++	m_lights = &lights;
++	m_shading = &shading;
++
++	D3DRMMATRIX4D modelView;
++	MultiplyMatrix(modelView, draw.world, draw.view);
++	SDL_memcpy(m_worldMatrix, draw.world, sizeof(D3DRMMATRIX4D));
++	NormalMatrix(m_normalMatrix, draw.world);
++
++	// The eye in world space, for the specular half vector (LOCALVIEWER).
++	const D3DRMMATRIX4D& v = draw.view;
++	D3DVECTOR t = {v[3][0], v[3][1], v[3][2]};
++	m_eye = {
++		-(t.x * v[0][0] + t.y * v[0][1] + t.z * v[0][2]),
++		-(t.x * v[1][0] + t.y * v[1][1] + t.z * v[1][2]),
++		-(t.x * v[2][0] + t.y * v[2][1] + t.z * v[2][2])
++	};
++
++	const DWORD vertexCount = draw.vertexCount;
++	m_positions.resize(vertexCount);
++	for (DWORD i = 0; i < vertexCount; ++i) {
++		const D3DVERTEX& vertex = draw.vertices[i];
++		m_positions[i] = TransformPoint({vertex.x, vertex.y, vertex.z}, modelView);
++	}
++	m_colors.resize(vertexCount);
++	m_speculars.resize(vertexCount);
++	m_lit.assign(vertexCount, 0);
++}
++
++// Direct3D's lighting of a D3DFVF_VERTEX with a D3DMATERIAL: emissive, plus
++// ambient light times the material's ambient, plus each light's diffuse and
++// (when wanted) specular. Vertex fog's factor goes in the specular alpha.
++void ImmediateTransformer::Light(WORD index)
++{
++	if (m_lit[index]) {
++		return;
++	}
++	m_lit[index] = 1;
++	const D3DVERTEX& v = m_draw->vertices[index];
++	const D3DMATERIAL& material = m_draw->material;
++	const PreparedLights& lights = *m_lights;
++	const bool specular = m_shading->specular;
++
++	D3DVECTOR normal = Normalize(TransformNormal({v.nx, v.ny, v.nz}, m_normalMatrix));
++	D3DVECTOR worldPos = TransformPoint({v.x, v.y, v.z}, m_worldMatrix);
++	D3DVECTOR toEye = Normalize(Subtract(m_eye, worldPos));
++
++	FColor diffuse = {
++		material.emissive.r + lights.ambientR * material.ambient.r,
++		material.emissive.g + lights.ambientG * material.ambient.g,
++		material.emissive.b + lights.ambientB * material.ambient.b,
++		0
++	};
++	FColor spec = {0, 0, 0, 0};
++	for (const PreparedLight& light : lights.lights) {
++		D3DVECTOR lightVec = light.vec;
++		float reach = 1.0f;
++		if (light.positional) {
++			reach = LightReach(light, worldPos, lightVec);
++			if (reach <= 0.0f) {
++				continue;
++			}
++		}
++		float dotNL = DotProduct(normal, lightVec);
++		if (dotNL <= 0.0f) {
++			continue;
++		}
++		diffuse.r += reach * dotNL * light.color.r * material.diffuse.r;
++		diffuse.g += reach * dotNL * light.color.g * material.diffuse.g;
++		diffuse.b += reach * dotNL * light.color.b * material.diffuse.b;
++		if (specular && material.power > 0.0f) {
++			D3DVECTOR halfway = Normalize({lightVec.x + toEye.x, lightVec.y + toEye.y, lightVec.z + toEye.z});
++			float dotNH = DotProduct(normal, halfway);
++			if (dotNH > 0.0f) {
++				float power = reach * std::pow(dotNH, material.power);
++				spec.r += power * light.color.r * material.specular.r;
++				spec.g += power * light.color.g * material.specular.g;
++				spec.b += power * light.color.b * material.specular.b;
++			}
++		}
++	}
++
++	auto toByte = [](float c) { return static_cast<Uint8>(std::min(255.0f, std::max(0.0f, c * 255.0f + 0.5f))); };
++	m_colors[index] = {toByte(diffuse.r), toByte(diffuse.g), toByte(diffuse.b), toByte(material.diffuse.a)};
++	m_speculars[index] = {toByte(spec.r), toByte(spec.g), toByte(spec.b), 0};
++	if (m_shading->fog == ImmediateShading::Fog::Vertex) {
++		float f = ImmediateFogFactor(
++			m_shading->vertexFogMode,
++			m_shading->vertexFogStart,
++			m_shading->vertexFogEnd,
++			m_shading->vertexFogDensity,
++			m_positions[index].z
++		);
++		m_speculars[index].a = static_cast<Uint8>(f * 255.0f + 0.5f);
++	}
++}
+diff --git a/miniwin/src/internal/immediatemode.h b/miniwin/src/internal/immediatemode.h
+new file mode 100644
+index 0000000..f2edb58
+--- /dev/null
++++ b/miniwin/src/internal/immediatemode.h
+@@ -0,0 +1,150 @@
++#pragma once
++
++#include "d3drmrenderer.h"
++#include "d3drmtexture_impl.h"
++#include "mathutils.h"
++
++#include <SDL3/SDL.h>
++#include <vector>
++
++// Immediate mode's transform and lighting on the CPU, as a DirectX 6 HAL
++// device without hardware T&L had it done for it: every backend that draws
++// immediate mode lights and culls the same way, and only rasterizes
++// differently.
++
++// A positional or directional scene light, prepared once per PushLights so
++// that per-vertex lighting does no normalization.
++struct PreparedLight {
++	D3DVECTOR vec;           // normalized direction to light (directional) or position (positional)
++	D3DVECTOR spotDirection; // unit direction the spot shines in
++	FColor color;
++	bool positional;
++	bool spot;
++	float range;
++	float attenuation[3];
++	float cosPenumbra; // the spot lights at full strength inside it, nothing outside
++};
++
++// The scene's lights for per-vertex lighting: ambient lights folded into one
++// colour, the others prepared.
++struct PreparedLights {
++	std::vector<PreparedLight> lights;
++	float ambientR = 0.0f;
++	float ambientG = 0.0f;
++	float ambientB = 0.0f;
++
++	void Prepare(const SceneLight* sceneLights, size_t count);
++};
++
++// How much of a positional light reaches worldPos (range, attenuation and
++// spot cone), and the unit vector from worldPos toward the light.
++float LightReach(const PreparedLight& light, const D3DVECTOR& worldPos, D3DVECTOR& toLight);
++
++// Direct3D's fog factor at view depth z: 1 leaves the colour, 0 is all fog.
++float ImmediateFogFactor(DWORD mode, float start, float end, float density, float z);
++
++// Keys an RGBA32 copy of a texture's surface for immediate mode. The colour
++// key already became alpha 0 in the conversion; the decal transparent colour
++// becomes alpha 0 here. Returns whether alpha-0 texels stand for a key rather
++// than for real alpha.
++bool KeyImmediateTexture(const Direct3DRMTextureImpl* texture, SDL_Surface* rgba32);
++
++// A float render or light state, stored in its DWORD's bits.
++float ImmediateFloatState(DWORD bits);
++
++// A vertex after transform and lighting: view-space position, texture
++// coordinates, the lit diffuse colour (alpha from the material) and the
++// specular colour, whose alpha carries the vertex fog factor.
++struct ImmediateLitVertex {
++	D3DVECTOR position;
++	TexCoord texCoord;
++	SDL_Color color;
++	SDL_Color specular;
++};
++
++// What a draw's state asks of the rasterizer, decoded from the device's
++// render, light and texture stage states.
++struct ImmediateShading {
++	bool zEnable, zWrite, blend;
++	DWORD zFunc, srcBlend, destBlend;
++	DWORD cull;
++	bool flat;
++	bool colorKeyEnable, linear;
++	// Stage 0. The stage passes the diffuse colour through when the draw is
++	// untextured or COLOROP is DISABLE.
++	DWORD colorOp, colorArg1, colorArg2, alphaOp, alphaArg1, alphaArg2;
++	bool specular; // SPECULARENABLE: add the vertex specular after stage 0
++	// Fog, blended in last: per vertex (the factor rides in the specular
++	// alpha, as in Direct3D) or per pixel from the view depth.
++	enum class Fog {
++		None,
++		Vertex,
++		Table
++	} fog;
++	DWORD fogMode; // D3DFOGMODE, for table fog
++	float fogStart, fogEnd, fogDensity;
++	float fogR, fogG, fogB;
++	// The vertex fog the light states describe, for Fog::Vertex.
++	DWORD vertexFogMode;
++	float vertexFogStart, vertexFogEnd, vertexFogDensity;
++};
++
++ImmediateShading DecodeImmediateShading(const ImmediateState& state);
++
++// A view-space triangle wound counter-clockwise on screen (a back face to
++// D3DCULL_CCW).
++bool IsBackface(const D3DVECTOR& v0, const D3DVECTOR& v1, const D3DVECTOR& v2);
++
++// Transforms a draw's vertices into view space, culls back faces, and lights
++// the vertices of the triangles that remain, each vertex once.
++class ImmediateTransformer {
++public:
++	// Calls emit(const ImmediateLitVertex (&triangle)[3]) for each triangle
++	// the cull mode keeps, in index order. Flat shading gives the whole
++	// triangle its first vertex's colours.
++	template <typename Emit>
++	void Run(const ImmediateDraw& draw, const PreparedLights& lights, const ImmediateShading& shading, Emit&& emit)
++	{
++		Begin(draw, lights, shading);
++		const bool cullCCW = shading.cull == static_cast<DWORD>(D3DCULL_CCW);
++		const bool cullCW = shading.cull == static_cast<DWORD>(D3DCULL_CW);
++		for (DWORD t = 0; t + 2 < draw.indexCount; t += 3) {
++			const WORD i0 = draw.indices[t];
++			const WORD i1 = draw.indices[t + 1];
++			const WORD i2 = draw.indices[t + 2];
++			const D3DVECTOR& p0 = m_positions[i0];
++			const D3DVECTOR& p1 = m_positions[i1];
++			const D3DVECTOR& p2 = m_positions[i2];
++			// Counter-clockwise on screen is IsBackface's test (D3DCULL_CCW).
++			if ((cullCCW && IsBackface(p0, p1, p2)) || (cullCW && IsBackface(p0, p2, p1))) {
++				continue;
++			}
++			Light(i0);
++			const WORD c1 = shading.flat ? i0 : i1;
++			const WORD c2 = shading.flat ? i0 : i2;
++			Light(c1);
++			Light(c2);
++			const ImmediateLitVertex triangle[3] = {
++				{p0, {draw.vertices[i0].tu, draw.vertices[i0].tv}, m_colors[i0], m_speculars[i0]},
++				{p1, {draw.vertices[i1].tu, draw.vertices[i1].tv}, m_colors[c1], m_speculars[c1]},
++				{p2, {draw.vertices[i2].tu, draw.vertices[i2].tv}, m_colors[c2], m_speculars[c2]},
++			};
++			emit(triangle);
++		}
++	}
++
++private:
++	void Begin(const ImmediateDraw& draw, const PreparedLights& lights, const ImmediateShading& shading);
++	void Light(WORD index);
++
++	const ImmediateDraw* m_draw = nullptr;
++	const PreparedLights* m_lights = nullptr;
++	const ImmediateShading* m_shading = nullptr;
++	D3DRMMATRIX4D m_worldMatrix;
++	Matrix3x3 m_normalMatrix;
++	D3DVECTOR m_eye;
++	std::vector<D3DVECTOR> m_positions;
++	std::vector<SDL_Color> m_colors;
++	std::vector<SDL_Color> m_speculars;
++	std::vector<Uint8> m_lit;
++};
