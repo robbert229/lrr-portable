@@ -47,3 +47,6 @@ lrr_unit_test(input_unit SOURCES ${ENGINE_DIR}/test_input_unit.cpp
 
 # Exercise CRLF reads, load notifications and the mounted path rewrite.
 lrr_unit_test(files_dispatch SOURCES ${ENGINE_DIR}/test_files_dispatch.cpp LABELS files)
+
+# Check texture sequence names across zero padding and a decimal carry.
+lrr_unit_test(mesh_unit SOURCES ${ENGINE_DIR}/test_mesh_unit.cpp LABELS mesh_unit)
