@@ -18,7 +18,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-hdiutil attach -quiet -nobrowse -readonly -mountpoint "$mnt" "$dmg"
+hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$dmg"
 app="$mnt/LegoRR.app"
 plist="$app/Contents/Info.plist"
 

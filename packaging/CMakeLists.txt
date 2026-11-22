@@ -95,7 +95,9 @@ set(CPACK_PACKAGE_VENDOR "lrr-portable")
 set(CPACK_PACKAGE_VERSION "${LRR_SEMANTIC_VERSION}")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${LRR_APP_SUMMARY}")
 set(CPACK_PACKAGE_HOMEPAGE_URL "${LRR_APP_URL}")
-set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
+# No CPACK_RESOURCE_FILE_LICENSE: DragNDrop would embed it as a licence
+# agreement that a disk image cannot be mounted without accepting. The licence
+# text is installed beside LegoRR in the Linux and Windows packages.
 set(CPACK_PACKAGE_DIRECTORY "dist")
 set(CPACK_PACKAGE_FILE_NAME "lrr-portable-${PROJECT_VERSION}-${LRR_PACKAGE_NAME}")
 if(WIN32)
