@@ -543,9 +543,10 @@ int direct3drm_device_initialize(DirectDraw_Device* dev, void* ddraw1,
                                  LPDIRECTDRAWSURFACE4 backSurf, int doubleBuffered)
 {
     LPDIRECT3DRM lpD3DRM1;
-    LPDIRECTDRAWSURFACE surf1;
+    LPDIRECTDRAWSURFACE surf1 = NULL;
     LPDIRECT3DDEVICE2 imdev2;
     HRESULT r = D3DRM_OK;
+    HRESULT qr;
     GUID* guid = NULL;
 
     if (dev) {
@@ -562,11 +563,18 @@ int direct3drm_device_initialize(DirectDraw_Device* dev, void* ddraw1,
     }
 
     if (Direct3DRMCreate(&lpD3DRM1) == D3DRM_OK) {
-        if (lpD3DRM1->QueryInterface(IID_IDirect3DRM3, &s_main_d3drm) == D3DRM_OK) {
+        /* s_main_d3drm holds its own reference to the object, so the
+         * IDirect3DRM reference is released here (the original keeps it for
+         * the rest of the run). */
+        qr = lpD3DRM1->QueryInterface(IID_IDirect3DRM3, &s_main_d3drm);
+        lpD3DRM1->Release();
+        if (qr == D3DRM_OK) {
             backSurf->QueryInterface(IID_IDirectDrawSurface, (void**)&surf1);
-            if ((r = lpD3DRM()->CreateDeviceFromSurface(
-                     guid, (LPDIRECTDRAW)ddraw1, surf1, 0,
-                     (LPDIRECT3DRMDEVICE3*)&s_main_device)) == D3DRM_OK) {
+            r = lpD3DRM()->CreateDeviceFromSurface(
+                    guid, (LPDIRECTDRAW)ddraw1, surf1, 0,
+                    (LPDIRECT3DRMDEVICE3*)&s_main_device);
+            if (surf1) surf1->Release();
+            if (r == D3DRM_OK) {
                 lpDevice()->GetDirect3DDevice2(&imdev2);
                 imdev2->QueryInterface(IID_IDirect3DDevice3, &s_main_im_device);
                 imdev2->Release();
@@ -577,6 +585,10 @@ int direct3drm_device_initialize(DirectDraw_Device* dev, void* ddraw1,
                 directx_result_diagnostic_dispatch(
                     // STRING: LEGORR 0x004aadb0
                     r, 3, "C:\\Dev\\SourceSafe\\gods98_dx6\\gods98\\src\\Main.c", 568);
+                /* Init.c can set the display up again on the next device,
+                 * which would overwrite the pointer and leak the object. */
+                lpD3DRM()->Release();
+                s_main_d3drm = NULL;
             }
         }
     }
