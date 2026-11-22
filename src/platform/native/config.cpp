@@ -320,6 +320,13 @@ bool LRR_LoadConfig(const char* iniPath)
     g_display.width = iniparser_getint(dict, LRR_CONFIG_XRES, g_display.width);
     g_display.height = iniparser_getint(dict, LRR_CONFIG_YRES, g_display.height);
     SDL_strlcpy(g_display.device, iniparser_getstring(dict, LRR_CONFIG_DEVICE, ""), sizeof(g_display.device));
+#ifdef __3DS__
+    /* A 3DS has no windows, and a windowed display takes the window's size,
+     * the screen's 320x240: the display is full screen, at the configured
+     * mode (640x480), which the Citro3D renderer fits onto the bottom
+     * screen. */
+    g_display.fullScreen = true;
+#endif
     g_trainingSave = ParseTrainingSave(
         iniparser_getstring(dict, LRR_CONFIG_TRAININGSAVE, TrainingSaveName(kDefaultTrainingSave)));
     g_displayScaling = ParseDisplayScaling(
