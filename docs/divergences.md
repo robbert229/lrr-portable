@@ -5,7 +5,8 @@ This file lists every place where it deliberately does not, and why.
 AGENTS.md requires an entry here for each such change. New divergences
 should, where they can:
 
-- come with a `LegoRR.ini` key (in `[legorr]`) that restores the original;
+- come with a `LegoRR.ini` key in the `[tweaks]` section that restores the
+  original;
 - mark their call site `// [divergence:<name>]`.
 
 Older ones carry a `PORT-ONLY:` comment instead.
@@ -44,7 +45,7 @@ reference.
 - **Why:** the reference binary's behaviour looks like an oversight in the
   game data rather than a design choice. Players lose the progress they have
   just made, and nothing tells them so.
-- **Configurable:** `Training Save = prompt` (the default) or `off`, which
+- **Configurable:** `[tweaks]` `Training Save = prompt` (the default) or `off`, which
   keeps the original.
 - **Where:** `reward_check_skip` in `src/game/reward.c`;
   `LRR_GetTrainingSave` in `src/platform/native/config.h`.

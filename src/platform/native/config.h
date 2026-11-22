@@ -15,7 +15,8 @@
  * and the 3D device. The port starts without the dialog.
  *
  * And it holds the port's opt-outs from its divergences from the original
- * game (docs/divergences.md): legorr:Training Save. */
+ * game (docs/divergences.md), in their own section, [tweaks]:
+ * tweaks:Training Save. */
 #ifndef LEGORRR_PLATFORM_NATIVE_CONFIG_H
 #define LEGORRR_PLATFORM_NATIVE_CONFIG_H
 
@@ -31,7 +32,9 @@
 #define LRR_CONFIG_XRES "legorr:Horizontal Resolution"
 #define LRR_CONFIG_YRES "legorr:Vertical Resolution"
 #define LRR_CONFIG_DEVICE "legorr:3D Device"
-#define LRR_CONFIG_TRAININGSAVE "legorr:Training Save"
+/* The section for the divergences' switches. */
+#define LRR_CONFIG_TWEAKS_SECTION "tweaks"
+#define LRR_CONFIG_TRAININGSAVE "tweaks:Training Save"
 
 /* The display settings, in place of the dialog's choices. device is a 3D
  * device's description as DirectDraw.c lists it, e.g. "Miniwin driver
@@ -46,7 +49,7 @@ struct LRR_DisplayConfig {
     char device[256];
 };
 
-/* legorr:Training Save (docs/divergences.md, "Save after a training
+/* tweaks:Training Save (docs/divergences.md, "Save after a training
  * mission"). The original shows no rewards screen, and so no Save button,
  * after a level whose Lego.cfg block has no Reward section (the eight
  * training missions), and keeps their progress only in a slot the Load menu
@@ -68,7 +71,7 @@ bool LRR_LoadConfig(const char* iniPath);
  * runs: a 640x480 window on the dialog's default device. */
 const LRR_DisplayConfig* LRR_GetDisplayConfig();
 
-/* The legorr:Training Save setting LRR_LoadConfig read, or the default,
+/* The tweaks:Training Save setting LRR_LoadConfig read, or the default,
  * LRR_TRAINING_SAVE_PROMPT, before it runs. */
 LRR_TrainingSave LRR_GetTrainingSave();
 

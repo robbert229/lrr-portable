@@ -69,6 +69,8 @@ full screen = false
 horizontal resolution = 640
 vertical resolution = 480
 3d device =
+
+[tweaks]
 training save = prompt
 ```
 
@@ -87,6 +89,10 @@ isle-portable does for Lego Island's `CONFIG.EXE`:
   `Miniwin driver (Miniwin Emulation)` or
   `Miniwin driver (Miniwin Paletted Software)`. Empty picks the default
   device.
+
+The `[tweaks]` section switches the port's deliberate changes to the
+original game:
+
 - `training save`: `prompt` (the default) opens the Save Game screen after a
   completed training mission, which the original never offers; `off` keeps
   the original's behaviour.

@@ -85,6 +85,7 @@ dictionary* DefaultConfig(const std::string& prefPath)
     iniparser_set(dict, LRR_CONFIG_XRES, std::to_string(kDefaultDisplay.width).c_str());
     iniparser_set(dict, LRR_CONFIG_YRES, std::to_string(kDefaultDisplay.height).c_str());
     iniparser_set(dict, LRR_CONFIG_DEVICE, kDefaultDisplay.device);
+    iniparser_set(dict, LRR_CONFIG_TWEAKS_SECTION, NULL);
     iniparser_set(dict, LRR_CONFIG_TRAININGSAVE, TrainingSaveName(kDefaultTrainingSave));
 
 #ifdef __3DS__
