@@ -50,6 +50,10 @@ make run
 make test
 ```
 
+CI also builds packages: an AppImage and a Flatpak for Linux, a DMG for
+macOS and a ZIP for Windows, uploaded as workflow artifacts. They hold no game
+data. See [Packages](docs/building.md#packages).
+
 ### Saves and configuration
 
 The original game keeps its saves in `Data\Saves` inside the install. Like

@@ -148,12 +148,19 @@ keep `LRR_SDL3_GIT_TAG` in `CMakeLists.txt` on the same commit. An existing
 build directory keeps its cached `LRR_SDL3_GIT_TAG`; delete that entry, or
 the directory, to pick up a new one.
 
+The `native-packages` workflow (`.github/workflows/native-packages.yml`) builds
+the Linux packages: a TGZ and an AppImage on `ubuntu-24.04` (with the AppImage
+checks and a smoke run of the image), and the Flatpak on x86_64 and aarch64
+in the `flatpak-github-actions:freedesktop-24.08` container. It is not a
+required check. Every package workflow uploads its packages as artifacts;
+there is no continuous release.
+
 The `native-hosts` workflow (`.github/workflows/native-hosts.yml`) runs on the
 same events and builds the port on macOS arm64 (`macos-latest`), macOS Intel
 (`macos-15-intel`), both with `CMAKE_OSX_DEPLOYMENT_TARGET=12.0`, FreeBSD
 15.1 in a VM, and Windows: MSVC x86 and x64 (`windows-2025`, x86 running
 under WOW64), MSVC arm64 (`windows-11-arm`), and msys2 MinGW64. Its jobs are
-not required checks. Each runs `tools/setup-miniwin.sh`, then the commands
+not required checks. The macOS and Windows jobs also build the CPack package and upload it. Each runs `tools/setup-miniwin.sh`, then the commands
 from [Tests](#tests) with Ninja and a Release build; SDL3 is the static build
 configure fetches at `LRR_SDL3_GIT_TAG`, with SDL's default drivers, except on
 MinGW64, which uses msys2's `mingw-w64-x86_64-sdl3` package. The `--wrap`
@@ -170,6 +177,54 @@ inside a developer environment (`ilammy/msvc-dev-cmd`), because Git Bash's
 statically, and a build against a shared SDL3 copies `SDL3.dll` beside
 `LegoRR.exe` (and the tests).
 
+
+## Packages
+
+`cmake --build build --target package` (or `cpack` in the build directory)
+writes `lrr-portable-<version>-<system>-<arch>` to `build/dist`; the
+`LRR_PACKAGING` option, on for Linux, macOS, FreeBSD and Windows, adds the
+install rules and CPack settings from `packaging/`. It follows
+isle-portable's `packaging/` tree, and the same files hold what each host
+needs:
+
+- **Linux:** a TGZ with `LegoRR`, a desktop entry and AppStream metadata
+  (generated from the templates in `packaging/linux`) and the icon. The
+  AppImage is `packaging/linux/appimage/build.sh build`: it installs into
+  `build/AppDir`, lets linuxdeploy copy in the libraries `LegoRR` needs,
+  swaps in the project's `AppRun`, and packs it with appimagetool. Both tools
+  are pinned releases, checked against a SHA-256. `check.sh` then fails the
+  build when anything in the image needs a glibc newer than 2.39 (Ubuntu
+  24.04's, the CI host) or a CPU above baseline x86-64. The AppImage is
+  x86_64 only. The Flatpak
+  (`packaging/linux/flatpak/io.github.robbert229.LegoRR.yml`, x86_64 and
+  aarch64) builds on the freedesktop 24.08 runtime. It copies the working
+  tree, so run `tools/setup-miniwin.sh` first, and it fetches SDL3 during the
+  build. Movies in the Flatpak need the runtime's
+  `org.freedesktop.Platform.ffmpeg-full//24.08` extension.
+- **macOS:** a DMG holding `LegoRR.app` (`packaging/macos`): `Info.plist`, the
+  icon, and an ad-hoc signature, which Apple silicon needs to run the binary.
+  It is neither Developer ID signed nor notarized, so Gatekeeper asks on the
+  first launch (right-click, Open). With packaging on, the build tree's
+  program is `build/LegoRR.app/Contents/MacOS/LegoRR`, which `make run` finds.
+  `packaging/macos/verify.sh` checks a DMG.
+- **Windows:** a ZIP with `LegoRR.exe`, `LICENSE` and, for a shared SDL3,
+  `SDL3.dll`.
+
+The icon is original artwork drawn for this repository
+(`packaging/icons/lrr-portable.svg`, LGPL-3.0-or-later); it shares nothing
+with the game's own art, and the repository ships no game data in any package.
+`packaging/icons/regenerate.py` renders the SVG into the macOS bundle's
+`AppIcon.icns`, which is committed.
+
+The application id is `io.github.robbert229.LegoRR`, set once as `LRR_APP_ID`
+in `packaging/CMakeLists.txt` and used by the desktop entry, the AppStream
+component, the Flatpak and the bundle identifier. It follows Flathub's
+`io.github.<owner>.<name>` convention for a project on GitHub.
+
+Every package expects the owner's own game files: set `diskpath` in
+`LegoRR.ini` (see the README) to the directory that holds `Data` and the WADs,
+because a launcher or an AppImage does not start in it. The Flatpak reads
+`/run/media`, `/media`, `/mnt` and the home directory read-only.
 
 ## Sources
 

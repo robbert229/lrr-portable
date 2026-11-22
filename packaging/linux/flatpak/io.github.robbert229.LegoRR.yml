@@ -1,0 +1,67 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+# The Flatpak (x86_64 and aarch64), adapted from isle-portable's
+# packaging/linux/flatpak/org.legoisland.Isle.json.
+#
+# The build copies the working tree, so run tools/setup-miniwin.sh first: it
+# fetches and patches the miniwin sources under 3rdparty/, and the build has
+# no git directory to check them with (LRR_CHECK_MINIWIN_PATCHES=OFF). CMake
+# fetches SDL3, iniparser and miniaudio itself, which needs the network
+# (build-args); a Flathub submission would have to list them as sources.
+#
+#   flatpak-builder --user --install --force-clean build-dir \
+#       packaging/linux/flatpak/io.github.robbert229.LegoRR.yml
+#
+# The package holds no game data. The app reads the game's directory (diskpath
+# in LegoRR.ini) read-only from the host locations below.
+id: io.github.robbert229.LegoRR
+runtime: org.freedesktop.Platform
+runtime-version: "24.08"
+sdk: org.freedesktop.Sdk
+command: LegoRR
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --socket=pulseaudio
+  # Game controllers.
+  - --device=all
+  - --filesystem=/run/media:ro
+  - --filesystem=/media:ro
+  - --filesystem=/mnt:ro
+  - --filesystem=home:ro
+# The game's movies load FFmpeg 7 at run time (docs/building.md); this is the
+# runtime's optional codec extension, which flatpak installs beside the app.
+add-extensions:
+  org.freedesktop.Platform.ffmpeg-full:
+    directory: lib/ffmpeg
+    version: "24.08"
+    add-ld-path: .
+    autodelete: false
+cleanup-commands:
+  - mkdir -p /app/lib/ffmpeg
+modules:
+  - name: lrr-portable
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DBUILD_TESTING=OFF
+      - -DLRR_CHECK_MINIWIN_PATCHES=OFF
+    build-options:
+      build-args:
+        - --share=network
+    sources:
+      - type: dir
+        path: ../../../src
+        dest: src
+      - type: dir
+        path: ../../../3rdparty
+        dest: 3rdparty
+        skip:
+          - .git
+      - type: dir
+        path: ../../../packaging
+        dest: packaging
+      - type: file
+        path: ../../../CMakeLists.txt
+      - type: file
+        path: ../../../LICENSE

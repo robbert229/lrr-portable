@@ -1,0 +1,89 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+#
+# Packages (issue #922): `cpack` in the build directory writes
+# lrr-portable-<version>-<system>-<arch> to build/dist, from `install()`:
+#   - Linux:   a TGZ with LegoRR, the desktop entry, the AppStream metadata and
+#              the icon; packaging/linux also holds the AppImage and Flatpak
+#              recipes the CI packages workflow runs.
+#   - macOS:   a DragNDrop disk image holding LegoRR.app (packaging/macos).
+#   - Windows: a ZIP with LegoRR.exe, and SDL3.dll beside it when SDL is shared.
+# The layout follows isle-portable's packaging/ (LGPL-3.0-or-later; keep the
+# attribution when adapting more of it). No package holds game data: every one
+# expects the owner's own LegoRR0.wad and LegoRR1.wad, found through `diskpath`
+# in LegoRR.ini (README.md).
+
+# The reverse-DNS application id, shared by the desktop entry, the AppStream
+# component, the Flatpak and the macOS bundle identifier. It follows Flathub's
+# convention for a project hosted on GitHub: io.github.<owner>.<name>.
+set(LRR_APP_ID "io.github.robbert229.LegoRR")
+set(LRR_APP_NAME "LRR Portable")
+set(LRR_APP_SUMMARY "Portable reconstruction of Lego Rock Raiders")
+set(LRR_APP_SPDX "LGPL-3.0-or-later")
+set(LRR_APP_URL "https://github.com/robbert229/lrr-portable")
+
+# The AppStream release date. SOURCE_DATE_EPOCH keeps it reproducible.
+string(TIMESTAMP LRR_BUILD_DATE "%Y-%m-%d" UTC)
+# CI numbers its packages by run, as isle-portable does, so that two runs of
+# one version sort apart.
+if("$ENV{GITHUB_ACTIONS}" STREQUAL "true" AND NOT "$ENV{GITHUB_RUN_NUMBER}" STREQUAL "")
+  set(LRR_SEMANTIC_VERSION "${PROJECT_VERSION}~build$ENV{GITHUB_RUN_NUMBER}")
+else()
+  set(LRR_SEMANTIC_VERSION "${PROJECT_VERSION}")
+endif()
+
+# Windows puts LegoRR.exe at the root of its ZIP; elsewhere bin/.
+if(WIN32)
+  set(CMAKE_INSTALL_BINDIR "." CACHE PATH "Binary install directory")
+  set(CMAKE_INSTALL_DOCDIR "." CACHE PATH "Documentation install directory")
+else()
+  include(GNUInstallDirs)
+endif()
+
+install(TARGETS program
+  RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+  BUNDLE DESTINATION ".")
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  add_subdirectory(linux)
+endif()
+if(APPLE AND NOT IOS)
+  add_subdirectory(macos)
+endif()
+if(WIN32)
+  # A shared SDL3 (an installed package; the fetched one is static) travels
+  # with the exe, as the post-build step copies it beside the build's.
+  install(FILES $<TARGET_RUNTIME_DLLS:program> DESTINATION "${CMAKE_INSTALL_BINDIR}")
+endif()
+if(NOT APPLE)
+  install(FILES "${PROJECT_SOURCE_DIR}/LICENSE" DESTINATION "${CMAKE_INSTALL_DOCDIR}")
+endif()
+
+# The package name: lrr-portable-0.1.0-Linux-x86_64, -Darwin-arm64,
+# -Windows-x64 ...
+if(MSVC)
+  string(TOLOWER "${MSVC_CXX_ARCHITECTURE_ID}" _lrr_arch)
+elseif(APPLE AND CMAKE_OSX_ARCHITECTURES)
+  string(REPLACE ";" "-" _lrr_arch "${CMAKE_OSX_ARCHITECTURES}")
+else()
+  string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" _lrr_arch)
+endif()
+set(LRR_PACKAGE_NAME "${CMAKE_SYSTEM_NAME}-${_lrr_arch}"
+  CACHE STRING "Platform name of the package")
+
+set(CPACK_PACKAGE_NAME "lrr-portable")
+set(CPACK_PACKAGE_VENDOR "lrr-portable")
+set(CPACK_PACKAGE_VERSION "${LRR_SEMANTIC_VERSION}")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${LRR_APP_SUMMARY}")
+set(CPACK_PACKAGE_HOMEPAGE_URL "${LRR_APP_URL}")
+set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
+set(CPACK_PACKAGE_DIRECTORY "dist")
+set(CPACK_PACKAGE_FILE_NAME "lrr-portable-${PROJECT_VERSION}-${LRR_PACKAGE_NAME}")
+if(WIN32)
+  set(CPACK_GENERATOR ZIP)
+elseif(APPLE)
+  set(CPACK_GENERATOR DragNDrop)
+  set(CPACK_DMG_VOLUME_NAME "${LRR_APP_NAME}")
+else()
+  set(CPACK_GENERATOR TGZ)
+endif()
+include(CPack)

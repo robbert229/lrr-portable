@@ -59,7 +59,11 @@ endif()
 # build checks that the series is applied, so a changed patch or a
 # `git submodule update` cannot build unpatched sources.
 find_program(LRR_BASH bash)
-if(LRR_BASH)
+# The Flatpak build (packaging/linux/flatpak) copies miniwin out of a checkout
+# that setup-miniwin.sh already patched, without the git directory that the
+# check reads.
+option(LRR_CHECK_MINIWIN_PATCHES "Check that patches/miniwin is applied" ON)
+if(LRR_BASH AND LRR_CHECK_MINIWIN_PATCHES)
   execute_process(COMMAND "${LRR_BASH}" tools/miniwin-patches.sh check
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" RESULT_VARIABLE LRR_MINIWIN_PATCHED)
   if(NOT LRR_MINIWIN_PATCHED EQUAL 0)
@@ -602,4 +606,16 @@ if(BUILD_TESTING)
   target_link_libraries(miniwin_keys_test PRIVATE miniwin)
   add_test(NAME miniwin_keys COMMAND miniwin_keys_test)
   set_tests_properties(miniwin_keys PROPERTIES LABELS miniwin)
+endif()
+
+# Install rules and CPack packages (packaging/, issue #922): on by default for
+# the desktop hosts, where the packages are built.
+if(CMAKE_SYSTEM_NAME MATCHES "^(Linux|Darwin|FreeBSD|Windows)$")
+  set(_lrr_packaging_default ON)
+else()
+  set(_lrr_packaging_default OFF)
+endif()
+option(LRR_PACKAGING "Add install rules and CPack packages" ${_lrr_packaging_default})
+if(LRR_PACKAGING)
+  add_subdirectory(packaging)
 endif()
