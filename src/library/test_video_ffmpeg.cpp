@@ -3,10 +3,11 @@
  * testdata/synthetic.avi (tools/make_synthetic_video.sh), 8 frames of
  * 32x24 at 15 fps, each one solid colour, with a mono 8 kHz track.
  *
- * Built twice. video_test runs against the host's FFmpeg and exits 77,
- * which ctest reports as skipped, when there is none. video_missing_test
- * is built with sonames that never load, and checks that every entry point
- * fails cleanly, as the game does on a host without FFmpeg. */
+ * Built three times. video_test runs against the host's FFmpeg and exits
+ * 77, which ctest reports as skipped, when there is none. video_missing_test
+ * is built with sonames that never load, and video_stub_test as the
+ * LRR_MOVIES=OFF stub; both check that every entry point fails cleanly, as
+ * the game does on a host without FFmpeg. */
 #include "library/video_ffmpeg.h"
 
 #include <SDL3/SDL.h>
@@ -171,7 +172,8 @@ int main()
     TestMissing();
 #else
     if (!video_available()) {
-        printf("video: FFmpeg runtime libraries not found; skipped\n");
+        printf("video: no movies (FFmpeg not found, or built with "
+               "LRR_MOVIES off); skipped\n");
         return 77;
     }
     TestOpen();

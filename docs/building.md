@@ -49,6 +49,14 @@ cmake --build build
 cd /path/to/game && /path/to/build/LegoRR -best -window
 ```
 
+The game's movies need FFmpeg 7 or later at run time, not at build time:
+`src/library/video_ffmpeg.cpp` loads libavformat, libavcodec, libavutil and
+libswscale with `SDL_LoadObject`, trying the names `CMakeLists.txt` lists for
+the host (`LRR_VIDEO_LIB*`: `.so`, `.dylib` or `.dll`). Without them the game
+skips its movies. `-DLRR_MOVIES=OFF` builds the video library as a stub that
+always reports no movies; it is off already on Emscripten, iOS, the Nintendo
+targets, Vita and DOS.
+
 miniwin emulates a 16-bit RGB565 display and describes its software renderer
 as a hardware device, which is what `-best` looks for (see the
 `MINIWIN_PIXELFORMAT` and `MINIWIN_SOFTWARE_HAL` definitions in
