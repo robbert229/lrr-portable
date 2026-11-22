@@ -77,3 +77,8 @@ lrr_unit_test(teleporter SOURCES ${GAME_DIR}/test_teleporter.cpp
 
 # Message formatting, replacement rules and tutorial text reset.
 lrr_unit_test(text SOURCES ${GAME_DIR}/test_text.cpp LABELS text)
+
+# Tooltip hover delay and the laid-out text, box and icon rows.
+lrr_unit_test(tooltip SOURCES ${GAME_DIR}/test_tooltip.cpp
+  WRAP surface_fill_pixel_spans surface_draw_polyline font_print_f Image_DisplayScaled
+  LABELS tooltip)
