@@ -34,3 +34,7 @@ lrr_unit_test(pointer SOURCES ${GAME_DIR}/test_pointer.cpp LABELS pointer)
 # Priority configuration, ordering, toggle state and reset.
 lrr_unit_test(priorities SOURCES ${GAME_DIR}/test_priorities.cpp
   WRAP media_action_feedback_sound_dispatch LABELS priorities)
+
+# Per-level event translation preserves the message payload.
+lrr_unit_test(ptl SOURCES ${GAME_DIR}/test_ptl.cpp
+  WRAP block_open block_close LABELS ptl)
