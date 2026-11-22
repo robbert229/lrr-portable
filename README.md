@@ -171,7 +171,8 @@ including packaging and running the tests.
 
 lrr-portable began as a decompilation of `LegoRR.exe`: the original program,
 rebuilt as source code that compiles back into a near-identical copy of the
-1999 executable. That matching decompilation continues on the `main` branch.
+1999 executable. That matching decompilation continues on the
+[`decomp`](https://github.com/robbert229/lrr-portable/tree/decomp) branch.
 At `77f65f61` (#848, 2026-11-15), built with the original MSVC 5.0 compiler
 and checked with reccmp:
 
@@ -181,9 +182,9 @@ and checked with reccmp:
 | Mapped functions, game-only / full | 2,723 / 3,019 |
 | Exact (100%) functions, game-only / full | 2,418 / 2,707 |
 
-This `develop` branch takes that rebuilt code and runs it on miniwin and
-SDL3 ([ADR 0007](docs/adr/0007-port-on-develop-units-on-miniwin.md)). It
-becomes `main` once the decompilation is finished.
+The `main` branch, the one you're looking at, takes that rebuilt code and
+runs it on miniwin and SDL3
+([ADR 0007](docs/adr/0007-port-on-develop-units-on-miniwin.md)).
 
 [Build guide](docs/building.md) · [Findings](docs/findings/README.md) ·
 [Pseudocode](docs/decompiles/README.md) · [Tools](tools/README.md) ·

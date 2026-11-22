@@ -29,7 +29,7 @@ _Avoid_: "the wine script", "the compat tool"
 **seam**:
 The DX6-era API surface recorded in finding 15 §1 — the set of entry points
 (DDraw, d3drm, DInput, DSOUND, WINMM, AVIFIL32…) the game logic was written
-against. Everything above it is platform-neutral; on `develop` miniwin is
+against. Everything above it is platform-neutral; on `main` miniwin is
 the one adapter that satisfies it (ADR 0007). `src/platform/platform.h` re-exports that
 surface under one roof.
 _Avoid_: "boundary", "port" when you mean the seam
@@ -54,11 +54,11 @@ The end-goal product: the reconstruction running natively on a modern host
 _Avoid_: "the Wine build", "native Linux build" when you mean the product
 
 **develop branch**:
-The long-lived `develop` branch, the main development branch, on which the _port_ is built from the *original shape* units, free of byte-matching rules; it becomes `main` at the *decomp tag* (ADR 0007).
+The branch on which the _port_ was built from the *original shape* units, free of byte-matching rules, from 2026-11-15 until it was merged into `main` on 2026-11-21 (ADR 0007). The port now lives on `main`; older documents say *develop branch* for it.
 _Avoid_: "port branch", "the native branch"
 
 **decomp tag**:
-The tag marking `main` once the *matching build* is byte-identical to the shipped `LegoRR.exe`; the last state of the decompilation before the *develop branch* takes over `main`.
+The tag marking the `decomp` branch once the *matching build* is byte-identical to the shipped `LegoRR.exe`. The decompilation and its matching build live on `decomp`; the port took over `main` without waiting for the tag.
 _Avoid_: "the 100% branch", "release"
 
 **port shell**:

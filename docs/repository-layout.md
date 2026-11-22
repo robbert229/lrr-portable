@@ -14,7 +14,7 @@ docs/evidence/      Exported REA evidence bundle (address-level citations)
 tools/              Analysis tooling: unwad.py, Ghidra function-naming script
 docs/coverage/      Original translation units, function areas and call graph
                     of LegoRR.exe (frozen at the develop fork; their
-                    generators are on main)
+                    generators are on the decomp branch)
 docs/adr/           Architecture decision records (build/port decisions)
 reference/          (gitignored) the original, unmodified game files
 unpacked/           (gitignored) 5,845 assets extracted from the .wad archives

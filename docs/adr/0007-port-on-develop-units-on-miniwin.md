@@ -3,8 +3,10 @@
 **Status:** accepted (2026-11-15). **Supersedes** [ADR 0004](0004-miniwin-native-port.md)
 on how the native port is structured and where it lives. **Amends**
 [ADR 0005](0005-original-shape-c-units.md) and [ADR 0006](0006-original-link-order.md)
-on the *develop branch* only; both still govern `main` until the *decomp tag*.
-**Amended by** [ADR 0009](0009-miniwin-patches-in-this-repository.md) on where
+on the *develop branch* only; both still govern the `decomp` branch until the
+*decomp tag*. **Amended** on 2026-11-21: the decompilation moved to the
+`decomp` branch and `develop` was merged into `main` without waiting for the
+decomp tag (see [Amendment](#amendment-2026-11-21)). **Amended by** [ADR 0009](0009-miniwin-patches-in-this-repository.md) on where
 miniwin patches awaiting upstream review are carried.
 
 ## Context
@@ -208,4 +210,21 @@ unit that reads them some other way is fixed so that it goes through the seam.
    substitutions are already needed in step 4.
 7. Add `make port-check` once the first scenario reaches gameplay, and
    ratchet it from there.
-8. At the decomp tag, `develop` becomes `main`.
+8. At the decomp tag, `develop` becomes `main`. (Superseded by the
+   amendment below: the hand-over no longer waits for the tag.)
+
+## Amendment (2026-11-21)
+
+The decompilation and its *matching build* moved from `main` to a new
+`decomp` branch, which forks from `main` at `08578fb3` (#861). Decomp work,
+the Reccmp tooling and the MSVC 5.0 rules continue there, and the *decomp tag*
+will be cut on `decomp` once it is byte-identical.
+
+With the decomp work no longer on `main`, the reason for waiting (not
+stranding the decomp work) was gone, so `develop` was merged into `main` the
+same day, without waiting for the decomp tag. The port now lives on `main`,
+and PRs target `main`. Decision 6 and step 8 above describe the original
+plan. Everything else in this ADR still stands: read `main` for the
+*develop branch*, and `decomp` for `main` wherever the text means the
+decompilation. Decomp changes reach `main` only when they fix behavior, and
+only by hand.

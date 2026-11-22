@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* The Win32 subset outside miniwin's scope that the units use: WinMM's
  * mmio, MCI and mixer types, KERNEL32's GlobalAlloc/GlobalFree and
- * USER32's wsprintfA, with the layouts the units read. The develop branch
+ * USER32's wsprintfA, with the layouts the units read. The port
  * has no WinMM. The audio library (library/audio_sdl.h) replaces the mmio,
  * MCI and mixer calls at the units' `// [library:audio]` call sites. */
 #ifndef LEGORRR_GODS98_WINMM_H

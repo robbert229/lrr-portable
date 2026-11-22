@@ -1,9 +1,11 @@
 # Agent workflow rules
 
-This is the `develop` branch. It follows
+This is `main`, the port. It follows
 [ADR 0007](docs/adr/0007-port-on-develop-units-on-miniwin.md): the port runs
-the original-shape units on miniwin, and becomes `main` at the *decomp tag*.
-Open PRs for this work against `develop`.
+the original-shape units on miniwin. The port was built on a `develop`
+branch, which was merged into `main` on 2026-11-21. The decompilation and its
+matching build live on the `decomp` branch, where the *decomp tag* will be
+cut. Open PRs against `main`.
 
 - **The units are the game.** All game and engine logic lives in the units
   (`src/link_order.cmake`, kind `unit`). Port-only code lives in exactly two
@@ -23,7 +25,7 @@ Open PRs for this work against `develop`.
 - Write C++17 that builds and runs 64-bit. Records read from or written to
   disk keep fixed-width fields and get explicit parse and serialize
   functions; every other record holds real pointers.
-- A decomp change on `main` reaches `develop` only when it fixes behavior,
+- A decomp change on `decomp` reaches `main` only when it fixes behavior,
   reapplied by hand.
 - Write every commit message and PR title in
   [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/)
@@ -56,7 +58,7 @@ Open PRs for this work against `develop`.
   (`make test` does the same).
 - CI runs one required check, `native-build`
   (`.github/workflows/native-build.yml`), on pull requests and on pushes to
-  `main` and `develop`. It builds the native port, runs ctest with synthetic
+  `main`. It builds the native port, runs ctest with synthetic
   fixtures only, and runs the Python tool tests in `tools/tests`. Real-data
   tests need licensed inputs, so run them locally.
 - Source files carry SPDX headers; keep them, and follow the surrounding C++
@@ -65,6 +67,6 @@ Open PRs for this work against `develop`.
   errors, so `native-build` fails on them. Don't put an assignment in a
   condition (`if (x = f())`); assign first, then test (`if (x != NULL)`).
 - The `// FUNCTION:`, `// GLOBAL:` and `// LIBRARY:` annotations and
-  `// PORT-ONLY:` tags in the source come from the matching build on `main`.
+  `// PORT-ONLY:` tags in the source come from the matching build on `decomp`.
   Keep the annotations as a record of original addresses; nothing on
-  `develop` checks them.
+  `main` checks them.

@@ -169,7 +169,8 @@ For each original translation unit, in link order where possible:
    - Regenerate the unit map with `python3 tools/translation_units.py build`.
 9. **Native.** The unit and every touched file must compile natively with
    no new errors, and `c_boundaries` must pass. Run the native tests once
-   `main` builds natively again.
+   `main` builds natively again. (Since 2026-11-21 these rules govern the
+   `decomp` branch; see ADR 0007's amendment.)
 
 ## Consequences
 

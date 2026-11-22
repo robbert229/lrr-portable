@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 #
 # Required check: builds the native port and runs its synthetic-fixture tests.
-# develop has no matching build (ADR 0007).
+# main has no matching build; it is on the decomp branch (ADR 0007).
 name: native-build
 
 on:
   pull_request:
   push:
-    branches: [main, develop]
+    branches: [main]
 
 permissions:
   contents: read

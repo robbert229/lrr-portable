@@ -1,8 +1,8 @@
 # `tools/` — game-data tooling
 
-The tools on `develop` read and convert the shipped game's data and run the
+The tools on `main` read and convert the shipped game's data and run the
 original executable. The matching-build tooling (Reccmp, the match baseline,
-unit conversion and the search tools) remains on `main` (ADR 0007).
+unit conversion and the search tools) remains on the `decomp` branch (ADR 0007).
 
 | Tool | Purpose |
 | --- | --- |

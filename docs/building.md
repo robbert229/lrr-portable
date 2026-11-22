@@ -189,7 +189,7 @@ SDL_shadercross and vkd3d-utils; its header lists what it needs.
 ## Continuous integration
 
 The `native-build` workflow (`.github/workflows/native-build.yml`) runs on pull
-requests and pushes to `main` and `develop`. Its check is required for merging. It checks out
+requests and pushes to `main`. Its check is required for merging. It checks out
 the repository without submodules, runs `tools/setup-miniwin.sh` to fetch only
 `miniwin/` and apply `patches/miniwin`, and then runs the native commands from [Tests](#tests). It also
 lints the units (no `LEGORRR_BACKEND_*`, `MINIWIN`, `_MSC_VER`, `_M_IX86` or
@@ -312,6 +312,6 @@ the seam stubs.
 
 ## The matching build
 
-develop has no matching build, Reccmp gate or Windows reference backend
-(ADR 0007). They remain on `main` until the decomp tag; see `main`'s
-`docs/building.md`.
+`main` has no matching build, Reccmp gate or Windows reference backend
+(ADR 0007). They live on the `decomp` branch, where the decomp tag will be
+cut; see `decomp`'s `docs/building.md`.
