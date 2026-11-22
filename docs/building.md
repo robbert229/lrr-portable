@@ -305,17 +305,25 @@ data, `Data` and the WADs, from `sdmc:/3ds/LegoRR`, and keeps `LegoRR.ini`
 and its saves there (`src/platform/native/3ds/config.cpp`). SDL writes its
 log to `sdmc:/3ds/SDL_Log.txt`. Movies are off (`LRR_MOVIES`).
 
-It needs a New 3DS. The menus hold about 60 MB of heap besides libctru's
-32 MB linear heap, more than an Old 3DS gives an application, so the `.cia`
-asks for the New 3DS's 124 MB mode (`template.rsf`); the `.3dsx` gets what
-the Homebrew Launcher gives it. These figures come from Azahar on the
-software device at the main menu; a level has not been measured yet. miniwin lists Citro3D,
-the palette software renderer and the software renderer here; the default
-device is Citro3D (`3ds/config.h`), but until Citro3D draws immediate mode
-the game passes over it to the software renderer, which draws the level far
-too slowly on the 3DS's CPU and shows its frames unscaled, so cropped, on
-the top screen. Presenting the frame (miniwin's 3DS path draws for the
-320x240 bottom screen) comes with the Citro3D work. On the SD card, where every lookup is a slow service call, the
+It needs a New 3DS. In Azahar on Citro3D, Level01 holds about 39 MB of heap
+besides libctru's 32 MB linear heap (some 14 MB of it in use: textures, the
+GPU command buffer and the frame's vertices), more than an Old 3DS gives an
+application, so the `.cia` asks for the New 3DS's 124 MB mode
+(`template.rsf`); the `.3dsx` gets what the Homebrew Launcher gives it.
+
+miniwin lists Citro3D, the palette software renderer and the software
+renderer here; the default device is Citro3D (`3ds/config.h`), which draws
+the level: immediate mode is lit on the CPU and rasterized by the GPU, at
+about 15 frames a second in Azahar. The game draws on the 320x240 bottom
+screen, the touch screen; the top screen shows libctru's console. A 3DS has
+no windows, so the display is always full screen, at the configured mode
+(640x480), which Citro3D fits onto the bottom screen; the software devices,
+if chosen in `LegoRR.ini`, still show their frame unscaled on the top
+screen. Citro3D has no second vertex colour, so a textured draw leaves out
+its specular colour (the game turns specular off). A frame's GPU commands
+get 1 MiB, about twice what Level01 needs; a draw that would overflow them
+is dropped, with a warning in the log.
+On the SD card, where every lookup is a slow service call, the
 path mapping (`files_native.cpp`) reads each directory once and matches
 case from that listing.
 
