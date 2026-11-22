@@ -87,3 +87,7 @@ lrr_unit_test(helpwindow SOURCES ${GAME_DIR}/test_helpwindow.cpp
 
 # Info message name lookup and bounded instance queue behavior.
 lrr_unit_test(info_unit SOURCES ${GAME_DIR}/test_info_unit.cpp LABELS info_unit)
+
+# Interface menu slide transitions and independent icon state.
+lrr_unit_test(interface_unit SOURCES ${GAME_DIR}/test_interface_unit.cpp
+  WRAP sound_alias_play LABELS interface_unit)
