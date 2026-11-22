@@ -172,9 +172,6 @@ void file_initialise(const char* programName, int insistOnCD,
         char wadFile[FILE_MAXPATH];
         // STRING: LEGORR 0x004aaf50
         snprintf(wadFile, sizeof(wadFile), "%s%i.wad", programName, i);
-        /* The WAD in the diskpath, by its host path: Wad.c opens it with
-         * the C library's fopen. */
-        files_native_host_path(wadFile, wadFile, FILE_MAXPATH); // [library:config]
         if (file_load_wad(wadFile) != -1) foundWad = 1;
     }
 
