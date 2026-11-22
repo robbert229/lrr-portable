@@ -26,3 +26,6 @@ lrr_unit_test(building_model SOURCES ${GAME_DIR}/test_building_model.cpp LABELS 
 
 # Segment and polyline distances and unclamped line projections.
 lrr_unit_test(collision SOURCES ${GAME_DIR}/test_collision.cpp LABELS collision)
+
+# Construction-zone membership, resource counting, and readiness.
+lrr_unit_test(construction SOURCES ${GAME_DIR}/test_construction.cpp LABELS construction)
