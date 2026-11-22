@@ -84,3 +84,6 @@ lrr_unit_test(frontend_unit SOURCES ${GAME_DIR}/test_frontend_unit.cpp LABELS fr
 lrr_unit_test(helpwindow SOURCES ${GAME_DIR}/test_helpwindow.cpp
   WRAP text_buffer_reset_target nerpfunc_get_tutorial_flags
   LABELS helpwindow)
+
+# Info message name lookup and bounded instance queue behavior.
+lrr_unit_test(info_unit SOURCES ${GAME_DIR}/test_info_unit.cpp LABELS info_unit)
