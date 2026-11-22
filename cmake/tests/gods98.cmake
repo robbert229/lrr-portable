@@ -17,3 +17,6 @@ lrr_unit_test(utils SOURCES ${ENGINE_DIR}/test_utils.cpp LABELS utils)
 
 # Exercise command-line options and texture-management flags without starting the game.
 lrr_unit_test(main SOURCES ${ENGINE_DIR}/test_main.cpp LABELS main)
+
+# Parse nested block text and check wildcard lookups, sibling traversal and typed values.
+lrr_unit_test(gods98_config SOURCES ${ENGINE_DIR}/test_config.cpp LABELS config)
