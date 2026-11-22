@@ -40,3 +40,7 @@ lrr_unit_test(images_unit SOURCES ${ENGINE_DIR}/test_images_unit.cpp LABELS imag
 lrr_unit_test(avi_player SOURCES ${ENGINE_DIR}/test_avi_player.cpp
   WRAP video_open video_get_rate video_get_size video_get_frame_count video_get_frame_dib video_close
   LABELS avi_player)
+
+# Drive current and previous key maps through synthetic SDL snapshots and focus loss.
+lrr_unit_test(input_unit SOURCES ${ENGINE_DIR}/test_input_unit.cpp
+  WRAP SDL_GetKeyboardState LABELS input_unit)
