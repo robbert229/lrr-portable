@@ -18,3 +18,8 @@ lrr_unit_test(objective_unit SOURCES ${GAME_DIR}/test_objective_unit.cpp
 # Raider recall order and snapshot/restore, beyond the save-image tests.
 lrr_unit_test(objectrecall SOURCES ${GAME_DIR}/test_objectrecall.cpp
   WRAP entity_building_index_set legoobject_rename LABELS objectrecall)
+
+# Health bar configuration and the geometry emitted without a renderer.
+lrr_unit_test(objinfo SOURCES ${GAME_DIR}/test_objinfo.cpp
+  WRAP entity_quad_mesh_render_record_allowed surface_fill_pixel_spans surface_draw_polyline
+  LABELS objinfo)
