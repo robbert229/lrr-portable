@@ -35,6 +35,8 @@ extern "C" {
 
 #define INFO_TYPE_COUNT 40
 #define INFO_MESSAGE_MAX 40
+/* The images a compiled text's trailer holds (info_compile_text). */
+#define INFO_TEXT_MAXIMAGES 5
 
 /* The message types the unit addresses by number. */
 #define INFO_TYPE_LANDSLIDE 6

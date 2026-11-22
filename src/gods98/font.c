@@ -17,7 +17,6 @@
  * those names and nothing calls the unit. */
 #include "font_link_names.h"
 
-#include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -140,7 +139,9 @@ unsigned int font_v_print_f2(Font* font, int x, int y, int render,
                              va_list args)
 {
     unsigned int lineWidth, lineHeight, loop, maxWidth, lines, count;
-    unsigned int value, hex, shift;
+    void* address;
+    char* close;
+    int read;
     Image* image;
     Point2F pos;
     char line[FONT_MAXSTRINGLEN];
@@ -154,15 +155,14 @@ unsigned int font_v_print_f2(Font* font, int x, int y, int render,
     s = msgCopy;
     while (*msg != '\0') {
         if (*msg == '%' && msg[1] == 'b') {
+            /* The original writes "@[0x%0.8x]": a 64-bit Image pointer does
+             * not fit eight digits, so the port writes the whole pointer
+             * with "%p" and reads it back with sscanf's "%p". The caller
+             * passes the Image* as a void*. */
             *s++ = '@';
             *s++ = '[';
-            *s++ = '0';
-            *s++ = 'x';
             *s++ = *msg;
-            *s++ = '0';
-            *s++ = '.';
-            *s++ = '8';
-            *s++ = 'x';
+            *s++ = 'p';
             *s = ']';
             msg++;
         } else {
@@ -183,25 +183,20 @@ unsigned int font_v_print_f2(Font* font, int x, int y, int render,
             lines++;
         } else if (line[loop] == '\t') {
             lineWidth += font->tabWidth - (lineWidth % font->tabWidth);
-        } else if (loop < count - 12 && line[loop] == '@' && line[loop + 1] == '[' &&
-                   line[loop + 2] == '0' && line[loop + 3] == 'x' && line[loop + 12] == ']') {
-            value = 0;
-            for (hex = 0, shift = 28; hex < 8; hex++) {
-                value |= ((unsigned char)line[loop + 4 + hex] -
-                          (isdigit((unsigned char)line[loop + 4 + hex]) ? '0' : 'a' - 10)) << shift;
-                shift -= 4;
-            }
-            /* A 32-bit image address in the text: no unit writes one, and
-             * a 64-bit pointer does not fit the eight digits (known 32-bit
-             * spot, ADR 0007 decision 4). */
-            if (image = (Image*)(uintptr_t)value) {
+        } else if (line[loop] == '@' && loop + 1 < count && line[loop + 1] == '[' &&
+                   (close = (char*)memchr(line + loop + 2, ']', count - loop - 2)) != NULL &&
+                   close - (line + loop + 2) < 32 &&
+                   sscanf(line + loop + 2, "%p%n", &address, &read) == 1 &&
+                   line + loop + 2 + read == close) {
+            /* An image pointer in the text, written by "%b" above. */
+            if ((image = (Image*)address)) {
                 pos.x = (float)(lineWidth + x);
                 pos.y = (float)y;
                 lineWidth += image->width;
                 if (image->height > lineHeight) lineHeight = image->height;
                 image_display_scaled(image, NULL, &pos, NULL);
             }
-            loop += 12;
+            loop = (unsigned int)(close - line);
         } else {
             lineWidth += font_output_char(font, lineWidth + x, y, line[loop], render);
         }

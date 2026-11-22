@@ -349,6 +349,25 @@ if(BUILD_TESTING)
       "LINKER:--wrap=idle_register")
     add_test(NAME run_away COMMAND run_away_test)
     set_tests_properties(run_away PROPERTIES LABELS legoobject)
+    # Info.c's $name$ tokens carry the whole image pointer to the panel
+    # print and to Font's "%b": the units' image and panel calls reach the
+    # test's __wrap_ stubs.
+    add_executable(info_image_token_test ${GAME_DIR}/test_info_image_token.cpp)
+    target_link_libraries(info_image_token_test PRIVATE units)
+    target_link_options(info_image_token_test PRIVATE
+      "LINKER:--wrap=Image_LoadBMPScaled"
+      "LINKER:--wrap=Image_SetPenZeroTrans"
+      "LINKER:--wrap=Image_DisplayScaled"
+      "LINKER:--wrap=panel_text_window_print_f"
+      "LINKER:--wrap=panel_state_flags_toggle"
+      "LINKER:--wrap=ui_text_output_object_release_target"
+      "LINKER:--wrap=ui_text_output_position_and_draw"
+      "LINKER:--wrap=ui_record_callback_forward"
+      "LINKER:--wrap=indexed_text_metrics_pair_set"
+      "LINKER:--wrap=indexed_text_metrics_pair_get"
+      "LINKER:--wrap=sound_submit_with_global_cooldown")
+    add_test(NAME info_image_token COMMAND info_image_token_test)
+    set_tests_properties(info_image_token PROPERTIES LABELS info)
   endif()
   # Files.c's SDL3 streams and path mapping, and the configuration file
   # ([library:filesystem], [library:config]).
