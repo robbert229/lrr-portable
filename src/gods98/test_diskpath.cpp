@@ -109,6 +109,23 @@ int main(void)
     CHECK(files_native_disk_path() != NULL && install == files_native_disk_path(),
           "diskpath: the directory is kept without its trailing separator");
 
+    /* A path with a scheme or drive (3DS and Switch "sdmc:/...") is
+     * absolute: the diskpath is not added to it a second time. */
+    char host[1024];
+    files_native_set_disk_path("sdmc:/3ds/LegoRR");
+    CHECK(files_native_host_path(host, "sdmc:/3ds/LegoRR\\Data\\Lego.cfg", sizeof(host)) != NULL &&
+              strcmp(host, "sdmc:/3ds/LegoRR/Data/Lego.cfg") == 0,
+          "map: a scheme path is absolute");
+    CHECK(files_native_host_path(host, "Data\\Lego.cfg", sizeof(host)) != NULL &&
+              strcmp(host, "sdmc:/3ds/LegoRR/Data/Lego.cfg") == 0,
+          "map: a relative path goes under a scheme diskpath");
+
+    /* A relative diskpath is taken from the working directory once, when
+     * it is set: the start-up below runs from Run with "../Install". */
+    files_native_set_disk_path("../Install");
+    CHECK(files_native_disk_path() != NULL && install == files_native_disk_path(),
+          "diskpath: a relative directory is made absolute");
+
     file_initialise("diskpath_test", 0, "");
     CHECK(access((install + "/Data/delme.dat").c_str(), F_OK) != 0,
           "init: delme.dat is removed from the diskpath's Data");
@@ -134,7 +151,6 @@ int main(void)
 
     /* A unit's own relative Windows path ("Data\\..."; Images.c, the CD
      * key check) maps into the diskpath too. */
-    char host[1024];
     CHECK(files_native_host_path(host, "DATA\\LOOSE.TXT", sizeof(host)) != NULL &&
               install + "/Data/Loose.txt" == host,
           "map: a relative path is taken from the diskpath");

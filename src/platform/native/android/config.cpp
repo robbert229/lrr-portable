@@ -17,13 +17,17 @@ void Android_SetupDefaultConfigOverrides(dictionary* p_dictionary)
     SDL_Log("Overriding default config for Android");
 
     const char* data = SDL_GetAndroidExternalStoragePath();
-    std::string savedata = std::string(data ? data : "") + "/saves/";
+    const std::string storage = data ? data : "";
+    std::string savedata = storage + "/saves/";
 
     if (!SDL_GetPathInfo(savedata.c_str(), NULL)) {
         SDL_CreateDirectory(savedata.c_str());
     }
 
     iniparser_set(p_dictionary, LRR_CONFIG_SAVEPATH, savedata.c_str());
-    // The game data (Data and the WADs) in the external storage directory.
-    iniparser_set(p_dictionary, LRR_CONFIG_DISKPATH, (std::string(data ? data : "") + "/").c_str());
+    // The game data (Data and the WADs) in the external storage directory;
+    // without one, the working directory.
+    if (!storage.empty()) {
+        iniparser_set(p_dictionary, LRR_CONFIG_DISKPATH, (storage + "/").c_str());
+    }
 }

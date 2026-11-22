@@ -80,7 +80,9 @@ const char* files_native_save_path(void);
  * isle-portable's isle:diskpath, the port can take them from the directory
  * the configuration's diskpath names (platform/native/config.cpp); then a
  * relative Windows path maps into it (files_native_host_path), and
- * File_Initialise starts from it. NULL or "" keeps the working directory. */
+ * File_Initialise starts from it. A relative diskpath is taken from the
+ * working directory when it is set; a path with a drive or scheme
+ * ("C:\\", "sdmc:/") is absolute. NULL or "" keeps the working directory. */
 void files_native_set_disk_path(const char* path);
 const char* files_native_disk_path(void);
 

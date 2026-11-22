@@ -113,13 +113,13 @@ static const char* files_save_name(const char* name)
 }
 
 /* [library:config] _getcwd, or the data directory the configuration's
- * diskpath names (files_native_disk_path): File_Initialise's install. */
+ * diskpath names (files_native_disk_path): File_Initialise's install. A
+ * diskpath too long for the buffer keeps the working directory. */
 static char* files_disk_dir(char* buffer, int maxlen)
 {
     const char* disk = files_native_disk_path();
 
-    if (disk == NULL) return _getcwd(buffer, maxlen);
-    if ((int)strlen(disk) + 1 > maxlen) return NULL;
+    if (disk == NULL || (int)strlen(disk) + 1 > maxlen) return _getcwd(buffer, maxlen);
     strcpy(buffer, disk);
     return buffer;
 }

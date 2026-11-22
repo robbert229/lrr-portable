@@ -34,6 +34,70 @@ std::string TrimDirectory(const char* path)
     return dir;
 }
 
+/* '\\' separators become '/'. */
+void ToHostSeparators(std::string& path)
+{
+    for (char& c : path) {
+        if (c == '\\') c = '/';
+    }
+}
+
+/* Whether a path with host separators is absolute: rooted ("/..."), or
+ * with a drive or scheme as its first component ("C:/...", the 3DS and
+ * Switch "sdmc:/..."). */
+bool IsAbsolute(const std::string& path)
+{
+    if (!path.empty() && path[0] == '/') return true;
+    size_t colon = path.find(':');
+    return colon != std::string::npos && colon > 0 && colon < path.find('/');
+}
+
+/* `path` taken from the working directory when relative, with its "." and
+ * ".." components resolved, so it can prefix a relative path once. */
+std::string AbsoluteDirectory(const std::string& path)
+{
+    std::string text = path;
+    ToHostSeparators(text);
+    if (!IsAbsolute(text)) {
+        char* cwd = SDL_GetCurrentDirectory();
+        if (cwd != NULL) {
+            std::string base = cwd;
+            SDL_free(cwd);
+            ToHostSeparators(base);
+            if (!base.empty() && base.back() != '/') base += '/';
+            text = base + text;
+        }
+    }
+    /* The root: "/", or a drive or scheme with its separator ("sdmc:/"). */
+    std::string root;
+    size_t start = 0;
+    if (text[0] == '/') {
+        root = "/";
+        start = 1;
+    }
+    else if (IsAbsolute(text)) {
+        size_t slash = text.find('/');
+        start = slash == std::string::npos ? text.size() : slash + 1;
+        root = text.substr(0, start);
+    }
+    std::vector<std::string> parts;
+    while (start < text.size()) {
+        size_t end = text.find('/', start);
+        if (end == std::string::npos) end = text.size();
+        std::string part = text.substr(start, end - start);
+        start = end + 1;
+        if (part.empty() || part == ".") continue;
+        if (part == ".." && !parts.empty() && parts.back() != "..") parts.pop_back();
+        else if (part != ".." || root.empty()) parts.push_back(part);
+    }
+    std::string result = root;
+    for (size_t i = 0; i < parts.size(); i++) {
+        if (i > 0) result += '/';
+        result += parts[i];
+    }
+    return result.empty() ? "." : result;
+}
+
 struct CaseMatch {
     const char* want;
     std::string found;
@@ -56,23 +120,17 @@ SDL_EnumerationResult SDLCALL MatchEntryCase(void* userdata, const char* dirname
 std::string HostPath(const char* path)
 {
     std::string text(path);
-    for (char& c : text) {
-        if (c == '\\') c = '/';
-    }
+    ToHostSeparators(text);
     std::string resolved;
     size_t start = 0;
     if (!text.empty() && text[0] == '/') {
         resolved = "/";
         start = 1;
     }
-    else if (!g_diskPath.empty() && !(text.size() > 1 && text[1] == ':')) {
+    else if (!g_diskPath.empty() && !IsAbsolute(text)) {
         /* [library:config] A relative path is taken from the diskpath, as
-         * the original takes it from the working directory. The diskpath
-         * is the host's own and is used as written. */
+         * the original takes it from the working directory. */
         resolved = g_diskPath;
-        for (char& c : resolved) {
-            if (c == '\\') c = '/';
-        }
     }
     while (start <= text.size()) {
         size_t end = text.find('/', start);
@@ -168,6 +226,9 @@ const char* files_native_save_path(void)
 void files_native_set_disk_path(const char* path)
 {
     g_diskPath = TrimDirectory(path);
+    /* Absolute, so File_Initialise's paths, which start with it, are not
+     * taken from it a second time. */
+    if (!g_diskPath.empty()) g_diskPath = AbsoluteDirectory(g_diskPath);
     if (!g_diskPath.empty()) {
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "Reading game data from \"%s\"", g_diskPath.c_str());
     }
