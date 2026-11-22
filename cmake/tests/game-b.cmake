@@ -49,3 +49,7 @@ lrr_unit_test(reward_score SOURCES ${GAME_DIR}/test_reward_score.cpp
 # Roof diagonals and normal updates using captured mesh vertices.
 lrr_unit_test(roof SOURCES ${GAME_DIR}/test_roof.cpp
   WRAP container_mesh_set_vertices lwo_layer_polygon_vertex_data_read LABELS roof)
+
+# Scrollbar arrow input, thumb dragging and rounded positions.
+lrr_unit_test(scrollinfo SOURCES ${GAME_DIR}/test_scrollinfo.cpp
+  WRAP Image_LoadBMPScaled Image_DisplayScaled LABELS scrollinfo)
