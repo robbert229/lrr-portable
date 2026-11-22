@@ -72,3 +72,7 @@ lrr_unit_test(erode SOURCES ${GAME_DIR}/test_erode.cpp LABELS erode)
 
 # Landslide eligibility, including reserved cells and safe-cavern edges.
 lrr_unit_test(fallin SOURCES ${GAME_DIR}/test_fallin.cpp LABELS fallin)
+
+# Steering group arrival hides only followers that have reached their targets.
+lrr_unit_test(steering_arrival SOURCES ${GAME_DIR}/test_steering_arrival.cpp
+  WRAP scene_render_lock_toggle LABELS steering)
