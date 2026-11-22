@@ -21,7 +21,7 @@
  *
  * And it holds the port's opt-outs from its divergences from the original
  * game (docs/divergences.md), in their own section, [tweaks]:
- * tweaks:Training Save. */
+ * tweaks:Training Save and tweaks:Display. */
 #ifndef LEGORRR_PLATFORM_NATIVE_CONFIG_H
 #define LEGORRR_PLATFORM_NATIVE_CONFIG_H
 
@@ -41,13 +41,18 @@
 /* The section for the divergences' switches. */
 #define LRR_CONFIG_TWEAKS_SECTION "tweaks"
 #define LRR_CONFIG_TRAININGSAVE "tweaks:Training Save"
+#define LRR_CONFIG_DISPLAY "tweaks:Display"
 
 /* The display settings, in place of the dialog's choices. device is a 3D
  * device's description as DirectDraw.c lists it, e.g. "Miniwin driver
  * (Miniwin Emulation)"; empty selects the platform's default device
- * (LRR_ChooseDevice). The resolution must be one of Init.c's valid modes
- * (640x480, and 800x600 or 1024x768 with -debug); otherwise the first
- * valid mode is used. */
+ * (LRR_ChooseDevice). With tweaks:Display = fit (the default), the
+ * resolution is the window's size when it opens, any size; the game keeps
+ * Init.c's first valid mode, 640x480, and the window fits it. With
+ * tweaks:Display = original, the resolution must be one of Init.c's valid
+ * modes (640x480, and 800x600 or 1024x768 with -debug), and the window has
+ * the mode's size; otherwise the first valid mode is used. Full screen
+ * fills the desktop either way. */
 struct LRR_DisplayConfig {
     bool fullScreen;
     int width;
@@ -107,6 +112,18 @@ enum LRR_TrainingSave {
     LRR_TRAINING_SAVE_PROMPT = 1,
 };
 
+/* tweaks:Display (docs/divergences.md, "A resizable window, and the 3D view
+ * at the window's resolution"). The original drew a fixed 640x480 picture.
+ * "fit", the default, makes the window resizable, opens it at the
+ * configured resolution, and draws the 3D view at the window's resolution,
+ * with the 640x480 interface scaled to fit; "original" keeps a fixed window
+ * of the mode's size and draws the whole picture at the mode's resolution,
+ * scaled to fit only in full screen. */
+enum LRR_DisplayScaling {
+    LRR_DISPLAY_ORIGINAL = 0,
+    LRR_DISPLAY_FIT = 1,
+};
+
 /* Reads the configuration from `iniPath`, or from LRR_CONFIG_FILE in the
  * preference directory when it is NULL, writing that file with defaults
  * when it is missing or empty, and applies it (files_native_set_save_path,
@@ -122,5 +139,9 @@ const LRR_DisplayConfig* LRR_GetDisplayConfig();
 /* The tweaks:Training Save setting LRR_LoadConfig read, or the default,
  * LRR_TRAINING_SAVE_PROMPT, before it runs. */
 LRR_TrainingSave LRR_GetTrainingSave();
+
+/* The tweaks:Display setting LRR_LoadConfig read, or the default,
+ * LRR_DISPLAY_FIT, before it runs. */
+LRR_DisplayScaling LRR_GetDisplayScaling();
 
 #endif /* LEGORRR_PLATFORM_NATIVE_CONFIG_H */

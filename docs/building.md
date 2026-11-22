@@ -94,6 +94,20 @@ cd /path/to/game
 SDL_VIDEODRIVER=offscreen MINIWIN_DUMP_FRAME=/tmp/frame.png /path/to/build/LegoRR -best -window
 ```
 
+The frame is written at the resolution the picture was drawn at: the game's
+640x480 at the render target's scale, such as 1600x1200 in a 1600x1200
+window on SDL GPU.
+
+miniwin fits the game's 640x480 picture into a window of any size, as
+isle-portable does: the largest 4:3 area of the window, with black bars at
+the sides or above and below. SDL GPU draws the 3D view at the window's
+resolution and scales the interface up, nearest-neighbour at whole-number
+scales and bilinear otherwise; the software renderer draws the whole picture
+at 640x480 and scales it. The mouse follows the fit. `[tweaks]` `display =
+original` keeps a fixed window at the mode's size
+([divergences](divergences.md)), and `miniwin_presentation_test` checks the
+fit, the mouse and the frame-buffer locks headlessly.
+
 Run the binary from a copy of the game directory, or from one whose WADs are
 symbolic links, so that nothing the program writes lands in your reference
 data. The front end ignores close requests, so stop a headless run with

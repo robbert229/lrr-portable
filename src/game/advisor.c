@@ -350,6 +350,10 @@ void advisor_position_config_load(BlockFile* config, const char* gameName,
 
     // STRING: LEGORR 0x004a13fc
     snprintf(name, sizeof(name), "AdvisorPositions%ix%i", screenWidth, screenHeight);
+    /* [divergence:layout-fallback] Lego.cfg lays the interface out only for
+     * 640x480; another mode reads that layout instead of finding none. */
+    if (block_subgroup(config, string_path_join(gameName, name, 0)) == NULL)
+        snprintf(name, sizeof(name), "AdvisorPositions%ix%i", 640, 480);
     for (item = block_subgroup(config, string_path_join(gameName, name, 0)); item; item = block_next_equal_key(item)) {
         textType = ADVISOR_TEXT_NONE;
         panelType = ADVISOR_PANEL_NONE;

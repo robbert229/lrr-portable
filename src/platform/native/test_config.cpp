@@ -112,6 +112,10 @@ int main(void)
               text.find("prompt") != std::string::npos,
           "default: training save = prompt is written under [tweaks]");
     CHECK(LRR_GetTrainingSave() == LRR_TRAINING_SAVE_PROMPT, "default: training save prompts");
+    CHECK(text.find("display") > text.find("[" LRR_CONFIG_TWEAKS_SECTION "]") &&
+              text.find("fit") != std::string::npos,
+          "default: display = fit is written under [tweaks]");
+    CHECK(LRR_GetDisplayScaling() == LRR_DISPLAY_FIT, "default: the display fits the window");
 
     /* A later run reads the file the user edited. */
     write_text(defaultIni, "[" LRR_CONFIG_SECTION "]\nsavepath = " + root + "/elsewhere/\n");
@@ -189,6 +193,22 @@ int main(void)
     write_text(custom, "[" LRR_CONFIG_SECTION "]\nTraining Save = off\n");
     CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetTrainingSave() == LRR_TRAINING_SAVE_PROMPT,
           "training save: the key is read from [tweaks], not [legorr]");
+
+    /* tweaks:Display: "original" keeps the original; anything else fits. */
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nDisplay = original\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetDisplayScaling() == LRR_DISPLAY_ORIGINAL,
+          "display: original");
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nDisplay = Original\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetDisplayScaling() == LRR_DISPLAY_ORIGINAL,
+          "display: original in any case");
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nDisplay = fit\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetDisplayScaling() == LRR_DISPLAY_FIT, "display: fit");
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nDisplay = bogus\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetDisplayScaling() == LRR_DISPLAY_FIT,
+          "display: an unknown value fits");
+    write_text(custom, "[" LRR_CONFIG_SECTION "]\nDisplay = original\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetDisplayScaling() == LRR_DISPLAY_FIT,
+          "display: the key is read from [tweaks], not [legorr]");
 
     /* An explicit file that does not load fails, as isle-portable's does. */
     CHECK(!LRR_LoadConfig((root + "/missing.ini").c_str()), "explicit: a missing file fails");

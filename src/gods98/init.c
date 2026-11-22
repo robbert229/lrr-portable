@@ -15,7 +15,14 @@
  * isle-portable reads isle.ini in place of Lego Island's CONFIG.EXE, a
  * [library:config] substitution takes the dialog's choices from LegoRR.ini
  * (platform/native/config.h). The dialog procedure and its helpers stay,
- * uncalled. */
+ * uncalled.
+ *
+ * A divergence ([divergence:display-fit]) sizes the window. With
+ * tweaks:Display = fit (the default), the game keeps the dialog's default
+ * mode, 640x480, which miniwin fits into a resizable window that opens at
+ * the file's resolution, any size, and draws the 3D view at the window's
+ * resolution (miniwin/miniwinpresentation.h). With tweaks:Display =
+ * original, the file's resolution chooses the mode, as the dialog did. */
 #include "init.h"
 
 // GLOBAL: LEGORR 0x005580a0
@@ -27,6 +34,7 @@ Init_Globs initGlobs;
 #include <miniwin/windows.h>
 #include <miniwin/d3d.h>         // [library:config]
 #include <miniwin/miniwind3d.h>   // [library:config] Miniwin_DeviceDrawsImmediateMode
+#include <miniwin/miniwinpresentation.h> // [divergence:display-fit] Miniwin_SetRenderResolution
 
 #include "crt/vc5names.h"
 #include "init_imports.h"
@@ -59,6 +67,14 @@ int init_initialise(int setup, int debug, int best, int window,
     int res = 1;
     LRR_DeviceCandidate candidates[INIT_MAX_DEVICES]; // [library:config]
     int chosen;                                       // [library:config]
+    int fitWindow = LRR_GetDisplayScaling() == LRR_DISPLAY_FIT; // [divergence:display-fit]
+
+    /* [divergence:display-fit] tweaks:Display = fit draws the 3D view at the
+     * window's resolution; = original at the mode's. Either way the 3D view
+     * keeps the mode's 4:3 frame (docs/divergences.md). */
+    Miniwin_SetRenderResolution(fitWindow ? MiniwinRenderResolution::Window
+                                          : MiniwinRenderResolution::Virtual);
+    Miniwin_SetViewportsFillWindow(false);
 
     initGlobs.selDriver = NULL;
     initGlobs.selDevice = NULL;
@@ -142,6 +158,7 @@ int init_initialise(int setup, int debug, int best, int window,
                 for (loop = 0; loop < initGlobs.modeCount; loop++) {
                     if (init_is_valid_mode(loop)) {
                         if (initGlobs.selMode == NULL) initGlobs.selMode = &initGlobs.modes[loop];
+                        if (fitWindow) break;                                                        // [divergence:display-fit]
                         if (initGlobs.modes[loop].width == (unsigned int)config->width &&
                             initGlobs.modes[loop].height == (unsigned int)config->height) {
                             initGlobs.selMode = &initGlobs.modes[loop];
@@ -166,6 +183,24 @@ int init_initialise(int setup, int debug, int best, int window,
                 res = directdraw_setup(TRUE, initGlobs.selDriver, initGlobs.selDevice, initGlobs.selMode, 0, 0, 320, 200);
             } else if (initGlobs.selMode) {
                 res = directdraw_setup(FALSE, NULL, initGlobs.selDevice, NULL, 100, 100, initGlobs.selMode->width, initGlobs.selMode->height);
+                /* [divergence:display-fit] tweaks:Display = fit: the
+                 * display is set up at the mode's size, which fixes the size
+                 * the game draws at, and the window then takes the file's
+                 * resolution, centred on the desktop. */
+                if (res && setup && !best && fitWindow) {
+                    const LRR_DisplayConfig* config = LRR_GetDisplayConfig();
+                    RECT desktop;
+                    int x = 100, y = 100;
+
+                    if (GetWindowRect(GetDesktopWindow(), &desktop)) {
+                        x = ((desktop.right - desktop.left) - config->width) / 2;
+                        y = ((desktop.bottom - desktop.top) - config->height) / 2;
+                        if (x < 0) x = 0;
+                        if (y < 0) y = 0;
+                    }
+                    if (config->width > 0 && config->height > 0)
+                        SetWindowPos((HWND)mainGlobs.hWnd, NULL, x, y, config->width, config->height, SWP_NOZORDER);
+                }
             } else {
                 res = directdraw_setup(FALSE, NULL, initGlobs.selDevice, NULL, 40, 40, 640, 480);
             }

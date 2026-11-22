@@ -45,6 +45,7 @@
 #include "main_imports.h"
 #define LEGORRR_MAIN_GLOBS_OWNER
 #include "gods98/main_globs.h"
+#include "platform/native/config.h" // [divergence:display-fit] LRR_GetDisplayScaling
 
 #define MAIN_MAXRENDERSTATES        200
 
@@ -519,6 +520,10 @@ void renderer_window_mode_apply(int fullScreen, int xPos, int yPos,
     if (!fullScreen) {
         rect.left = xPos;
         mainGlobs.style = WS_POPUP | WS_SYSMENU | WS_CAPTION;
+        /* [divergence:display-fit] With tweaks:Display = fit, the
+         * window can be resized: miniwin fits the game's picture into it
+         * (docs/divergences.md). */
+        if (LRR_GetDisplayScaling() == LRR_DISPLAY_FIT) mainGlobs.style |= WS_THICKFRAME;
         rect.top = yPos;
         rect.right = xPos + width;
         rect.bottom = yPos + height;

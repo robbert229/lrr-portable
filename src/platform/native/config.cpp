@@ -57,6 +57,27 @@ LRR_TrainingSave ParseTrainingSave(const char* value)
     return LRR_TRAINING_SAVE_PROMPT;
 }
 
+constexpr LRR_DisplayScaling kDefaultDisplayScaling = LRR_DISPLAY_FIT;
+
+LRR_DisplayScaling g_displayScaling = kDefaultDisplayScaling;
+
+const char* DisplayScalingName(LRR_DisplayScaling value)
+{
+    return value == LRR_DISPLAY_ORIGINAL ? "original" : "fit";
+}
+
+/* "original" (or off/false/no/0) keeps the original; anything else fits. */
+LRR_DisplayScaling ParseDisplayScaling(const char* value)
+{
+    if (value != NULL &&
+        (SDL_strcasecmp(value, "original") == 0 || SDL_strcasecmp(value, "off") == 0 ||
+         SDL_strcasecmp(value, "false") == 0 || SDL_strcasecmp(value, "no") == 0 ||
+         SDL_strcmp(value, "0") == 0)) {
+        return LRR_DISPLAY_ORIGINAL;
+    }
+    return LRR_DISPLAY_FIT;
+}
+
 /* The directory that holds the configuration file and, by default, the
  * saves; "" when the host has none. */
 std::string PreferencePath()
@@ -89,6 +110,7 @@ dictionary* DefaultConfig(const std::string& prefPath)
     iniparser_set(dict, LRR_CONFIG_DEVICE, kDefaultDisplay.device);
     iniparser_set(dict, LRR_CONFIG_TWEAKS_SECTION, NULL);
     iniparser_set(dict, LRR_CONFIG_TRAININGSAVE, TrainingSaveName(kDefaultTrainingSave));
+    iniparser_set(dict, LRR_CONFIG_DISPLAY, DisplayScalingName(kDefaultDisplayScaling));
 
 #ifdef __3DS__
     N3DS_SetupDefaultConfigOverrides(dict);
@@ -292,6 +314,8 @@ bool LRR_LoadConfig(const char* iniPath)
     SDL_strlcpy(g_display.device, iniparser_getstring(dict, LRR_CONFIG_DEVICE, ""), sizeof(g_display.device));
     g_trainingSave = ParseTrainingSave(
         iniparser_getstring(dict, LRR_CONFIG_TRAININGSAVE, TrainingSaveName(kDefaultTrainingSave)));
+    g_displayScaling = ParseDisplayScaling(
+        iniparser_getstring(dict, LRR_CONFIG_DISPLAY, DisplayScalingName(kDefaultDisplayScaling)));
     iniparser_freedict(dict);
 
 #ifdef __EMSCRIPTEN__
@@ -308,4 +332,9 @@ const LRR_DisplayConfig* LRR_GetDisplayConfig()
 LRR_TrainingSave LRR_GetTrainingSave()
 {
     return g_trainingSave;
+}
+
+LRR_DisplayScaling LRR_GetDisplayScaling()
+{
+    return g_displayScaling;
 }
