@@ -8,10 +8,9 @@
 
 #include "platform/native/config.h"
 
-/* Citro3D, the 3DS's own GPU backend: miniwin builds no SDL GPU device
- * here, and the software renderer is far too slow on the ARM11. Until
- * Citro3D draws immediate mode (Miniwin_DeviceDrawsImmediateMode),
- * LRR_ChooseDevice passes over it to the software renderer, which does. */
+/* Citro3D, the 3DS's own GPU backend, which draws immediate mode
+ * (Miniwin_DeviceDrawsImmediateMode): miniwin builds no SDL GPU device
+ * here, and the software renderer is far too slow on the ARM11. */
 #define N3DS_DEFAULT_3D_DEVICE "Miniwin driver (Citro3D)"
 
 void N3DS_SetupDefaultConfigOverrides(dictionary* p_dictionary);
