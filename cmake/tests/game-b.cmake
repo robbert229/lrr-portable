@@ -23,3 +23,7 @@ lrr_unit_test(objectrecall SOURCES ${GAME_DIR}/test_objectrecall.cpp
 lrr_unit_test(objinfo SOURCES ${GAME_DIR}/test_objinfo.cpp
   WRAP entity_quad_mesh_render_record_allowed surface_fill_pixel_spans surface_draw_polyline
   LABELS objinfo)
+
+# Panel lookup, hit bounds, control geometry and slide state.
+lrr_unit_test(panel_unit SOURCES ${GAME_DIR}/test_panel_unit.cpp
+  WRAP Image_DisplayScaled LABELS panel_unit)
