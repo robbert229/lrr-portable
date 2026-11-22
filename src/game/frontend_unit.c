@@ -20,6 +20,7 @@
 #include "gods98/flic_record.h"
 #include "crt/vc5names.h"
 #include "gods98/winmm.h"
+#include "platform/native/input.h" // [divergence:touch-keyboard] LRR_InputTextWanted
 
 /* Input.c's mouse is signed; the port's words are unsigned. */
 #define FRONT_MSX ((int)s_renderer_word_a)
@@ -1460,6 +1461,10 @@ Front_Menu* front_menu_update_menu_items_input(float elapsed, Front_Menu* menu)
 
     if (item->itemType == Front_MenuItem_TextInput) {
         input = (Front_TextInputData*)item->itemData;
+        /* [divergence:touch-keyboard] The on-screen keyboard opens while a
+         * text field has the focus (docs/divergences.md, "Touch
+         * controls"). */
+        LRR_InputTextWanted();
         for (i = 0; i < 256; i++) {
             if (s_global_current_keys[i] && (s_global_previous_keys[i] ^ s_global_current_keys[i])) {
                 if (i == 0x0e && input->caretPos > 0) {

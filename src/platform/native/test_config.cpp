@@ -137,6 +137,20 @@ int main(void)
               text.find("false", text.find("fps_overlay")) != std::string::npos,
           "default: fps_overlay = false is written under [tweaks]");
     CHECK(!LRR_GetFpsOverlay(), "default: no frame rate overlay");
+    CHECK(text.find("touch_two_finger_tap") > text.find("[" LRR_CONFIG_TWEAKS_SECTION "]") &&
+              text.find("touch_two_finger_tap") < text.find("[" LRR_CONFIG_CHEATS_SECTION "]") &&
+              text.find("back_button") != std::string::npos,
+          "default: the touch keys are written under [tweaks]");
+    LRR_TouchConfig touch = LRR_GetTouchConfig();
+    CHECK(touch.longPressHover && touch.scroll && touch.zoom && touch.rotate &&
+              touch.twoFingerTap == LRR_TOUCH_TAP_SPACE && touch.threeFingerKeyboard && touch.keyboard &&
+              touch.backEscape,
+          "default: every touch gesture is on");
+#if defined(ANDROID) || defined(IOS)
+    CHECK(touch.enabled, "default: touch controls on, on a touch host");
+#else
+    CHECK(!touch.enabled, "default: touch controls off, on a desktop");
+#endif
 
     /* A later run reads the file the user edited. */
     write_text(defaultIni, "[" LRR_CONFIG_SECTION "]\nsavepath = " + root + "/elsewhere/\n");
@@ -359,6 +373,21 @@ int main(void)
     CHECK(LRR_LoadConfig(custom.c_str()) && !LRR_GetFpsOverlay(), "fps_overlay: a file without the key draws nothing");
     write_text(custom, "[" LRR_CONFIG_CHEATS_SECTION "]\nfps_overlay = true\n");
     CHECK(LRR_LoadConfig(custom.c_str()) && !LRR_GetFpsOverlay(), "fps_overlay: the key is read from [tweaks], not [cheats]");
+    /* The touch keys: "off" (or false) turns each part off. */
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\ntouch = on\ntouch_long_press = off\n"
+                       "touch_scroll = off\ntouch_zoom = no\ntouch_rotate = 0\n"
+                       "touch_two_finger_tap = Right Click\ntouch_three_finger_tap = off\n"
+                       "touch_keyboard = off\nback_button = off\n");
+    CHECK(LRR_LoadConfig(custom.c_str()), "touch: loads");
+    touch = LRR_GetTouchConfig();
+    CHECK(touch.enabled && !touch.longPressHover && !touch.scroll && !touch.zoom && !touch.rotate &&
+              touch.twoFingerTap == LRR_TOUCH_TAP_RIGHT_CLICK && !touch.threeFingerKeyboard && !touch.keyboard &&
+              !touch.backEscape,
+          "touch: each key turns its part off");
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\ntouch = false\ntouch_two_finger_tap = off\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && !LRR_GetTouchConfig().enabled &&
+              LRR_GetTouchConfig().twoFingerTap == LRR_TOUCH_TAP_OFF,
+          "touch: off, and the two-finger tap off");
     /* One reading per kind of value (config.h, LRR_Setting), so a key
      * takes the spellings of its kind: these were each read otherwise
      * before the settings shared one table. */

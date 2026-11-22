@@ -86,6 +86,19 @@ constexpr const char* kSaveDirectory = NULL;
 constexpr const char* kTrainingSaveNames[] = {"off", "prompt", NULL};
 constexpr const char* kDisplayNames[] = {"original", "fit", NULL};
 constexpr const char* kControlsNames[] = {"original", "modern", NULL};
+constexpr const char* kLongPressNames[] = {"off", "hover", NULL};
+constexpr const char* kTwoFingerTapNames[] = {"off", "space", "right click", NULL};
+constexpr const char* kThreeFingerTapNames[] = {"off", "keyboard", NULL};
+constexpr const char* kTouchKeyboardNames[] = {"off", "auto", NULL};
+constexpr const char* kBackButtonNames[] = {"off", "escape", NULL};
+
+/* The touch controls are on by default where the screen is the only
+ * pointer (LRR_TouchConfig). */
+#if defined(ANDROID) || defined(IOS)
+constexpr bool kDefaultTouch = true;
+#else
+constexpr bool kDefaultTouch = false;
+#endif
 
 /* The settings, in the order they are written to a new file. A choice's
  * names are indexed by its enum (config.h): the original's is 0. */
@@ -105,6 +118,17 @@ constexpr Row kTable[] = {
     Choice(LRR_SETTING_CONTROLS, "tweaks:controls", kControlsNames, LRR_CONTROLS_MODERN),
     Switch(LRR_SETTING_FIX_IDLENESS_SYNDROME, "tweaks:fix_idleness_syndrome", true),
     Switch(LRR_SETTING_FPS_OVERLAY, "tweaks:fps_overlay", false),
+    /* The touch controls (LRR_TouchConfig). */
+    Switch(LRR_SETTING_TOUCH, "tweaks:touch", kDefaultTouch),
+    Choice(LRR_SETTING_TOUCH_LONG_PRESS, "tweaks:touch_long_press", kLongPressNames, 1),
+    Switch(LRR_SETTING_TOUCH_SCROLL, "tweaks:touch_scroll", true),
+    Switch(LRR_SETTING_TOUCH_ZOOM, "tweaks:touch_zoom", true),
+    Switch(LRR_SETTING_TOUCH_ROTATE, "tweaks:touch_rotate", true),
+    Choice(LRR_SETTING_TOUCH_TWO_FINGER_TAP, "tweaks:touch_two_finger_tap", kTwoFingerTapNames,
+           LRR_TOUCH_TAP_SPACE),
+    Choice(LRR_SETTING_TOUCH_THREE_FINGER_TAP, "tweaks:touch_three_finger_tap", kThreeFingerTapNames, 1),
+    Choice(LRR_SETTING_TOUCH_KEYBOARD, "tweaks:touch_keyboard", kTouchKeyboardNames, 1),
+    Choice(LRR_SETTING_BACK_BUTTON, "tweaks:back_button", kBackButtonNames, 1),
     /* The cheats, off by default. */
     Switch(LRR_SETTING_UNLIMITED_RAIDERS, "cheats:unlimited_raiders", false),
     Switch(LRR_SETTING_UNLIMITED_OXYGEN, "cheats:unlimited_oxygen", false),

@@ -38,6 +38,16 @@ void Defaults()
     CHECK(!LRR_GetFpsOverlay(), "default: no frame rate overlay");
     CHECK(!LRR_GetUnlimitedRaiders(), "default: the raider limit is kept");
     CHECK(!LRR_GetUnlimitedOxygen(), "default: the air drains");
+    const LRR_TouchConfig touch = LRR_GetTouchConfig();
+#if defined(ANDROID) || defined(IOS)
+    CHECK(touch.enabled, "default: touch controls on, on a touch host");
+#else
+    CHECK(!touch.enabled, "default: touch controls off, on a desktop");
+#endif
+    CHECK(touch.longPressHover && touch.scroll && touch.zoom && touch.rotate &&
+              touch.twoFingerTap == LRR_TOUCH_TAP_SPACE && touch.threeFingerKeyboard && touch.keyboard &&
+              touch.backEscape,
+          "default: every touch gesture is on");
 }
 
 /* A switch: the words, iniparser_getboolean's first letters, and the
@@ -48,6 +58,10 @@ void Switches()
         LRR_SETTING_FULLSCREEN,
         LRR_SETTING_FIX_IDLENESS_SYNDROME,
         LRR_SETTING_FPS_OVERLAY,
+        LRR_SETTING_TOUCH,
+        LRR_SETTING_TOUCH_SCROLL,
+        LRR_SETTING_TOUCH_ZOOM,
+        LRR_SETTING_TOUCH_ROTATE,
         LRR_SETTING_UNLIMITED_RAIDERS,
         LRR_SETTING_UNLIMITED_OXYGEN,
     };
@@ -84,6 +98,10 @@ void Choices()
         { LRR_SETTING_TRAINING_SAVE, "off", "prompt" },
         { LRR_SETTING_DISPLAY, "original", "fit" },
         { LRR_SETTING_CONTROLS, "original", "modern" },
+        { LRR_SETTING_TOUCH_LONG_PRESS, "off", "hover" },
+        { LRR_SETTING_TOUCH_THREE_FINGER_TAP, "off", "keyboard" },
+        { LRR_SETTING_TOUCH_KEYBOARD, "off", "auto" },
+        { LRR_SETTING_BACK_BUTTON, "off", "escape" },
     };
     for (const Case& c : cases) {
         CHECK_EQ(Read(c.setting, c.original), 0);
@@ -103,6 +121,16 @@ void Choices()
     CHECK_EQ(Read(LRR_SETTING_TRAINING_SAVE, "OFF"), LRR_TRAINING_SAVE_OFF);
     CHECK_EQ(Read(LRR_SETTING_DISPLAY, "Fit"), LRR_DISPLAY_FIT);
     CHECK_EQ(Read(LRR_SETTING_CONTROLS, "MODERN"), LRR_CONTROLS_MODERN);
+
+    /* The two-finger tap, a choice of three: no true words, and Space for
+     * anything it does not know. */
+    CHECK_EQ(Read(LRR_SETTING_TOUCH_TWO_FINGER_TAP, "off"), LRR_TOUCH_TAP_OFF);
+    CHECK_EQ(Read(LRR_SETTING_TOUCH_TWO_FINGER_TAP, "false"), LRR_TOUCH_TAP_OFF);
+    CHECK_EQ(Read(LRR_SETTING_TOUCH_TWO_FINGER_TAP, "Space"), LRR_TOUCH_TAP_SPACE);
+    CHECK_EQ(Read(LRR_SETTING_TOUCH_TWO_FINGER_TAP, "right click"), LRR_TOUCH_TAP_RIGHT_CLICK);
+    CHECK_EQ(Read(LRR_SETTING_TOUCH_TWO_FINGER_TAP, "true"), LRR_TOUCH_TAP_SPACE);
+    CHECK_EQ(Read(LRR_SETTING_TOUCH_TWO_FINGER_TAP, "bogus"), LRR_TOUCH_TAP_SPACE);
+    CHECK_EQ(Read(LRR_SETTING_TOUCH_TWO_FINGER_TAP, NULL), LRR_TOUCH_TAP_SPACE);
 }
 
 /* The typed getters read the settings LRR_SetSetting set. */

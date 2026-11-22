@@ -22,7 +22,8 @@
  * And it holds the port's opt-outs from its divergences from the original
  * game (docs/divergences.md), in their own section, [tweaks]:
  * tweaks:Training Save, tweaks:display, tweaks:controls,
- * tweaks:fix_idleness_syndrome and tweaks:fps_overlay.
+ * tweaks:fix_idleness_syndrome, tweaks:fps_overlay, and the touch controls'
+ * tweaks:touch keys and tweaks:back_button.
  *
  * And it holds cheats, off by default, in their own section, [cheats]:
  * cheats:unlimited_raiders and cheats:unlimited_oxygen. */
@@ -76,6 +77,15 @@ enum LRR_Setting {
     LRR_SETTING_CONTROLS,              /* tweaks:controls, a choice */
     LRR_SETTING_FIX_IDLENESS_SYNDROME, /* tweaks:fix_idleness_syndrome */
     LRR_SETTING_FPS_OVERLAY,           /* tweaks:fps_overlay, a switch */
+    LRR_SETTING_TOUCH,                 /* tweaks:touch, a switch */
+    LRR_SETTING_TOUCH_LONG_PRESS,      /* tweaks:touch_long_press, a choice */
+    LRR_SETTING_TOUCH_SCROLL,          /* tweaks:touch_scroll, a switch */
+    LRR_SETTING_TOUCH_ZOOM,            /* tweaks:touch_zoom, a switch */
+    LRR_SETTING_TOUCH_ROTATE,          /* tweaks:touch_rotate, a switch */
+    LRR_SETTING_TOUCH_TWO_FINGER_TAP,  /* tweaks:touch_two_finger_tap */
+    LRR_SETTING_TOUCH_THREE_FINGER_TAP, /* tweaks:touch_three_finger_tap */
+    LRR_SETTING_TOUCH_KEYBOARD,        /* tweaks:touch_keyboard, a choice */
+    LRR_SETTING_BACK_BUTTON,           /* tweaks:back_button, a choice */
     LRR_SETTING_UNLIMITED_RAIDERS,     /* cheats:unlimited_raiders */
     LRR_SETTING_UNLIMITED_OXYGEN,      /* cheats:unlimited_oxygen */
     LRR_SETTING_COUNT
@@ -216,6 +226,49 @@ enum LRR_Controls {
  * original shows no frame rate. "true" draws the frames a second in the
  * top right corner of the screen; "false", the default, draws nothing. */
 
+/* What a two-finger tap sends (tweaks:touch_two_finger_tap): "space", the
+ * default, "right click", or "off". */
+enum LRR_TouchTwoFingerTap {
+    LRR_TOUCH_TAP_OFF = 0,
+    LRR_TOUCH_TAP_SPACE = 1,
+    LRR_TOUCH_TAP_RIGHT_CLICK = 2,
+};
+
+/* The touch controls (docs/divergences.md, "Touch controls";
+ * platform/native/touch_gestures.h). Each key's "off" turns its part off.
+ * - tweaks:touch: "true" or "false". True, the port makes the mouse from
+ *   finger events with the gestures below, and SDL's own touch-to-mouse
+ *   mapping (a touch is the left button, held) is off; false keeps SDL's
+ *   mapping. True by default on Android and iOS, false elsewhere: on a
+ *   desktop the pointer follows a finger only where the system lets SDL
+ *   move it.
+ * - tweaks:touch_long_press: "hover" (a finger held still moves the pointer
+ *   without pressing, so tooltips show) or "off" (it holds the left
+ *   button).
+ * - tweaks:touch_scroll, touch_zoom, touch_rotate: "true" or "false", for a
+ *   two-finger drag (scrolls the map), a pinch (zooms) and a twist (turns
+ *   the view).
+ * - tweaks:touch_two_finger_tap: LRR_TouchTwoFingerTap.
+ * - tweaks:touch_three_finger_tap: "keyboard" (opens or closes the
+ *   on-screen keyboard) or "off".
+ * - tweaks:touch_keyboard: "auto" (the on-screen keyboard opens while the
+ *   game takes typed text, on hosts that have one) or "off".
+ * - tweaks:back_button: "escape" (Android's Back button is Escape) or
+ *   "off" (Back is left to the system).
+ * The keys other than tweaks:touch work only while it is on, except
+ * touch_keyboard and back_button, which work either way. */
+struct LRR_TouchConfig {
+    bool enabled;
+    bool longPressHover;
+    bool scroll;
+    bool zoom;
+    bool rotate;
+    LRR_TouchTwoFingerTap twoFingerTap;
+    bool threeFingerKeyboard;
+    bool keyboard;
+    bool backEscape;
+};
+
 /* cheats:unlimited_raiders (docs/divergences.md, "Cheat: unlimited
  * raiders"). The original greys out the Teleport Rock Raider button, and
  * its teleporters hold back queued raiders, once the level's raiders would
@@ -276,6 +329,22 @@ inline bool LRR_GetFixIdlenessSyndrome()
 inline bool LRR_GetFpsOverlay()
 {
     return LRR_GetSetting(LRR_SETTING_FPS_OVERLAY) != 0;
+}
+
+/* The touch settings, from their rows (LRR_TouchConfig). */
+inline LRR_TouchConfig LRR_GetTouchConfig()
+{
+    LRR_TouchConfig touch;
+    touch.enabled = LRR_GetSetting(LRR_SETTING_TOUCH) != 0;
+    touch.longPressHover = LRR_GetSetting(LRR_SETTING_TOUCH_LONG_PRESS) != 0;
+    touch.scroll = LRR_GetSetting(LRR_SETTING_TOUCH_SCROLL) != 0;
+    touch.zoom = LRR_GetSetting(LRR_SETTING_TOUCH_ZOOM) != 0;
+    touch.rotate = LRR_GetSetting(LRR_SETTING_TOUCH_ROTATE) != 0;
+    touch.twoFingerTap = static_cast<LRR_TouchTwoFingerTap>(LRR_GetSetting(LRR_SETTING_TOUCH_TWO_FINGER_TAP));
+    touch.threeFingerKeyboard = LRR_GetSetting(LRR_SETTING_TOUCH_THREE_FINGER_TAP) != 0;
+    touch.keyboard = LRR_GetSetting(LRR_SETTING_TOUCH_KEYBOARD) != 0;
+    touch.backEscape = LRR_GetSetting(LRR_SETTING_BACK_BUTTON) != 0;
+    return touch;
 }
 
 inline bool LRR_GetUnlimitedRaiders()
