@@ -23,3 +23,6 @@ lrr_unit_test(bubbles SOURCES ${GAME_DIR}/test_bubbles.cpp
 
 # Building power smoothing, footprint access and cached attachment points.
 lrr_unit_test(building_model SOURCES ${GAME_DIR}/test_building_model.cpp LABELS building_model)
+
+# Segment and polyline distances and unclamped line projections.
+lrr_unit_test(collision SOURCES ${GAME_DIR}/test_collision.cpp LABELS collision)
