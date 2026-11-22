@@ -136,6 +136,16 @@ reference.
 - **Why:** this holds the settings above, as isle-portable does.
 - **Where:** `src/platform/native/entry.cpp`, `src/platform/native/config.cpp`.
 
+### `--version`
+
+- **Original:** has no version option.
+- **Port:** `--version` prints `lrr-portable <version>` and exits before
+  the game starts. Every run also logs that line at start-up.
+- **Why:** players and bug reports can name the release or commit a build
+  came from (docs/releasing.md).
+- **Configurable:** no.
+- **Where:** `src/platform/native/entry.cpp`, `tools/version.cmake`.
+
 ### No registry
 
 - **Original:** reads `HKLM\SOFTWARE\LEGO Media\Games\Rock Raiders`:

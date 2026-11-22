@@ -2,7 +2,8 @@
 #
 # The Linux packages (issue #922): a TGZ and an AppImage on x86_64, and a
 # Flatpak on x86_64 and aarch64. Each is uploaded as a workflow artifact; a
-# continuous release is the owner's decision and is not made here. The macOS
+# continuous release is the owner's decision and is not made here. release.yml
+# calls this workflow to build a release's packages (docs/releasing.md). The macOS
 # and Windows packages are built by the native-hosts workflow. These jobs are
 # not required checks: native-build is the only one. packaging/ holds the
 # recipes, and docs/building.md describes the packages.
@@ -12,12 +13,16 @@ on:
   pull_request:
   push:
     branches: [main]
+  # The release workflow (release.yml) calls this one to build its packages.
+  workflow_call:
 
 permissions:
   contents: read
 
+# A call from release.yml runs under that workflow's name, so it never
+# shares, or cancels, this workflow's own run for the same ref.
 concurrency:
-  group: native-packages-${{ github.ref }}
+  group: native-packages-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -83,6 +88,11 @@ jobs:
             timeout 60 "$GITHUB_WORKSPACE"/build/dist/lrr-portable-*-Linux-x86_64.AppImage -nosound \
             || echo "LegoRR exited with status $?"
           test -f "$HOME/.local/share/lrr-portable/LegoRR/LegoRR.ini"
+
+      # The licence and the notices are inside, and nothing off
+      # tools/check_package.py's allow-list (no game data).
+      - name: Check the packages
+        run: python3 tools/check_package.py build/dist/lrr-portable-*.tar.gz build/dist/lrr-portable-*.AppImage
 
       - name: Upload packages
         uses: actions/upload-artifact@v4

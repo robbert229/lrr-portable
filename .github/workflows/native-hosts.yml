@@ -9,21 +9,27 @@
 # the web job builds LegoRR.html, .js and .wasm and uploads them, and the 3DS
 # job LegoRR.3dsx and LegoRR.cia. The Python
 # tool tests and the unit lint run in native-build only. The macOS and
-# Windows jobs also build the CPack package (packaging/) and upload it as an
-# artifact; the Linux packages are in native-packages. The Android job
-# builds the debug APK (packaging/android) and uploads it.
+# Windows jobs also build the CPack package (packaging/), check its contents
+# with tools/check_package.py and upload it as an artifact; the Linux packages
+# are in native-packages. The Android job builds the debug APK
+# (packaging/android) and uploads it. release.yml calls this workflow for a
+# release.
 name: native-hosts
 
 on:
   pull_request:
   push:
     branches: [main]
+  # The release workflow (release.yml) calls this one to build its packages.
+  workflow_call:
 
 permissions:
   contents: read
 
+# A call from release.yml runs under that workflow's name, so it never
+# shares, or cancels, this workflow's own run for the same ref.
 concurrency:
-  group: native-hosts-${{ github.ref }}
+  group: native-hosts-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -148,6 +154,11 @@ jobs:
           cmake --build build --target package
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
+      # The licence, the notices and the Visual C++ runtime DLLs are inside,
+      # and nothing off tools/check_package.py's allow-list.
+      - name: Check the package
+        run: python tools/check_package.py --require vcruntime140.dll --require msvcp140.dll build/dist/lrr-portable-*.zip
+
       - name: Upload package
         uses: actions/upload-artifact@v4
         with:
@@ -195,6 +206,10 @@ jobs:
           cmake --build build
           ctest --test-dir build --output-on-failure
           cmake --build build --target package
+
+      - name: Check the package
+        shell: bash
+        run: python tools/check_package.py build/dist/lrr-portable-*.zip
 
       - name: Upload package
         uses: actions/upload-artifact@v4
@@ -343,6 +358,10 @@ jobs:
       - name: Build the debug APK
         working-directory: packaging/android
         run: ./gradlew --no-daemon assembleDebug
+
+      # The licence and notices inside, nothing off the allow-list.
+      - name: Check the debug APK
+        run: python3 tools/check_package.py packaging/android/app/build/outputs/apk/debug/app-debug.apk
 
       # Debug-signed (Android's debug key), for testing: see
       # docs/building.md, "Android", for the game data and signing.

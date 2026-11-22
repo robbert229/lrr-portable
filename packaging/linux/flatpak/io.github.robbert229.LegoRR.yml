@@ -65,3 +65,10 @@ modules:
         path: ../../../CMakeLists.txt
       - type: file
         path: ../../../LICENSE
+      - type: file
+        path: ../../../THIRD-PARTY-NOTICES.txt
+      # The version header's script (CMakeLists.txt); without a git
+      # directory it reports the plain project version.
+      - type: file
+        path: ../../../tools/version.cmake
+        dest: tools

@@ -14,7 +14,11 @@
  * Before WinMain it reads the port's configuration file (config.h), as
  * isle-portable's IsleApp does before it starts the game: --ini <path>
  * names the file, which otherwise lives in the preference directory. The
- * option does not reach WinMain. */
+ * option does not reach WinMain.
+ *
+ * --version prints the port's version (lrr_version.h, written by
+ * tools/version.cmake; docs/releasing.md) and exits; every run also logs it
+ * at start-up. */
 #include <SDL3/SDL.h>
 #ifdef __ANDROID__
 /* SDL's activity calls the program's SDL_main: SDL_main.h renames main
@@ -27,6 +31,9 @@
 
 #include "platform/native/config.h"
 
+#include "lrr_version.h"
+
+#include <cstdio>
 #include <cstring>
 #include <string>
 
@@ -55,6 +62,10 @@ int main(int argc, char** argv)
     std::string arguments;
     const char* iniPath = NULL;
     for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--version") == 0) {
+            printf("lrr-portable %s\n", LRR_VERSION);
+            return 0;
+        }
         if (strcmp(argv[i], "--ini") == 0 && i + 1 < argc) {
             iniPath = argv[++i];
             continue;
@@ -93,10 +104,12 @@ int main(int argc, char** argv)
      * orientation, and the activity's own landscape setting with it. */
     SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
 #endif
+    SDL_SetAppMetadata("LRR Portable", LRR_VERSION, NULL);
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_Init: %s", SDL_GetError());
         return 1;
     }
+    SDL_Log("lrr-portable %s", LRR_VERSION);
     if (!LRR_LoadConfig(iniPath)) {
         SDL_Quit();
         return 1;
