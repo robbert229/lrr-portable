@@ -14,3 +14,7 @@ lrr_unit_test(tutorial_script SOURCES ${GAME_DIR}/test_tutorial_script.cpp LABEL
 lrr_unit_test(objective_unit SOURCES ${GAME_DIR}/test_objective_unit.cpp
   WRAP legoobject_run_through_lists_skip_upgrade_parts legoobject_position_to_terrain_cell
   LABELS objective_unit)
+
+# Raider recall order and snapshot/restore, beyond the save-image tests.
+lrr_unit_test(objectrecall SOURCES ${GAME_DIR}/test_objectrecall.cpp
+  WRAP entity_building_index_set legoobject_rename LABELS objectrecall)
