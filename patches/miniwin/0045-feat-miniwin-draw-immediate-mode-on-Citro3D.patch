@@ -1,0 +1,1286 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sun, 22 Nov 2026 12:50:22 -0800
+Subject: [PATCH] feat(miniwin): draw immediate mode on Citro3D
+
+SubmitImmediate, SetViewportRect and ClearRect on the Citro3D backend,
+and the backend listed in Miniwin_DeviceDrawsImmediateMode:
+
+- The vertices are lit and culled on the CPU (ImmediateTransformer), as
+  on the other backends, projected and turned onto the sideways
+  framebuffer, and drawn from a per-frame linear buffer through a
+  pass-through shader. Depth is reversed, as citro3d's own projections
+  give retained mode, so both share the z-buffer.
+- Texture stage 0 becomes PICA texture combiners; a colour key, an alpha
+  test; fog, a table indexed by depth. The arithmetic is in
+  citro3dimmediate.h, which builds on any host.
+- Viewports are a viewport and scissor on the framebuffer, for retained
+  draws too; a rectangle clear is a quad among the draws.
+- A level's frame outgrows citro3d's default command buffer: it is 1 MiB,
+  and a draw that would overflow it is dropped with a warning instead of
+  stopping the program.
+- 2D images are uploaded at their own size and sampled half a texel in
+  from the source rectangle, on whole pixels, so that a font drawn at
+  half size never shows its glyph separators.
+- The backend no longer shadows the base renderer's viewport transform,
+  so GetFitRect sees the fit.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/CMakeLists.txt b/miniwin/CMakeLists.txt
+index 73c4dfe..55d6104 100644
+--- a/miniwin/CMakeLists.txt
++++ b/miniwin/CMakeLists.txt
+@@ -138,7 +138,8 @@ if(NINTENDO_3DS)
+     message(STATUS "Found citro3d: enabling Citro3D renderer")
+     target_sources(miniwin PRIVATE src/d3drm/backends/citro3d/renderer.cpp)
+     ctr_add_shader_library(vshader src/d3drm/backends/citro3d/vshader.v.pica)
+-    dkp_add_embedded_binary_library(3ds_shaders vshader)
++    ctr_add_shader_library(immediate_vshader src/d3drm/backends/citro3d/immediate.v.pica)
++    dkp_add_embedded_binary_library(3ds_shaders vshader immediate_vshader)
+     target_link_libraries(miniwin PRIVATE ${CITRO3D_LIBRARY} 3ds_shaders)
+     list(APPEND GRAPHICS_BACKENDS USE_CITRO3D)
+   else()
+diff --git a/miniwin/src/d3drm/backends/citro3d/immediate.v.pica b/miniwin/src/d3drm/backends/citro3d/immediate.v.pica
+new file mode 100644
+index 0000000..1f1cbd1
+--- /dev/null
++++ b/miniwin/src/d3drm/backends/citro3d/immediate.v.pica
+@@ -0,0 +1,20 @@
++; Immediate mode: the vertices arrive transformed, lit and in PICA's clip
++; space (Citro3DRenderer::SubmitImmediate). No uniforms or constants, so
++; that the retained-mode shader's stay as they were.
++
++; Outputs
++.out outpos position
++.out outclr color
++.out outtc0 texcoord0
++
++; Inputs
++.alias inpos v0
++.alias inclr v1
++.alias intex v2
++
++.proc main
++	mov outpos, inpos
++	mov outclr, inclr
++	mov outtc0, intex
++	end
++.end
+diff --git a/miniwin/src/d3drm/backends/citro3d/renderer.cpp b/miniwin/src/d3drm/backends/citro3d/renderer.cpp
+index 3ddb2d4..218020b 100644
+--- a/miniwin/src/d3drm/backends/citro3d/renderer.cpp
++++ b/miniwin/src/d3drm/backends/citro3d/renderer.cpp
+@@ -1,16 +1,25 @@
++#include "citro3dimmediate.h"
+ #include "d3drmrenderer.h"
+ #include "d3drmrenderer_citro3d.h"
+ #include "d3drmtexture_impl.h"
+ #include "ddraw_impl.h"
++#include "immediate_vshader_shbin.h"
+ #include "meshutils.h"
+ #include "miniwin.h"
+ #include "vshader_shbin.h"
+ 
++#include <algorithm>
+ #include <cstring>
+ #include <vector>
+ 
+ static bool g_rendering = false;
+ 
++// The GPU command buffer, in bytes: a level's frame needs several times
++// citro3d's default (C3D_DEFAULT_CMDBUF_SIZE, 256 KiB).
++static constexpr size_t kCommandBufferSize = 0x100000;
++// The words one draw may add to it, with room to spare.
++static constexpr u32 kDrawCommandWords = 1024;
++
+ // C3D_FrameEnd only queues the frame; the GPU keeps reading vertex buffers and
+ // textures asynchronously until C3D_FrameBegin drains the queue on the next
+ // frame. Anything released in between (mesh/texture destruction runs from game
+@@ -66,16 +75,24 @@ static int uLoc_lightVec;
+ static int uLoc_lightClr;
+ static int uLoc_shininess;
+ 
++// Immediate mode's shader: the vertices arrive in clip space.
++// BufInfo_Add's permutation for the three attributes in order, v0 v1 v2.
++static constexpr u64 kAttributesInOrder = 0x210;
++static DVLB_s* immediate_dvlb;
++static shaderProgram_s immediateProgram;
++
+ Citro3DRenderer::Citro3DRenderer(DWORD width, DWORD height)
+ {
+ 	m_width = 320;
+ 	m_height = 240;
+ 	m_virtualWidth = width;
+ 	m_virtualHeight = height;
++	m_viewportTransform = {1.0f, 0.0f, 0.0f};
++	m_viewportRect = {0, 0, m_width, m_height};
+ 
+ 	gfxSetScreenFormat(GFX_BOTTOM, GSP_BGR8_OES);
+ 	consoleInit(GFX_TOP, nullptr);
+-	C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
++	C3D_Init(kCommandBufferSize);
+ 
+ 	m_renderTarget = C3D_RenderTargetCreate(m_height, m_width, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
+ 	C3D_RenderTargetSetOutput(
+@@ -90,9 +107,14 @@ Citro3DRenderer::Citro3DRenderer(DWORD width, DWORD height)
+ 	vshader_dvlb = DVLB_ParseFile((u32*) vshader_shbin, vshader_shbin_size);
+ 	shaderProgramInit(&program);
+ 	shaderProgramSetVsh(&program, &vshader_dvlb->DVLE[0]);
+-	C3D_BindProgram(&program);
+ 
+-	C3D_CullFace(GPU_CULL_FRONT_CCW);
++	immediate_dvlb = DVLB_ParseFile((u32*) immediate_vshader_shbin, immediate_vshader_shbin_size);
++	shaderProgramInit(&immediateProgram);
++	shaderProgramSetVsh(&immediateProgram, &immediate_dvlb->DVLE[0]);
++
++	// Window depth 1 at the near plane and 0 at the far one, for retained
++	// and immediate mode alike (Citro3DImmediate::ClipFromD3D).
++	C3D_DepthMap(true, -1.0f, 0.0f);
+ 
+ 	uLoc_projection = shaderInstanceGetUniformLocation(program.vertexShader, "projection");
+ 	uLoc_modelView = shaderInstanceGetUniformLocation(program.vertexShader, "modelView");
+@@ -101,11 +123,7 @@ Citro3DRenderer::Citro3DRenderer(DWORD width, DWORD height)
+ 	uLoc_lightClr = shaderInstanceGetUniformLocation(program.vertexShader, "lightClr");
+ 	uLoc_shininess = shaderInstanceGetUniformLocation(program.vertexShader, "shininess");
+ 
+-	C3D_AttrInfo* attrInfo = C3D_GetAttrInfo();
+-	AttrInfo_Init(attrInfo);
+-	AttrInfo_AddLoader(attrInfo, 0, GPU_FLOAT, 3); // v0=position
+-	AttrInfo_AddLoader(attrInfo, 1, GPU_FLOAT, 3); // v2=normal
+-	AttrInfo_AddLoader(attrInfo, 2, GPU_FLOAT, 2); // v1=texcoord
++	UseRetainedPipeline();
+ 
+ 	aptHook(&g_gpuRightHookCookie, HandleAptHook, nullptr);
+ }
+@@ -115,15 +133,22 @@ Citro3DRenderer::~Citro3DRenderer()
+ 	aptUnhook(&g_gpuRightHookCookie);
+ 	shaderProgramFree(&program);
+ 	DVLB_Free(vshader_dvlb);
++	shaderProgramFree(&immediateProgram);
++	DVLB_Free(immediate_dvlb);
+ 	if (!g_gpuRightLost) {
+ 		C3D_Fini();
+ 	}
+ 	FlushDeferredDestroys();
++	if (m_immediateVertices) {
++		linearFree(m_immediateVertices);
++	}
+ }
+ 
+ void Citro3DRenderer::PushLights(const SceneLight* lights, size_t count)
+ {
+ 	m_lights.assign(lights, lights + count);
++	// Immediate mode lights on the CPU, with every light.
++	m_preparedLights.Prepare(lights, count);
+ }
+ 
+ void Citro3DRenderer::SetProjection(const D3DRMMATRIX4D& projection, D3DVALUE front, D3DVALUE back)
+@@ -159,44 +184,55 @@ void Citro3DRenderer::AddTextureDestroyCallback(Uint32 id, IDirect3DRMTexture* t
+ 
+ static int NearestPowerOfTwoClamp(int val)
+ {
+-	static const int sizes[] = {8, 16, 32, 64, 128, 256, 512};
++	static const int sizes[] = {8, 16, 32, 64, 128, 256, 512, 1024};
+ 	for (int size : sizes) {
+ 		if (val <= size) {
+ 			return size;
+ 		}
+ 	}
+-	return 512;
++	return 1024;
+ }
+ 
+-static SDL_Surface* ConvertAndResizeSurface(SDL_Surface* original, bool isUI, float scaleX, float scaleY)
++// A texture: RGBA8888, its colour key and decal colour keyed out to alpha 0
++// (KeyImmediateTexture, which works on RGBA32). keyed says whether its
++// alpha-0 texels stand for a key.
++static SDL_Surface* ConvertTexture(const Direct3DRMTextureImpl* texture, SDL_Surface* original, bool* keyed)
+ {
+-	if (!isUI) {
+-		return SDL_ConvertSurface(original, SDL_PIXELFORMAT_RGBA8888);
++	SDL_Surface* rgba32 = SDL_ConvertSurface(original, SDL_PIXELFORMAT_RGBA32);
++	if (!rgba32) {
++		return nullptr;
+ 	}
++	*keyed = KeyImmediateTexture(texture, rgba32);
++	SDL_Surface* converted = SDL_ConvertSurface(rgba32, SDL_PIXELFORMAT_RGBA8888);
++	SDL_DestroySurface(rgba32);
++	return converted;
++}
+ 
+-	scaleX = std::min(scaleX, 1.0f);
+-	scaleY = std::min(scaleY, 1.0f);
+-
+-	int scaledW = static_cast<int>(original->w * scaleX);
+-	int scaledH = static_cast<int>(original->h * scaleY);
+-
+-	int paddedW = NearestPowerOfTwoClamp(scaledW);
+-	int paddedH = NearestPowerOfTwoClamp(scaledH);
++// A 2D image at its own size, padded to powers of two. The GPU samples it,
++// nearest, within the source rectangle each draw asks for, so that drawing
++// it at the fit's scale never takes in the pixels beside that rectangle (a
++// font's glyph separators), as an image scaled beforehand would.
++static SDL_Surface* ConvertAndResizeSurface(
++	const Direct3DRMTextureImpl* texture,
++	SDL_Surface* original,
++	bool isUI,
++	bool* keyed
++)
++{
++	*keyed = false;
++	if (!isUI) {
++		return ConvertTexture(texture, original, keyed);
++	}
+ 
+-	SDL_Surface* padded = SDL_CreateSurface(paddedW, paddedH, SDL_PIXELFORMAT_RGBA8888);
++	SDL_Surface* padded = SDL_CreateSurface(
++		NearestPowerOfTwoClamp(original->w),
++		NearestPowerOfTwoClamp(original->h),
++		SDL_PIXELFORMAT_RGBA8888
++	);
+ 	if (!padded) {
+ 		return nullptr;
+ 	}
+-
+-	if (scaleX == 1.0f && scaleY == 1.0f) {
+-		SDL_BlitSurface(original, nullptr, padded, nullptr);
+-	}
+-	else {
+-		SDL_ScaleMode scaleMode = (scaleX >= 1.0f && scaleY >= 1.0f) ? SDL_SCALEMODE_NEAREST : SDL_SCALEMODE_LINEAR;
+-		SDL_Rect dstRect = {0, 0, scaledW, scaledH};
+-		SDL_BlitSurfaceScaled(original, nullptr, padded, &dstRect, scaleMode);
+-	}
+-
++	SDL_BlitSurface(original, nullptr, padded, nullptr);
+ 	return padded;
+ }
+ 
+@@ -237,9 +273,15 @@ static void EncodeTextureLayout(const u8* src, u8* dst, int width, int height)
+ 	}
+ }
+ 
+-static bool ConvertAndUploadTexture(C3D_Tex* tex, SDL_Surface* originalSurface, bool isUI, float scaleX, float scaleY)
++static bool ConvertAndUploadTexture(
++	C3D_Tex* tex,
++	const Direct3DRMTextureImpl* texture,
++	SDL_Surface* originalSurface,
++	bool isUI,
++	bool* keyed
++)
+ {
+-	SDL_Surface* resized = ConvertAndResizeSurface(originalSurface, isUI, scaleX, scaleY);
++	SDL_Surface* resized = ConvertAndResizeSurface(texture, originalSurface, isUI, keyed);
+ 	if (!resized) {
+ 		return false;
+ 	}
+@@ -316,17 +358,17 @@ Uint32 Citro3DRenderer::GetTextureId(IDirect3DRMTexture* iTexture, bool isUI, fl
+ 				g_pendingTexDeletes.push_back(tex.c3dTex);
+ 				if (!ConvertAndUploadTexture(
+ 						&tex.c3dTex,
++						texture,
+ 						originalSurface,
+ 						isUI,
+-						scaleX * m_viewportTransform.scale,
+-						scaleY * m_viewportTransform.scale
++						&tex.keyed
+ 					)) {
+ 					return NO_TEXTURE_ID;
+ 				}
+ 
+ 				tex.version = texture->m_version;
+-				tex.width = NearestPowerOfTwoClamp(originalW * m_viewportTransform.scale);
+-				tex.height = NearestPowerOfTwoClamp(originalH * m_viewportTransform.scale);
++				tex.width = NearestPowerOfTwoClamp(originalW);
++				tex.height = NearestPowerOfTwoClamp(originalH);
+ 			}
+ 			return i;
+ 		}
+@@ -335,15 +377,15 @@ Uint32 Citro3DRenderer::GetTextureId(IDirect3DRMTexture* iTexture, bool isUI, fl
+ 	C3DTextureCacheEntry entry;
+ 	entry.texture = texture;
+ 	entry.version = texture->m_version;
+-	entry.width = NearestPowerOfTwoClamp(originalW * m_viewportTransform.scale);
+-	entry.height = NearestPowerOfTwoClamp(originalH * m_viewportTransform.scale);
++	entry.width = NearestPowerOfTwoClamp(originalW);
++	entry.height = NearestPowerOfTwoClamp(originalH);
+ 
+ 	if (!ConvertAndUploadTexture(
+ 			&entry.c3dTex,
++			texture,
+ 			originalSurface,
+ 			isUI,
+-			scaleX * m_viewportTransform.scale,
+-			scaleY * m_viewportTransform.scale
++			&entry.keyed
+ 		)) {
+ 		return NO_TEXTURE_ID;
+ 	}
+@@ -457,10 +499,69 @@ void Citro3DRenderer::StartFrame()
+ 	}
+ 	C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+ 	FlushDeferredDestroys();
++	m_immediateUsed = 0;
++	m_immediateFlushed = 0;
+ 	C3D_FrameDrawOn(m_renderTarget);
+ 	g_rendering = true;
+ }
+ 
++// Retained mode and 2D images: the mesh shader, lit on the GPU.
++void Citro3DRenderer::UseRetainedPipeline()
++{
++	if (m_pipeline == Pipeline::Retained) {
++		return;
++	}
++	m_pipeline = Pipeline::Retained;
++	C3D_BindProgram(&program);
++	C3D_AttrInfo* attrInfo = C3D_GetAttrInfo();
++	AttrInfo_Init(attrInfo);
++	AttrInfo_AddLoader(attrInfo, 0, GPU_FLOAT, 3); // v0=position
++	AttrInfo_AddLoader(attrInfo, 1, GPU_FLOAT, 3); // v1=normal
++	AttrInfo_AddLoader(attrInfo, 2, GPU_FLOAT, 2); // v2=texcoord
++	C3D_CullFace(GPU_CULL_FRONT_CCW);
++	C3D_AlphaBlend(
++		GPU_BLEND_ADD,
++		GPU_BLEND_ADD,
++		GPU_SRC_ALPHA,
++		GPU_ONE_MINUS_SRC_ALPHA,
++		GPU_SRC_ALPHA,
++		GPU_ONE_MINUS_SRC_ALPHA
++	);
++	C3D_AlphaTest(false, GPU_ALWAYS, 0);
++	C3D_TexEnvInit(C3D_GetTexEnv(1));
++	DisableFog();
++}
++
++// Immediate mode: lit and culled on the CPU (ImmediateTransformer), each
++// draw setting its own depth test, blend, texture combiners and fog.
++void Citro3DRenderer::UseImmediatePipeline()
++{
++	if (m_pipeline == Pipeline::Immediate) {
++		return;
++	}
++	m_pipeline = Pipeline::Immediate;
++	C3D_BindProgram(&immediateProgram);
++	C3D_AttrInfo* attrInfo = C3D_GetAttrInfo();
++	AttrInfo_Init(attrInfo);
++	AttrInfo_AddLoader(attrInfo, 0, GPU_FLOAT, 4); // v0=position
++	AttrInfo_AddLoader(attrInfo, 1, GPU_FLOAT, 4); // v1=color
++	AttrInfo_AddLoader(attrInfo, 2, GPU_FLOAT, 2); // v2=texcoord
++	C3D_CullFace(GPU_CULL_NONE);
++}
++
++// Draw into a rectangle of the screen, in render pixels.
++void Citro3DRenderer::SetTargetViewport(const SDL_Rect& screen)
++{
++	const SDL_Rect target = Citro3DImmediate::TargetRect(screen, m_width, m_height);
++	C3D_SetViewport(target.x, target.y, target.w, target.h);
++	if (screen.x == 0 && screen.y == 0 && screen.w == m_width && screen.h == m_height) {
++		C3D_SetScissor(GPU_SCISSOR_DISABLE, 0, 0, 0, 0);
++	}
++	else {
++		C3D_SetScissor(GPU_SCISSOR_NORMAL, target.x, target.y, target.x + target.w, target.y + target.h);
++	}
++}
++
+ void ConvertPerspective(const D3DRMMATRIX4D in, C3D_Mtx* out)
+ {
+ 	float f_h = in[0][0];
+@@ -481,7 +582,9 @@ HRESULT Citro3DRenderer::BeginFrame()
+ 		return S_OK;
+ 	}
+ 	StartFrame();
+-	C3D_DepthTest(true, GPU_GREATER, GPU_WRITE_ALL);
++	UseRetainedPipeline();
++	m_retainedWriteMask = GPU_WRITE_ALL;
++	C3D_DepthTest(true, GPU_GREATER, m_retainedWriteMask);
+ 
+ 	C3D_Mtx projection;
+ 	ConvertPerspective(m_projection, &projection);
+@@ -522,7 +625,8 @@ HRESULT Citro3DRenderer::BeginFrame()
+ 
+ void Citro3DRenderer::EnableTransparency()
+ {
+-	C3D_DepthTest(true, GPU_GREATER, GPU_WRITE_COLOR);
++	m_retainedWriteMask = GPU_WRITE_COLOR;
++	C3D_DepthTest(true, GPU_GREATER, m_retainedWriteMask);
+ }
+ 
+ void ConvertMatrix(const D3DRMMATRIX4D in, C3D_Mtx* out)
+@@ -573,6 +677,13 @@ void Citro3DRenderer::SubmitDraw(
+ 	if (g_gpuRightLost) {
+ 		return;
+ 	}
++	if (!EnsureCommandSpace()) {
++		return;
++	}
++	// Immediate draws between the meshes set their own state.
++	UseRetainedPipeline();
++	C3D_DepthTest(true, GPU_GREATER, m_retainedWriteMask);
++	SetTargetViewport(m_viewportRect);
+ 	C3D_Mtx modelView;
+ 	ConvertMatrix(modelViewMatrix, &modelView);
+ 	C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_modelView, &modelView);
+@@ -607,6 +718,7 @@ void Citro3DRenderer::Resize(int width, int height, const ViewportTransform& vie
+ 	m_width = width;
+ 	m_height = height;
+ 	m_viewportTransform = viewportTransform;
++	m_viewportRect = {0, 0, m_width, m_height};
+ }
+ 
+ void Citro3DRenderer::Clear(float r, float g, float b)
+@@ -626,6 +738,7 @@ void Citro3DRenderer::Flip()
+ 		g_rendering = false;
+ 		return;
+ 	}
++	FlushImmediateVertices();
+ 	C3D_FrameEnd(0);
+ 	gfxFlushBuffers();
+ 	gspWaitForVBlank();
+@@ -637,6 +750,11 @@ void Citro3DRenderer::Draw2DImage(Uint32 textureId, const SDL_Rect& srcRect, con
+ 	if (g_gpuRightLost) {
+ 		return;
+ 	}
++	StartFrame();
++	if (!EnsureCommandSpace()) {
++		return;
++	}
++	UseRetainedPipeline();
+ 	C3D_AlphaBlend(
+ 		GPU_BLEND_ADD,
+ 		GPU_BLEND_ADD,
+@@ -645,8 +763,8 @@ void Citro3DRenderer::Draw2DImage(Uint32 textureId, const SDL_Rect& srcRect, con
+ 		GPU_SRC_ALPHA,
+ 		GPU_ONE_MINUS_SRC_ALPHA
+ 	);
+-	StartFrame();
+ 	C3D_DepthTest(false, GPU_GREATER, GPU_WRITE_COLOR);
++	SetTargetViewport({0, 0, m_width, m_height});
+ 
+ 	float left = -m_viewportTransform.offsetX / m_viewportTransform.scale;
+ 	float right = (m_width - m_viewportTransform.offsetX) / m_viewportTransform.scale;
+@@ -672,12 +790,15 @@ void Citro3DRenderer::Draw2DImage(Uint32 textureId, const SDL_Rect& srcRect, con
+ 
+ 	SetMaterialAppearance(color, 0.0f, uLoc_meshColor, uLoc_shininess, texture ? &texture->c3dTex : nullptr);
+ 
+-	float scale = m_viewportTransform.scale;
+-
+-	float x1 = static_cast<float>(dstRect.x);
+-	float y1 = static_cast<float>(dstRect.y);
+-	float x2 = x1 + static_cast<float>(dstRect.w);
+-	float y2 = y1 + static_cast<float>(dstRect.h);
++	// The quad on whole render pixels, in the game's coordinates.
++	const float scale = m_viewportTransform.scale;
++	auto snap = [scale](float v, float offset) { return (SDL_roundf(v * scale + offset) - offset) / scale; };
++	const float offsetX = m_viewportTransform.offsetX;
++	const float offsetY = m_viewportTransform.offsetY;
++	float x1 = snap(static_cast<float>(dstRect.x), offsetX);
++	float y1 = snap(static_cast<float>(dstRect.y), offsetY);
++	float x2 = snap(static_cast<float>(dstRect.x + dstRect.w), offsetX);
++	float y2 = snap(static_cast<float>(dstRect.y + dstRect.h), offsetY);
+ 
+ 	float u0 = 0.0f;
+ 	float u1 = 0.0f;
+@@ -685,10 +806,15 @@ void Citro3DRenderer::Draw2DImage(Uint32 textureId, const SDL_Rect& srcRect, con
+ 	float v1 = 0.0f;
+ 
+ 	if (texture) {
+-		u0 = (srcRect.x * scale) / texture->width;
+-		u1 = ((srcRect.x + srcRect.w) * scale) / texture->width;
+-		v0 = (srcRect.y * scale) / texture->height;
+-		v1 = ((srcRect.y + srcRect.h) * scale) / texture->height;
++		// Shrunk to the fit, a pixel spans several texels, and where in it the
++		// GPU samples (its centre or its corner) decides which: half a texel
++		// in from each edge, every sample stays inside the rectangle, never
++		// taking the texels beside it (a font's glyph separators).
++		const float inset = scale < 1.0f ? 0.5f : 0.0f;
++		u0 = (srcRect.x + inset) / texture->width;
++		u1 = (srcRect.x + srcRect.w - inset) / texture->width;
++		v0 = (srcRect.y + inset) / texture->height;
++		v1 = (srcRect.y + srcRect.h - inset) / texture->height;
+ 	}
+ 
+ 	C3D_ImmDrawBegin(GPU_TRIANGLES);
+@@ -776,3 +902,436 @@ void Citro3DRenderer::Download(SDL_Surface* target)
+ 
+ 	SDL_DestroySurface(rotatedSurface);
+ }
++
++// ---- immediate mode ---------------------------------------------------------
++
++static GPU_TESTFUNC ToGpuTest(D3DCMPFUNC func)
++{
++	switch (func) {
++	case D3DCMP_NEVER:
++		return GPU_NEVER;
++	case D3DCMP_LESS:
++		return GPU_LESS;
++	case D3DCMP_EQUAL:
++		return GPU_EQUAL;
++	case D3DCMP_LESSEQUAL:
++		return GPU_LEQUAL;
++	case D3DCMP_GREATER:
++		return GPU_GREATER;
++	case D3DCMP_NOTEQUAL:
++		return GPU_NOTEQUAL;
++	case D3DCMP_GREATEREQUAL:
++		return GPU_GEQUAL;
++	default:
++		return GPU_ALWAYS;
++	}
++}
++
++static GPU_BLENDFACTOR ToGpuBlend(DWORD blend)
++{
++	switch (static_cast<D3DBLEND>(blend)) {
++	case D3DBLEND_ZERO:
++		return GPU_ZERO;
++	case D3DBLEND_SRCCOLOR:
++		return GPU_SRC_COLOR;
++	case D3DBLEND_INVSRCCOLOR:
++		return GPU_ONE_MINUS_SRC_COLOR;
++	case D3DBLEND_SRCALPHA:
++		return GPU_SRC_ALPHA;
++	case D3DBLEND_INVSRCALPHA:
++		return GPU_ONE_MINUS_SRC_ALPHA;
++	case D3DBLEND_DESTALPHA:
++		return GPU_DST_ALPHA;
++	case D3DBLEND_INVDESTALPHA:
++		return GPU_ONE_MINUS_DST_ALPHA;
++	case D3DBLEND_DESTCOLOR:
++		return GPU_DST_COLOR;
++	case D3DBLEND_INVDESTCOLOR:
++		return GPU_ONE_MINUS_DST_COLOR;
++	case D3DBLEND_SRCALPHASAT:
++		return GPU_SRC_ALPHA_SATURATE;
++	default: // ONE
++		return GPU_ONE;
++	}
++}
++
++static GPU_TEVSRC ToGpuSource(Citro3DImmediate::Source source)
++{
++	switch (source) {
++	case Citro3DImmediate::Source::Texture:
++		return GPU_TEXTURE0;
++	case Citro3DImmediate::Source::Constant:
++		return GPU_CONSTANT;
++	case Citro3DImmediate::Source::Previous:
++		return GPU_PREVIOUS;
++	default:
++		return GPU_PRIMARY_COLOR;
++	}
++}
++
++static GPU_TEVOP_RGB ToGpuRgbOperand(Citro3DImmediate::Operand operand)
++{
++	switch (operand) {
++	case Citro3DImmediate::Operand::OneMinusColor:
++		return GPU_TEVOP_RGB_ONE_MINUS_SRC_COLOR;
++	case Citro3DImmediate::Operand::Alpha:
++		return GPU_TEVOP_RGB_SRC_ALPHA;
++	case Citro3DImmediate::Operand::OneMinusAlpha:
++		return GPU_TEVOP_RGB_ONE_MINUS_SRC_ALPHA;
++	default:
++		return GPU_TEVOP_RGB_SRC_COLOR;
++	}
++}
++
++static GPU_TEVOP_A ToGpuAlphaOperand(Citro3DImmediate::Operand operand)
++{
++	const bool complement =
++		operand == Citro3DImmediate::Operand::OneMinusAlpha || operand == Citro3DImmediate::Operand::OneMinusColor;
++	return complement ? GPU_TEVOP_A_ONE_MINUS_SRC_ALPHA : GPU_TEVOP_A_SRC_ALPHA;
++}
++
++static void SetCombiner(C3D_TexEnv* env, bool alpha, const Citro3DImmediate::Combiner& combiner)
++{
++	const C3D_TexEnvMode mode = alpha ? C3D_Alpha : C3D_RGB;
++	C3D_TexEnvSrc(env, mode, ToGpuSource(combiner.source[0]), ToGpuSource(combiner.source[1]), GPU_PRIMARY_COLOR);
++	if (alpha) {
++		C3D_TexEnvOpAlpha(
++			env,
++			ToGpuAlphaOperand(combiner.operand[0]),
++			ToGpuAlphaOperand(combiner.operand[1]),
++			GPU_TEVOP_A_SRC_ALPHA
++		);
++	}
++	else {
++		C3D_TexEnvOpRgb(
++			env,
++			ToGpuRgbOperand(combiner.operand[0]),
++			ToGpuRgbOperand(combiner.operand[1]),
++			GPU_TEVOP_RGB_SRC_COLOR
++		);
++	}
++	switch (combiner.func) {
++	case Citro3DImmediate::Func::Modulate:
++		C3D_TexEnvFunc(env, mode, GPU_MODULATE);
++		break;
++	case Citro3DImmediate::Func::Add:
++		C3D_TexEnvFunc(env, mode, GPU_ADD);
++		break;
++	default:
++		C3D_TexEnvFunc(env, mode, GPU_REPLACE);
++		break;
++	}
++	GPU_TEVSCALE scale = GPU_TEVSCALE_1;
++	if (combiner.scale == 2) {
++		scale = GPU_TEVSCALE_2;
++	}
++	else if (combiner.scale == 4) {
++		scale = GPU_TEVSCALE_4;
++	}
++	C3D_TexEnvScale(env, mode, scale);
++}
++
++// Stages 0 and 1; a stage the plan leaves out passes the previous one on.
++static void ApplyCombiners(const Citro3DImmediate::Combiners& plan)
++{
++	for (int i = 0; i < 2; ++i) {
++		C3D_TexEnv* env = C3D_GetTexEnv(i);
++		C3D_TexEnvInit(env); // the constant colour is white
++		if (i < plan.count) {
++			SetCombiner(env, false, plan.stage[i].rgb);
++			SetCombiner(env, true, plan.stage[i].alpha);
++		}
++	}
++}
++
++SDL_Rect Citro3DRenderer::ToRenderPixels(const D3DRECT& rect) const
++{
++	float scale = m_viewportTransform.scale;
++	int x1 = static_cast<int>(std::lround(rect.x1 * scale + m_viewportTransform.offsetX));
++	int y1 = static_cast<int>(std::lround(rect.y1 * scale + m_viewportTransform.offsetY));
++	int x2 = static_cast<int>(std::lround(rect.x2 * scale + m_viewportTransform.offsetX));
++	int y2 = static_cast<int>(std::lround(rect.y2 * scale + m_viewportTransform.offsetY));
++	SDL_Rect fit = GetFitRect();
++	x1 = std::max(fit.x, std::min(x1, fit.x + fit.w));
++	y1 = std::max(fit.y, std::min(y1, fit.y + fit.h));
++	x2 = std::max(x1, std::min(x2, fit.x + fit.w));
++	y2 = std::max(y1, std::min(y2, fit.y + fit.h));
++	return {x1, y1, x2 - x1, y2 - y1};
++}
++
++void Citro3DRenderer::SetViewportRect(const D3DRECT* rect)
++{
++	m_viewportRect = rect ? ToRenderPixels(*rect) : SDL_Rect{0, 0, m_width, m_height};
++}
++
++// Room for count more vertices this frame. A full buffer gives way to one
++// twice its size; the draws already recorded keep reading the old one until
++// the frame is done.
++Citro3DRenderer::ImmediateVertex* Citro3DRenderer::ReserveImmediate(size_t count)
++{
++	if (m_immediateUsed + count > m_immediateCapacity) {
++		const size_t capacity = std::max(m_immediateCapacity * 2, std::max<size_t>(count, 16384));
++		auto* buffer = static_cast<ImmediateVertex*>(linearAlloc(capacity * sizeof(ImmediateVertex)));
++		if (!buffer) {
++			SDL_LogError(LOG_CATEGORY_MINIWIN, "Citro3D: no linear memory for %zu immediate-mode vertices", capacity);
++			return nullptr;
++		}
++		if (m_immediateVertices) {
++			FlushImmediateVertices();
++			g_pendingBufferFrees.push_back(m_immediateVertices);
++		}
++		m_immediateVertices = buffer;
++		m_immediateCapacity = capacity;
++		m_immediateUsed = 0;
++		m_immediateFlushed = 0;
++	}
++	return m_immediateVertices + m_immediateUsed;
++}
++
++// The GPU reads the vertices from memory, not from the CPU's cache.
++void Citro3DRenderer::FlushImmediateVertices()
++{
++	if (m_immediateVertices && m_immediateUsed > m_immediateFlushed) {
++		GSPGPU_FlushDataCache(
++			m_immediateVertices + m_immediateFlushed,
++			(m_immediateUsed - m_immediateFlushed) * sizeof(ImmediateVertex)
++		);
++		m_immediateFlushed = m_immediateUsed;
++	}
++}
++
++// Whether a frame's GPU command buffer has room for another draw. A level's
++// frame draws hundreds of times (an immediate draw takes some 130 words);
++// past the end, libctru would stop the program, so the draw is dropped.
++bool Citro3DRenderer::EnsureCommandSpace()
++{
++	u32* buffer = nullptr;
++	u32 size = 0;
++	u32 offset = 0;
++	GPUCMD_GetBuffer(&buffer, &size, &offset);
++	if (offset + kDrawCommandWords <= size) {
++		return true;
++	}
++	static bool warned = false;
++	if (!warned) {
++		SDL_LogWarn(LOG_CATEGORY_MINIWIN, "Citro3D: the frame's command buffer is full; dropping draws");
++		warned = true;
++	}
++	return false;
++}
++
++void Citro3DRenderer::DisableFog()
++{
++	if (m_fogEnabled) {
++		C3D_FogGasMode(GPU_NO_FOG, GPU_PLAIN_DENSITY, false);
++		m_fogEnabled = false;
++	}
++}
++
++// PICA fogs by window depth through a table: the table holds Direct3D's fog
++// factor at the view depth each window depth stands for.
++void Citro3DRenderer::ApplyImmediateFog(const ImmediateShading& shading)
++{
++	if (shading.fog == ImmediateShading::Fog::None) {
++		DisableFog();
++		return;
++	}
++	FogKey key = {};
++	if (shading.fog == ImmediateShading::Fog::Table) {
++		key.mode = shading.fogMode;
++		key.start = shading.fogStart;
++		key.end = shading.fogEnd;
++		key.density = shading.fogDensity;
++	}
++	else {
++		key.mode = shading.vertexFogMode;
++		key.start = shading.vertexFogStart;
++		key.end = shading.vertexFogEnd;
++		key.density = shading.vertexFogDensity;
++	}
++	memcpy(key.projection, m_projection, sizeof(D3DRMMATRIX4D));
++	if (!m_fogBuilt || memcmp(&key, &m_fogKey, sizeof(FogKey)) != 0) {
++		float data[256];
++		Citro3DImmediate::FogTable(
++			m_projection,
++			[&key](float viewZ) { return ImmediateFogFactor(key.mode, key.start, key.end, key.density, viewZ); },
++			data
++		);
++		FogLut_FromArray(&m_fogLut, data);
++		C3D_FogLutBind(&m_fogLut);
++		m_fogKey = key;
++		m_fogBuilt = true;
++	}
++	if (!m_fogEnabled) {
++		C3D_FogGasMode(GPU_FOG, GPU_PLAIN_DENSITY, false);
++		m_fogEnabled = true;
++	}
++	const u32 r = static_cast<u32>(shading.fogR * 255.0f + 0.5f);
++	const u32 g = static_cast<u32>(shading.fogG * 255.0f + 0.5f);
++	const u32 b = static_cast<u32>(shading.fogB * 255.0f + 0.5f);
++	C3D_FogColor(r | (g << 8) | (b << 16));
++}
++
++// The draw's vertices are lit and culled as the software backend does it
++// (immediatemode.cpp), projected on the CPU, and rasterized by the GPU.
++HRESULT Citro3DRenderer::SubmitImmediate(const ImmediateDraw& draw)
++{
++	if (g_gpuRightLost) {
++		return DD_OK;
++	}
++	StartFrame();
++	if (!EnsureCommandSpace()) {
++		return DD_OK;
++	}
++	const ImmediateShading shading = DecodeImmediateShading(*draw.state);
++
++	C3DTextureCacheEntry* texture = nullptr;
++	if (draw.texture && shading.colorOp != static_cast<DWORD>(D3DTOP_DISABLE)) {
++		Uint32 textureId = GetTextureId(draw.texture, false, 1.0f, 1.0f);
++		if (textureId != NO_TEXTURE_ID) {
++			texture = &m_textures[textureId];
++		}
++	}
++
++	ImmediateVertex* vertices = ReserveImmediate(draw.indexCount);
++	if (!vertices) {
++		return DDERR_OUTOFMEMORY;
++	}
++	// PICA has no second vertex colour: the specular colour is added to an
++	// untextured draw's diffuse, and left out of a textured one.
++	const bool addSpecular = shading.specular && !texture;
++	const D3DRMMATRIX4D& p = m_projection;
++	size_t count = 0;
++	m_transformer.Run(draw, m_preparedLights, shading, [&](const ImmediateLitVertex(&triangle)[3]) {
++		for (const ImmediateLitVertex& v : triangle) {
++			const D3DVECTOR& e = v.position;
++			float clip[4];
++			for (int c = 0; c < 4; ++c) {
++				clip[c] = p[0][c] * e.x + p[1][c] * e.y + p[2][c] * e.z + p[3][c];
++			}
++			ImmediateVertex& out = vertices[count++];
++			Citro3DImmediate::ClipFromD3D(clip, out.position);
++			int r = v.color.r;
++			int g = v.color.g;
++			int b = v.color.b;
++			if (addSpecular) {
++				r = std::min(255, r + v.specular.r);
++				g = std::min(255, g + v.specular.g);
++				b = std::min(255, b + v.specular.b);
++			}
++			out.color[0] = r / 255.0f;
++			out.color[1] = g / 255.0f;
++			out.color[2] = b / 255.0f;
++			out.color[3] = v.color.a / 255.0f;
++			out.texCoord[0] = v.texCoord.u;
++			out.texCoord[1] = v.texCoord.v;
++		}
++	});
++	if (count == 0) {
++		return DD_OK;
++	}
++	m_immediateUsed += count;
++
++	UseImmediatePipeline();
++	SetTargetViewport(m_viewportRect);
++	if (shading.zEnable) {
++		const D3DCMPFUNC func = Citro3DImmediate::ReversedDepthFunc(static_cast<D3DCMPFUNC>(shading.zFunc));
++		C3D_DepthTest(true, ToGpuTest(func), shading.zWrite ? GPU_WRITE_ALL : GPU_WRITE_COLOR);
++	}
++	else {
++		C3D_DepthTest(false, GPU_ALWAYS, GPU_WRITE_COLOR);
++	}
++	if (shading.blend) {
++		const GPU_BLENDFACTOR src = ToGpuBlend(shading.srcBlend);
++		const GPU_BLENDFACTOR dst = ToGpuBlend(shading.destBlend);
++		C3D_AlphaBlend(GPU_BLEND_ADD, GPU_BLEND_ADD, src, dst, src, dst);
++	}
++	else {
++		C3D_AlphaBlend(GPU_BLEND_ADD, GPU_BLEND_ADD, GPU_ONE, GPU_ZERO, GPU_ONE, GPU_ZERO);
++	}
++
++	Citro3DImmediate::StageState stage;
++	stage.colorOp = shading.colorOp;
++	stage.colorArg1 = shading.colorArg1;
++	stage.colorArg2 = shading.colorArg2;
++	stage.alphaOp = shading.alphaOp;
++	stage.alphaArg1 = shading.alphaArg1;
++	stage.alphaArg2 = shading.alphaArg2;
++	const bool keyed = texture && texture->keyed;
++	const Citro3DImmediate::Combiners plan =
++		Citro3DImmediate::PlanCombiners(stage, texture != nullptr, keyed, shading.colorKeyEnable);
++	ApplyCombiners(plan);
++	if (texture) {
++		const GPU_TEXTURE_FILTER_PARAM filter = shading.linear ? GPU_LINEAR : GPU_NEAREST;
++		C3D_TexSetFilter(&texture->c3dTex, filter, filter);
++		C3D_TexBind(0, &texture->c3dTex);
++	}
++	else {
++		C3D_TexBind(0, nullptr);
++	}
++	if (plan.alphaTest) {
++		// The draw's alpha before the texel's: the material's, on every vertex.
++		const float alpha = std::min(1.0f, std::max(0.0f, draw.material.diffuse.a));
++		C3D_AlphaTest(true, GPU_GEQUAL, Citro3DImmediate::KeyAlphaTestRef(static_cast<int>(alpha * 255.0f + 0.5f)));
++	}
++	else {
++		C3D_AlphaTest(false, GPU_ALWAYS, 0);
++	}
++	ApplyImmediateFog(shading);
++
++	C3D_BufInfo* bufInfo = C3D_GetBufInfo();
++	BufInfo_Init(bufInfo);
++	BufInfo_Add(bufInfo, vertices, sizeof(ImmediateVertex), 3, kAttributesInOrder);
++	C3D_DrawArrays(GPU_TRIANGLES, 0, count);
++	return DD_OK;
++}
++
++// A rectangle clear is a quad over the rectangle at depth z, drawn with the
++// other draws so that it keeps its place among them.
++HRESULT Citro3DRenderer::ClearRect(const D3DRECT& rect, DWORD flags, D3DCOLOR color, float z)
++{
++	const bool target = (flags & D3DCLEAR_TARGET) != 0;
++	const bool zbuffer = (flags & D3DCLEAR_ZBUFFER) != 0;
++	if ((!target && !zbuffer) || g_gpuRightLost) {
++		return DD_OK;
++	}
++	const SDL_Rect pixels = ToRenderPixels(rect);
++	if (pixels.w <= 0 || pixels.h <= 0) {
++		return DD_OK;
++	}
++	StartFrame();
++	if (!EnsureCommandSpace()) {
++		return DD_OK;
++	}
++	ImmediateVertex* vertices = ReserveImmediate(6);
++	if (!vertices) {
++		return DDERR_OUTOFMEMORY;
++	}
++	const float depth = std::min(1.0f, std::max(0.0f, z));
++	const float fill[4] = {((color >> 16) & 0xff) / 255.0f, ((color >> 8) & 0xff) / 255.0f, (color & 0xff) / 255.0f, 1.0f};
++	const float corners[6][2] = {{-1, 1}, {1, 1}, {-1, -1}, {-1, -1}, {1, 1}, {1, -1}};
++	for (int i = 0; i < 6; ++i) {
++		const float clip[4] = {corners[i][0], corners[i][1], depth, 1.0f};
++		Citro3DImmediate::ClipFromD3D(clip, vertices[i].position);
++		memcpy(vertices[i].color, fill, sizeof(fill));
++		vertices[i].texCoord[0] = 0.0f;
++		vertices[i].texCoord[1] = 0.0f;
++	}
++	m_immediateUsed += 6;
++
++	UseImmediatePipeline();
++	SetTargetViewport(pixels);
++	const int mask = (target ? GPU_WRITE_COLOR : 0) | (zbuffer ? GPU_WRITE_DEPTH : 0);
++	C3D_DepthTest(true, GPU_ALWAYS, static_cast<GPU_WRITEMASK>(mask));
++	C3D_AlphaBlend(GPU_BLEND_ADD, GPU_BLEND_ADD, GPU_ONE, GPU_ZERO, GPU_ONE, GPU_ZERO);
++	C3D_AlphaTest(false, GPU_ALWAYS, 0);
++	ApplyCombiners(Citro3DImmediate::PlanCombiners({}, false, false, false));
++	C3D_TexBind(0, nullptr);
++	DisableFog();
++
++	C3D_BufInfo* bufInfo = C3D_GetBufInfo();
++	BufInfo_Init(bufInfo);
++	BufInfo_Add(bufInfo, vertices, sizeof(ImmediateVertex), 3, kAttributesInOrder);
++	C3D_DrawArrays(GPU_TRIANGLES, 0, 6);
++	return DD_OK;
++}
+diff --git a/miniwin/src/d3drm/d3drmrenderer.cpp b/miniwin/src/d3drm/d3drmrenderer.cpp
+index 3641f85..b4bc06f 100644
+--- a/miniwin/src/d3drm/d3drmrenderer.cpp
++++ b/miniwin/src/d3drm/d3drmrenderer.cpp
+@@ -388,6 +388,11 @@ bool Miniwin_DeviceDrawsImmediateMode(const GUID& guid)
+ 	if (SDL_memcmp(&guid, &OpenGLES3_GUID, sizeof(GUID)) == 0) {
+ 		return true;
+ 	}
++#endif
++#ifdef USE_CITRO3D
++	if (SDL_memcmp(&guid, &Citro3D_GUID, sizeof(GUID)) == 0) {
++		return true;
++	}
+ #endif
+ 	return false;
+ }
+diff --git a/miniwin/src/internal/citro3dimmediate.h b/miniwin/src/internal/citro3dimmediate.h
+new file mode 100644
+index 0000000..a2e108f
+--- /dev/null
++++ b/miniwin/src/internal/citro3dimmediate.h
+@@ -0,0 +1,233 @@
++#pragma once
++
++#include "miniwin/d3drm.h"
++
++#include <SDL3/SDL_rect.h>
++
++// The arithmetic of the Citro3D backend's immediate mode, apart from citro3d
++// so that it builds, and is tested, on any host:
++// - the 3DS's framebuffers lie on their side;
++// - depth is reversed, as citro3d's own projections give retained mode, so
++//   that both share one z-buffer;
++// - texture stage 0 becomes PICA texture combiners, and a colour key an
++//   alpha test;
++// - fog is a table indexed by depth.
++namespace Citro3DImmediate {
++
++// A Direct3D clip-space position, z from 0 at the near plane to w at the far
++// one, as PICA's: x and y turned as Mtx_OrthoTilt turns them, and z/w from
++// -1 (near) to 0 (far), so that C3D_DepthMap's default (scale -1, offset 0)
++// makes the window depth 1 at the near plane and 0 at the far one.
++inline void ClipFromD3D(const float in[4], float out[4])
++{
++	out[0] = in[1];
++	out[1] = -in[0];
++	out[2] = in[2] - in[3];
++	out[3] = in[3];
++}
++
++// A rectangle of a screenWidth x screenHeight screen, from its top left, as
++// pixels of the framebuffer under it (C3D_SetViewport's): the framebuffer is
++// screenHeight wide and screenWidth high, its x along the screen's height
++// from the bottom and its y along the screen's width from the right.
++inline SDL_Rect TargetRect(const SDL_Rect& screen, int screenWidth, int screenHeight)
++{
++	return {screenHeight - (screen.y + screen.h), screenWidth - (screen.x + screen.w), screen.h, screen.w};
++}
++
++// A Direct3D depth test for the reversed depth.
++inline D3DCMPFUNC ReversedDepthFunc(D3DCMPFUNC func)
++{
++	switch (func) {
++	case D3DCMP_LESS:
++		return D3DCMP_GREATER;
++	case D3DCMP_LESSEQUAL:
++		return D3DCMP_GREATEREQUAL;
++	case D3DCMP_GREATER:
++		return D3DCMP_LESS;
++	case D3DCMP_GREATEREQUAL:
++		return D3DCMP_LESSEQUAL;
++	default:
++		return func;
++	}
++}
++
++// Texture stage 0's operations and arguments, Direct3D's values.
++struct StageState {
++	DWORD colorOp, colorArg1, colorArg2;
++	DWORD alphaOp, alphaArg1, alphaArg2;
++};
++
++// A texture combiner, in PICA's terms. The constant colour is white in
++// every stage.
++enum class Source {
++	Primary,
++	Texture,
++	Constant,
++	Previous
++};
++enum class Operand {
++	Color,
++	OneMinusColor,
++	Alpha,
++	OneMinusAlpha
++};
++enum class Func {
++	Replace,
++	Modulate,
++	Add
++};
++struct Combiner {
++	Func func = Func::Replace;
++	int scale = 1;
++	Source source[2] = {Source::Primary, Source::Primary};
++	Operand operand[2] = {Operand::Color, Operand::Color};
++};
++struct CombinerStage {
++	Combiner rgb;
++	Combiner alpha;
++};
++struct Combiners {
++	CombinerStage stage[2];
++	int count = 1;
++	// Drop the fragments whose alpha is under KeyAlphaTestRef.
++	bool alphaTest = false;
++};
++
++// One stage argument. A keyed texture's alpha is opaque (its alpha-0
++// texels stand for the key); TFACTOR is white; SPECULAR is black, as the
++// other backends have them. The alpha combiner reads every argument's alpha.
++inline void CombinerArg(DWORD arg, bool alphaCombiner, bool keyed, Source& source, Operand& operand)
++{
++	bool complement = (arg & D3DTA_COMPLEMENT) != 0;
++	const bool alpha = alphaCombiner || (arg & D3DTA_ALPHAREPLICATE) != 0;
++	switch (arg & D3DTA_SELECTMASK) {
++	case D3DTA_TEXTURE:
++		source = alpha && keyed ? Source::Constant : Source::Texture;
++		break;
++	case D3DTA_TFACTOR:
++		source = Source::Constant;
++		break;
++	case D3DTA_SPECULAR:
++		source = Source::Constant;
++		complement = !complement;
++		break;
++	default: // DIFFUSE, CURRENT
++		source = Source::Primary;
++		break;
++	}
++	if (alpha) {
++		operand = complement ? Operand::OneMinusAlpha : Operand::Alpha;
++	}
++	else {
++		operand = complement ? Operand::OneMinusColor : Operand::Color;
++	}
++}
++
++inline Combiner StageCombiner(DWORD op, DWORD arg1, DWORD arg2, bool alphaCombiner, bool keyed)
++{
++	Combiner c;
++	CombinerArg(arg1, alphaCombiner, keyed, c.source[0], c.operand[0]);
++	CombinerArg(arg2, alphaCombiner, keyed, c.source[1], c.operand[1]);
++	switch (static_cast<D3DTEXTUREOP>(op)) {
++	case D3DTOP_DISABLE: // stage 0's current: the diffuse
++		c.func = Func::Replace;
++		c.source[0] = Source::Primary;
++		c.operand[0] = alphaCombiner ? Operand::Alpha : Operand::Color;
++		break;
++	case D3DTOP_SELECTARG1:
++		c.func = Func::Replace;
++		break;
++	case D3DTOP_SELECTARG2:
++		c.func = Func::Replace;
++		c.source[0] = c.source[1];
++		c.operand[0] = c.operand[1];
++		break;
++	case D3DTOP_MODULATE2X:
++		c.func = Func::Modulate;
++		c.scale = 2;
++		break;
++	case D3DTOP_MODULATE4X:
++		c.func = Func::Modulate;
++		c.scale = 4;
++		break;
++	case D3DTOP_ADD:
++		c.func = Func::Add;
++		break;
++	default: // MODULATE, and what the other backends draw as it
++		c.func = Func::Modulate;
++		break;
++	}
++	return c;
++}
++
++// Stage 0, or the diffuse colour when the draw is untextured or COLOROP is
++// DISABLE. With COLORKEYENABLE a keyed texture's texels on the key are not
++// drawn: a second stage multiplies in the texel's alpha, 0 on the key, and
++// the alpha test drops them.
++inline Combiners PlanCombiners(const StageState& state, bool textured, bool keyed, bool colorKeyEnable)
++{
++	Combiners plan;
++	if (!textured || static_cast<D3DTEXTUREOP>(state.colorOp) == D3DTOP_DISABLE) {
++		plan.stage[0].rgb = StageCombiner(static_cast<DWORD>(D3DTOP_DISABLE), 0, 0, false, false);
++		plan.stage[0].alpha = StageCombiner(static_cast<DWORD>(D3DTOP_DISABLE), 0, 0, true, false);
++		return plan;
++	}
++	plan.stage[0].rgb = StageCombiner(state.colorOp, state.colorArg1, state.colorArg2, false, keyed);
++	plan.stage[0].alpha = StageCombiner(state.alphaOp, state.alphaArg1, state.alphaArg2, true, keyed);
++	if (keyed && colorKeyEnable) {
++		Combiner& rgb = plan.stage[1].rgb;
++		rgb.func = Func::Replace;
++		rgb.source[0] = Source::Previous;
++		Combiner& alpha = plan.stage[1].alpha;
++		alpha.func = Func::Modulate;
++		alpha.source[0] = Source::Previous;
++		alpha.operand[0] = Operand::Alpha;
++		alpha.source[1] = Source::Texture;
++		alpha.operand[1] = Operand::Alpha;
++		plan.count = 2;
++		plan.alphaTest = true;
++	}
++	return plan;
++}
++
++// The alpha test's reference for a keyed draw whose alpha, before the
++// texel's, is diffuseAlpha (0-255): texels under half covered are dropped,
++// as the other backends drop them.
++inline int KeyAlphaTestRef(int diffuseAlpha)
++{
++	return (diffuseAlpha + 1) / 2;
++}
++
++// The view-space depth at window depth `depth` (1 at the near plane, 0 at
++// the far one) under a Direct3D projection.
++inline float FogViewZ(const D3DRMMATRIX4D& p, float depth)
++{
++	const float ndc = 1.0f - depth;
++	const float denominator = ndc * p[2][3] - p[2][2];
++	if (denominator == 0.0f) {
++		return 0.0f;
++	}
++	return (p[3][2] - ndc * p[3][3]) / denominator;
++}
++
++// The fog table for FogLut_FromArray: fogFactor(viewZ) (1 leaves the colour,
++// 0 is all fog) at the 129 window depths i / 128 from the far plane, as 128
++// values and then the 128 steps from each to the next.
++template <typename FogFactor>
++void FogTable(const D3DRMMATRIX4D& p, FogFactor fogFactor, float data[256])
++{
++	float previous = 0.0f;
++	for (int i = 0; i <= 128; ++i) {
++		const float value = fogFactor(FogViewZ(p, i / 128.0f));
++		if (i < 128) {
++			data[i] = value;
++		}
++		if (i > 0) {
++			data[i + 127] = value - previous;
++		}
++		previous = value;
++	}
++}
++
++} // namespace Citro3DImmediate
+diff --git a/miniwin/src/internal/d3drmrenderer_citro3d.h b/miniwin/src/internal/d3drmrenderer_citro3d.h
+index 2359a88..9a6682b 100644
+--- a/miniwin/src/internal/d3drmrenderer_citro3d.h
++++ b/miniwin/src/internal/d3drmrenderer_citro3d.h
+@@ -2,6 +2,7 @@
+ 
+ #include "d3drmrenderer.h"
+ #include "ddraw_impl.h"
++#include "immediatemode.h"
+ 
+ #include <SDL3/SDL.h>
+ #include <citro3d.h>
+@@ -15,6 +16,7 @@ struct C3DTextureCacheEntry {
+ 	C3D_Tex c3dTex;
+ 	uint16_t width;
+ 	uint16_t height;
++	bool keyed; // alpha-0 texels stand for a colour key (KeyImmediateTexture)
+ };
+ 
+ struct C3DMeshCacheEntry {
+@@ -51,19 +53,69 @@ class Citro3DRenderer : public Direct3DRMRenderer {
+ 	void Draw2DImage(Uint32 textureId, const SDL_Rect& srcRect, const SDL_Rect& dstRect, FColor color) override;
+ 	void Download(SDL_Surface* target) override;
+ 	void SetDither(bool dither) override;
++	HRESULT SubmitImmediate(const ImmediateDraw& draw) override;
++	void SetViewportRect(const D3DRECT* rect) override;
++	HRESULT ClearRect(const D3DRECT& rect, DWORD flags, D3DCOLOR color, float z) override;
+ 
+ private:
++	// A vertex of immediate mode, in clip space: Citro3DImmediate::ClipFromD3D.
++	struct ImmediateVertex {
++		float position[4];
++		float color[4];
++		float texCoord[2];
++	};
++	// The shader, attributes and fixed-function state each kind of draw
++	// sets up, set when the kind of draw changes.
++	enum class Pipeline {
++		None,
++		Retained,
++		Immediate
++	};
++	// The fog table last built, rebuilt when a draw's fog differs.
++	struct FogKey {
++		DWORD mode;
++		float start, end, density;
++		D3DRMMATRIX4D projection;
++	};
++
+ 	void AddTextureDestroyCallback(Uint32 id, IDirect3DRMTexture* texture);
+ 	void AddMeshDestroyCallback(Uint32 id, IDirect3DRMMesh* mesh);
+ 	void StartFrame();
++	void UseRetainedPipeline();
++	void UseImmediatePipeline();
++	void SetTargetViewport(const SDL_Rect& screen);
++	SDL_Rect ToRenderPixels(const D3DRECT& rect) const;
++	bool EnsureCommandSpace();
++	ImmediateVertex* ReserveImmediate(size_t count);
++	void FlushImmediateVertices();
++	void ApplyImmediateFog(const ImmediateShading& shading);
++	void DisableFog();
+ 
+ 	D3DRMMATRIX4D m_projection;
+ 	SDL_Surface* m_renderedImage;
+ 	C3D_RenderTarget* m_renderTarget;
+ 	std::vector<C3DTextureCacheEntry> m_textures;
+ 	std::vector<C3DMeshCacheEntry> m_meshs;
+-	ViewportTransform m_viewportTransform;
+ 	std::vector<SceneLight> m_lights;
++
++	Pipeline m_pipeline = Pipeline::None;
++	GPU_WRITEMASK m_retainedWriteMask = GPU_WRITE_ALL;
++	// The viewport, in render pixels (the screen's, from its top left).
++	SDL_Rect m_viewportRect = {0, 0, 0, 0};
++
++	PreparedLights m_preparedLights;
++	ImmediateTransformer m_transformer;
++	// This frame's immediate-mode vertices, in linear memory the GPU reads.
++	// A frame begins after the last one finished (C3D_FRAME_SYNCDRAW), so
++	// each frame starts over at the beginning.
++	ImmediateVertex* m_immediateVertices = nullptr;
++	size_t m_immediateCapacity = 0;
++	size_t m_immediateUsed = 0;
++	size_t m_immediateFlushed = 0; // the vertices already flushed to memory
++	C3D_FogLut m_fogLut;
++	FogKey m_fogKey = {};
++	bool m_fogBuilt = false;
++	bool m_fogEnabled = false;
+ };
+ 
+ inline static void Citro3DRenderer_EnumDevice(LPD3DENUMDEVICESCALLBACK cb, void* ctx)

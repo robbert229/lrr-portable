@@ -170,17 +170,18 @@ int main(void)
           "web: the software renderer before SDL GPU");
 
     /* 3DS: Citro3D, the palette and software renderers; no SDL GPU or
-     * OpenGL. Citro3D does not draw the level yet, so the software renderer
-     * does; once Citro3D draws, the default picks it. */
+     * OpenGL. Citro3D draws the level, so the default picks it; were it
+     * unable to, the software renderer would. */
     CHECK(Is(N3DS_DEFAULT_3D_DEVICE, kCitro3D), "3DS: Citro3D by default");
-    const auto n3ds = List({kCitro3D, kPaletteSw, kSoftware});
-    CHECK(Is(Choose(n3ds, "", N3DS_DEFAULT_3D_DEVICE), kSoftware),
-          "3DS: Citro3D cannot draw the level yet; the software renderer");
-    CHECK(Is(Choose(n3ds, kCitro3D, N3DS_DEFAULT_3D_DEVICE), kCitro3D), "3DS: an explicit Citro3D device wins");
-    auto n3dsDraws = n3ds;
-    n3dsDraws[0].drawsLevel = true;
-    CHECK(Is(Choose(n3dsDraws, "", N3DS_DEFAULT_3D_DEVICE), kCitro3D),
-          "3DS: Citro3D once it draws the level, before the software renderer");
+    auto n3ds = List({kCitro3D, kPaletteSw, kSoftware});
+    n3ds[0].drawsLevel = true;
+    CHECK(Is(Choose(n3ds, "", N3DS_DEFAULT_3D_DEVICE), kCitro3D),
+          "3DS: Citro3D, which draws the level, before the software renderer");
+    CHECK(Is(Choose(n3ds, kSoftware, N3DS_DEFAULT_3D_DEVICE), kSoftware), "3DS: an explicit software device wins");
+    auto n3dsNoDraw = n3ds;
+    n3dsNoDraw[0].drawsLevel = false;
+    CHECK(Is(Choose(n3dsNoDraw, "", N3DS_DEFAULT_3D_DEVICE), kSoftware),
+          "3DS: a Citro3D that could not draw the level gives way to the software renderer");
 
     /* Vita: GXM, no software or SDL GPU device; nothing draws yet. */
     const auto vita = List({kPaletteSw, kGxm});

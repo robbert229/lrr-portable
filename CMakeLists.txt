@@ -798,6 +798,14 @@ if(BUILD_TESTING)
   add_test(NAME miniwin_presentation COMMAND miniwin_presentation_test)
   set_tests_properties(miniwin_presentation PROPERTIES LABELS miniwin SKIP_RETURN_CODE 77)
 
+  # The arithmetic of miniwin's Citro3D immediate mode, which runs only on a
+  # 3DS: its header (src/internal/citro3dimmediate.h) builds on any host.
+  add_executable(miniwin_citro3d_test ${PLATFORM_DIR}/native/test_miniwin_citro3d.cpp)
+  target_include_directories(miniwin_citro3d_test PRIVATE "${MINIWIN}/src/internal")
+  target_link_libraries(miniwin_citro3d_test PRIVATE miniwin)
+  add_test(NAME miniwin_citro3d COMMAND miniwin_citro3d_test)
+  set_tests_properties(miniwin_citro3d PROPERTIES LABELS miniwin)
+
   # miniwin's key messages: Windows virtual-key codes and lParam flags from
   # SDL key events, WM_SYSKEY* for Alt and F10, and Alt+F4 as WM_CLOSE.
   add_executable(miniwin_keys_test ${PLATFORM_DIR}/native/test_miniwin_keys.cpp)
