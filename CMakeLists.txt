@@ -779,6 +779,7 @@ if(BUILD_TESTING)
   lrr_unit_test(miniwin_keys SOURCES ${PLATFORM_DIR}/native/test_miniwin_keys.cpp
     LINK miniwin
     LABELS miniwin)
+  include(${CMAKE_SOURCE_DIR}/cmake/tests/game-b.cmake)
 endif()
 
 # Install rules and CPack packages (packaging/, issue #922): on by default for
