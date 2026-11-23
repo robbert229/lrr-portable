@@ -119,6 +119,19 @@ bool ParseFixIdlenessSyndrome(const char* value)
               SDL_strcmp(value, "0") == 0));
 }
 
+constexpr bool kDefaultUnlimitedRaiders = false;
+
+bool g_unlimitedRaiders = kDefaultUnlimitedRaiders;
+
+/* "true" (or on/yes/1) turns the cheat on; anything else keeps the
+ * original. */
+bool ParseCheatEnabled(const char* value)
+{
+    return value != NULL &&
+           (SDL_strcasecmp(value, "true") == 0 || SDL_strcasecmp(value, "on") == 0 ||
+            SDL_strcasecmp(value, "yes") == 0 || SDL_strcmp(value, "1") == 0);
+}
+
 /* The directory that holds the configuration file and, by default, the
  * saves; "" when the host has none. */
 std::string PreferencePath()
@@ -154,6 +167,8 @@ dictionary* DefaultConfig(const std::string& prefPath)
     iniparser_set(dict, LRR_CONFIG_DISPLAY, DisplayScalingName(kDefaultDisplayScaling));
     iniparser_set(dict, LRR_CONFIG_CONTROLS, ControlsName(kDefaultControls));
     iniparser_set(dict, LRR_CONFIG_FIXIDLENESS, BoolName(kDefaultFixIdlenessSyndrome));
+    iniparser_set(dict, LRR_CONFIG_CHEATS_SECTION, NULL);
+    iniparser_set(dict, LRR_CONFIG_UNLIMITEDRAIDERS, BoolName(kDefaultUnlimitedRaiders));
 
 #ifdef __3DS__
     N3DS_SetupDefaultConfigOverrides(dict);
@@ -377,6 +392,7 @@ bool LRR_LoadConfig(const char* iniPath)
     g_controls = ParseControls(iniparser_getstring(dict, LRR_CONFIG_CONTROLS, ControlsName(kDefaultControls)));
     g_fixIdlenessSyndrome = ParseFixIdlenessSyndrome(
         iniparser_getstring(dict, LRR_CONFIG_FIXIDLENESS, BoolName(kDefaultFixIdlenessSyndrome)));
+    g_unlimitedRaiders = ParseCheatEnabled(iniparser_getstring(dict, LRR_CONFIG_UNLIMITEDRAIDERS, NULL));
     iniparser_freedict(dict);
 
 #ifdef __EMSCRIPTEN__
@@ -408,4 +424,9 @@ LRR_Controls LRR_GetControls()
 bool LRR_GetFixIdlenessSyndrome()
 {
     return g_fixIdlenessSyndrome;
+}
+
+bool LRR_GetUnlimitedRaiders()
+{
+    return g_unlimitedRaiders;
 }

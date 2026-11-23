@@ -40,6 +40,7 @@
 #include "construction_record.h"
 #include "aitask_record.h"
 #include "lego_globs.h"
+#include "platform/native/config.h" // [divergence:unlimited-raiders] LRR_GetUnlimitedRaiders
 
 /* ------------------------------------------------------------------ */
 /* State: objectGlobs fields the port does not model, and legoGlobs     */
@@ -3168,6 +3169,12 @@ int legoobject_state_pair_predicate(int type, int id, int type2, int id2)
 {
     float sum;
 
+    /* [divergence:unlimited-raiders] With cheats:unlimited_raiders, the
+     * level's oxygen never limits what is teleported in: the Teleport Rock
+     * Raider button stays lit and the teleporters take every request. */
+    if (LRR_GetUnlimitedRaiders()) { // [library:config]
+        return 1;
+    }
     if (stats_table_float_at_dc(type, id) != legoobject_zero) {
         sum = 0.0f;
         legoobject_run_through_lists_skip_upgrade_parts(legoobject_nested_float_add_unless_blocked, &sum);

@@ -124,6 +124,11 @@ int main(void)
               text.find("true", text.find("fix_idleness_syndrome")) != std::string::npos,
           "default: fix_idleness_syndrome = true is written under [tweaks]");
     CHECK(LRR_GetFixIdlenessSyndrome(), "default: the idleness syndrome is fixed");
+    CHECK(text.find("[" LRR_CONFIG_CHEATS_SECTION "]") != std::string::npos &&
+              text.find("unlimited_raiders") > text.find("[" LRR_CONFIG_CHEATS_SECTION "]") &&
+              text.find("false", text.find("unlimited_raiders")) != std::string::npos,
+          "default: unlimited_raiders = false is written under [cheats]");
+    CHECK(!LRR_GetUnlimitedRaiders(), "default: the raider limit is kept");
 
     /* A later run reads the file the user edited. */
     write_text(defaultIni, "[" LRR_CONFIG_SECTION "]\nsavepath = " + root + "/elsewhere/\n");
@@ -255,6 +260,26 @@ int main(void)
     write_text(custom, "[" LRR_CONFIG_SECTION "]\nfix_idleness_syndrome = false\n");
     CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetFixIdlenessSyndrome(),
           "fix_idleness_syndrome: the key is read from [tweaks], not [legorr]");
+
+    /* cheats:unlimited_raiders: "true" lifts the raider limit; anything
+     * else keeps it. */
+    write_text(custom, "[" LRR_CONFIG_CHEATS_SECTION "]\nunlimited_raiders = true\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetUnlimitedRaiders(), "unlimited_raiders: true");
+    write_text(custom, "[" LRR_CONFIG_SECTION "]\nother = 1\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && !LRR_GetUnlimitedRaiders(),
+          "unlimited_raiders: a file without the key keeps the limit");
+    write_text(custom, "[" LRR_CONFIG_CHEATS_SECTION "]\nunlimited_raiders = On\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetUnlimitedRaiders(), "unlimited_raiders: on in any case");
+    write_text(custom, "[" LRR_CONFIG_CHEATS_SECTION "]\nunlimited_raiders = 1\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetUnlimitedRaiders(), "unlimited_raiders: 1");
+    write_text(custom, "[" LRR_CONFIG_CHEATS_SECTION "]\nunlimited_raiders = false\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && !LRR_GetUnlimitedRaiders(), "unlimited_raiders: false");
+    write_text(custom, "[" LRR_CONFIG_CHEATS_SECTION "]\nunlimited_raiders = bogus\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && !LRR_GetUnlimitedRaiders(),
+          "unlimited_raiders: an unknown value keeps the limit");
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nunlimited_raiders = true\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && !LRR_GetUnlimitedRaiders(),
+          "unlimited_raiders: the key is read from [cheats], not [tweaks]");
 
     /* An explicit file that does not load fails, as isle-portable's does. */
     CHECK(!LRR_LoadConfig((root + "/missing.ini").c_str()), "explicit: a missing file fails");

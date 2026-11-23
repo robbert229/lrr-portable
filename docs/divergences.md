@@ -6,7 +6,7 @@ AGENTS.md requires an entry here for each such change. New divergences
 should, where they can:
 
 - come with a `LegoRR.ini` key in the `[tweaks]` section that restores the
-  original;
+  original (cheats, off by default, go in a `[cheats]` section instead);
 - mark their call site `// [divergence:<name>]`.
 
 Older ones carry a `PORT-ONLY:` comment instead.
@@ -181,6 +181,23 @@ reference.
   default) or `false`, which keeps the original's job assignment.
 - **Where:** `src/game/aitask.c` (`[divergence:idleness-syndrome]`);
   `src/game/test_idleness_syndrome.cpp`.
+
+### Cheat: unlimited raiders
+
+- **Original:** the Teleport Rock Raider button greys out once the level
+  holds as many raiders as its Support Stations support. The check
+  (`LegoObject.c` 0x0043c200) adds up `Lego.cfg`'s `OxygenCoef` over the
+  level's objects: -1.0 for each raider and 10.0 for each Support Station.
+  A teleporter also holds back a queued raider while the check fails.
+- **Port:** with the cheat on, the check always passes. The button stays
+  lit while a teleporter that takes raiders stands and the level's
+  building dependencies are met, and the teleporters take every queued
+  raider. The level's oxygen still drains as the original's does.
+- **Why:** a cheat players asked for, off unless they turn it on.
+- **Configurable:** `[cheats]` `unlimited_raiders = false` (the default,
+  the original's limit) or `true`.
+- **Where:** `src/game/legoobject_unit.c`
+  (`[divergence:unlimited-raiders]`).
 
 ### Movies fill a larger screen mode
 
