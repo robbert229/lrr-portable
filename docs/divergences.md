@@ -148,6 +148,40 @@ reference.
   button and the wheel as `WM_MBUTTONDOWN`, `WM_MBUTTONUP` and
   `WM_MOUSEWHEEL`).
 
+### Idle raiders take the jobs waiting for them
+
+- **Original:** raiders sometimes stand idle while jobs wait for them, in
+  the original as much as in the port. Players call it the "idleness
+  syndrome"; it is worse with more raiders, and on maps with parts a
+  raider cannot reach. On every tick, `AITask.c`'s job assignment
+  (0x00405c10) hands each waiting job to the nearest idle unit that can
+  do it. A unit that must walk to the job first is sent there
+  (`Message_Dig`, `Message_Clear` and the rest, which the level's `.ptl`
+  turns into a Goto), and the job records it as its unit on its way. In
+  three places, a job makes no use of idle units it could have:
+  - A job whose unit is on its way still takes the nearest idle unit on
+    every tick. It gives it nothing, but takes it off the tick's idle
+    list, so no later job can have it. Each unit on its way keeps one idle
+    unit standing, and lower-priority jobs get none.
+  - A unit that cannot reach a job pauses the job for 75 ticks. The pause
+    also makes the job refuse every unit after it in the idle list on that
+    tick. One raider cut off on an island can keep jobs from all the
+    raiders listed after it, again and again.
+  - The unit on its way stops being the job's only when it takes a job or
+    the player gives it an order. If its Goto fails or ends elsewhere, the
+    job waits for it forever, and keeps taking an idle unit on every tick.
+- **Port:** a unit leaves the idle list only when it is given a job or
+  sent to one. A job pauses only when no idle unit can reach it, as the
+  original does. An idle unit stops being any job's unit on its way.
+  Checking the walk to a job's side cell also uses the unit being
+  checked; the original used the best unit found so far.
+- **Why:** to fix a long-known bug. What a raider does with a job, and
+  which job it takes first, are unchanged.
+- **Configurable:** `[tweaks]` `fix_idleness_syndrome = true` (the
+  default) or `false`, which keeps the original's job assignment.
+- **Where:** `src/game/aitask.c` (`[divergence:idleness-syndrome]`);
+  `src/game/test_idleness_syndrome.cpp`.
+
 ### Movies fill a larger screen mode
 
 - **Original:** the front end plays its movies at 640x480. In a larger

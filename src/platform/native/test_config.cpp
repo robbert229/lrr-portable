@@ -120,6 +120,10 @@ int main(void)
               text.find("modern") != std::string::npos,
           "default: controls = modern is written under [tweaks]");
     CHECK(LRR_GetControls() == LRR_CONTROLS_MODERN, "default: the modern controls");
+    CHECK(text.find("fix_idleness_syndrome") > text.find("[" LRR_CONFIG_TWEAKS_SECTION "]") &&
+              text.find("true", text.find("fix_idleness_syndrome")) != std::string::npos,
+          "default: fix_idleness_syndrome = true is written under [tweaks]");
+    CHECK(LRR_GetFixIdlenessSyndrome(), "default: the idleness syndrome is fixed");
 
     /* A later run reads the file the user edited. */
     write_text(defaultIni, "[" LRR_CONFIG_SECTION "]\nsavepath = " + root + "/elsewhere/\n");
@@ -233,6 +237,24 @@ int main(void)
     write_text(custom, "[" LRR_CONFIG_SECTION "]\ncontrols = original\n");
     CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetControls() == LRR_CONTROLS_MODERN,
           "controls: the key is read from [tweaks], not [legorr]");
+
+    /* tweaks:fix_idleness_syndrome: "false" keeps the original's job
+     * assignment; anything else fixes it. */
+    write_text(custom, "[" LRR_CONFIG_SECTION "]\nother = 1\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetFixIdlenessSyndrome(),
+          "fix_idleness_syndrome: a file without the key fixes it");
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nfix_idleness_syndrome = false\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && !LRR_GetFixIdlenessSyndrome(), "fix_idleness_syndrome: false");
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nfix_idleness_syndrome = Off\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && !LRR_GetFixIdlenessSyndrome(),
+          "fix_idleness_syndrome: off in any case");
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nfix_idleness_syndrome = 0\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && !LRR_GetFixIdlenessSyndrome(), "fix_idleness_syndrome: 0");
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nfix_idleness_syndrome = true\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetFixIdlenessSyndrome(), "fix_idleness_syndrome: true");
+    write_text(custom, "[" LRR_CONFIG_SECTION "]\nfix_idleness_syndrome = false\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetFixIdlenessSyndrome(),
+          "fix_idleness_syndrome: the key is read from [tweaks], not [legorr]");
 
     /* An explicit file that does not load fails, as isle-portable's does. */
     CHECK(!LRR_LoadConfig((root + "/missing.ini").c_str()), "explicit: a missing file fails");

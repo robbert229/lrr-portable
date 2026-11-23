@@ -491,6 +491,29 @@ if(BUILD_TESTING)
       entity_stats_float_at138
       ddiscene_object_position_get
     LABELS legoobject)
+  # AITask.c's job assignment with tweaks:fix_idleness_syndrome off and on:
+  # a job with a unit on its way keeps no idle unit from the next job, a
+  # unit that cannot reach a job does not pause it for the others, and an
+  # idle unit is no job's unit on its way. The unit's calls to the map,
+  # object, message and config units reach the test's __wrap_ stubs.
+  lrr_unit_test(idleness_syndrome SOURCES ${GAME_DIR}/test_idleness_syndrome.cpp
+    WRAP
+      _Z26LRR_GetFixIdlenessSyndromev
+      level_current_terrain_get
+      selection_contains_entity_active_target
+      lego_entity_matches_current_selection_or_owner
+      entity_stats_word_get
+      legoobject_type_two_target_resolve_and_apply
+      legoobject_transform_position_get
+      legoobject_position_to_terrain_cell
+      legoobject_surface_vector_normalize
+      legoobject_adjacent_position_candidate_find
+      terrain_map_block_to_world
+      terrain_map_world_to_block
+      legoobject_grid_route_search_adapter
+      cmd_produce
+      idle_register
+    LABELS aitask)
   # LegoObject.c's run away frees only the route lists it allocated: the
   # unit's calls to free reach the test's __wrap_free, which records a
   # stack address instead of aborting on it.
