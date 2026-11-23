@@ -45,7 +45,8 @@
  *   on every tick, gives it nothing, and keeps it from every later job;
  * - the first unit that cannot reach a job pauses the job for 75 ticks,
  *   which also turns away every unit after it in the list on that tick;
- * - a job whose unit never arrives waits for that unit forever.
+ * - a job whose unit's Goto is dropped without a flush waits for that unit
+ *   until it takes another job, which the first point can stop it doing.
  * With the fix, a unit leaves the idle list only when it is given
  * something, a job pauses only when no unit can reach it, and an idle unit
  * stops being a job's unit on its way. */
@@ -4412,8 +4413,9 @@ int aitask_cmd_entity_command_chain_tick(struct Lego_Object* object, void* data)
              * no job: a job that sent it (00405c10) and that it never took,
              * because its Goto failed or ended elsewhere, lets another unit
              * take it. The original clears the reference only when the
-             * unit takes a job or its queue is flushed, so the job waits
-             * forever. The Goto is made in the same frame (Message.c runs
+             * unit takes a job or its queue is flushed, which a Goto
+             * dropped during the AI update, or one with no route, never
+             * does. The Goto is made in the same frame (Message.c runs
              * after this tick), so a unit on its way is never idle here. */
             if (aitask_fix_idleness_syndrome())
                 aitask_pending_record_entity_reference_clear(object);

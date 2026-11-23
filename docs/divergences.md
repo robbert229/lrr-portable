@@ -168,8 +168,13 @@ reference.
     tick. One raider cut off on an island can keep jobs from all the
     raiders listed after it, again and again.
   - The unit on its way stops being the job's only when it takes a job or
-    the player gives it an order. If its Goto fails or ends elsewhere, the
-    job waits for it forever, and keeps taking an idle unit on every tick.
+    its queue is flushed. An interrupted route flushes the queue
+    (`LegoObject_Route_End`, 0x00441940), but not while the AI update
+    runs, and a Goto whose route cannot be found (the cell beside the job
+    is picked again when the unit is sent, and may differ from the one
+    checked) is dropped without one. The job then waits for the unit until
+    it takes another job, and keeps taking an idle unit on every tick; if
+    that is the same unit, it waits forever.
 - **Port:** a unit leaves the idle list only when it is given a job or
   sent to one. A job pauses only when no idle unit can reach it, as the
   original does. An idle unit stops being any job's unit on its way.
