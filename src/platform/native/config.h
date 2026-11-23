@@ -22,7 +22,10 @@
  * And it holds the port's opt-outs from its divergences from the original
  * game (docs/divergences.md), in their own section, [tweaks]:
  * tweaks:Training Save, tweaks:display, tweaks:controls and
- * tweaks:fix_idleness_syndrome. */
+ * tweaks:fix_idleness_syndrome.
+ *
+ * And it holds cheats, off by default, in their own section, [cheats]:
+ * cheats:unlimited_raiders. */
 #ifndef LEGORRR_PLATFORM_NATIVE_CONFIG_H
 #define LEGORRR_PLATFORM_NATIVE_CONFIG_H
 
@@ -45,6 +48,9 @@
 #define LRR_CONFIG_DISPLAY "tweaks:display"
 #define LRR_CONFIG_CONTROLS "tweaks:controls"
 #define LRR_CONFIG_FIXIDLENESS "tweaks:fix_idleness_syndrome"
+/* The section for the cheats. */
+#define LRR_CONFIG_CHEATS_SECTION "cheats"
+#define LRR_CONFIG_UNLIMITEDRAIDERS "cheats:unlimited_raiders"
 
 /* The display settings, in place of the dialog's choices. device is a 3D
  * device's description as DirectDraw.c lists it, e.g. "Miniwin driver
@@ -159,6 +165,14 @@ enum LRR_Controls {
  * "true", the default, fixes both; "false" keeps the original's
  * behaviour. */
 
+/* cheats:unlimited_raiders (docs/divergences.md, "Cheat: unlimited
+ * raiders"). The original greys out the Teleport Rock Raider button, and
+ * its teleporters hold back queued raiders, once the level's raiders would
+ * use more oxygen than its Support Stations give (Lego.cfg OxygenCoef,
+ * LegoObject.c 0043c200). "true" skips that check, so raiders can always
+ * be teleported in from any teleporter that takes them;
+ * "false", the default, keeps the original's limit. */
+
 /* Reads the configuration from `iniPath`, or from LRR_CONFIG_FILE in the
  * preference directory when it is NULL, writing that file with defaults
  * when it is missing or empty, and applies it (files_native_set_save_path,
@@ -186,5 +200,9 @@ LRR_Controls LRR_GetControls();
 /* The tweaks:fix_idleness_syndrome setting LRR_LoadConfig read, or the
  * default, true, before it runs. */
 bool LRR_GetFixIdlenessSyndrome();
+
+/* The cheats:unlimited_raiders setting LRR_LoadConfig read, or the
+ * default, false, before it runs. */
+bool LRR_GetUnlimitedRaiders();
 
 #endif /* LEGORRR_PLATFORM_NATIVE_CONFIG_H */
