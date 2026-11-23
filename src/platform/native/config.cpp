@@ -78,26 +78,26 @@ LRR_DisplayScaling ParseDisplayScaling(const char* value)
     return LRR_DISPLAY_FIT;
 }
 
-constexpr LRR_Controls kDefaultControls = LRR_CONTROLS_ORIGINAL;
+constexpr LRR_Controls kDefaultControls = LRR_CONTROLS_MODERN;
 
 LRR_Controls g_controls = kDefaultControls;
 
 const char* ControlsName(LRR_Controls value)
 {
-    return value == LRR_CONTROLS_MODERN ? "modern" : "original";
+    return value == LRR_CONTROLS_ORIGINAL ? "original" : "modern";
 }
 
-/* "modern" (or on/true/yes/1) adds the camera controls; anything else keeps
- * the original's. */
+/* "original" (or off/false/no/0) keeps the original's controls; anything
+ * else adds the camera controls. */
 LRR_Controls ParseControls(const char* value)
 {
     if (value != NULL &&
-        (SDL_strcasecmp(value, "modern") == 0 || SDL_strcasecmp(value, "on") == 0 ||
-         SDL_strcasecmp(value, "true") == 0 || SDL_strcasecmp(value, "yes") == 0 ||
-         SDL_strcmp(value, "1") == 0)) {
-        return LRR_CONTROLS_MODERN;
+        (SDL_strcasecmp(value, "original") == 0 || SDL_strcasecmp(value, "off") == 0 ||
+         SDL_strcasecmp(value, "false") == 0 || SDL_strcasecmp(value, "no") == 0 ||
+         SDL_strcmp(value, "0") == 0)) {
+        return LRR_CONTROLS_ORIGINAL;
     }
-    return LRR_CONTROLS_ORIGINAL;
+    return LRR_CONTROLS_MODERN;
 }
 
 /* The directory that holds the configuration file and, by default, the

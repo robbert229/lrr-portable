@@ -142,8 +142,8 @@ enum LRR_DisplayScaling {
  * W, A, S and D to pan, Q and E to rotate, the mouse wheel to zoom and a
  * middle-button drag to pan; edge panning still works. While debug keys
  * are on (Lego.cfg AllowDebugKeys), W, A, S, D, Q and E keep their debug
- * meanings and do not move the camera. "original", the default, keeps the
- * original's controls. */
+ * meanings and do not move the camera. "modern" is the default;
+ * "original" keeps the original's controls. */
 enum LRR_Controls {
     LRR_CONTROLS_ORIGINAL = 0,
     LRR_CONTROLS_MODERN = 1,
@@ -170,7 +170,7 @@ LRR_TrainingSave LRR_GetTrainingSave();
 LRR_DisplayScaling LRR_GetDisplayScaling();
 
 /* The tweaks:controls setting LRR_LoadConfig read, or the default,
- * LRR_CONTROLS_ORIGINAL, before it runs. */
+ * LRR_CONTROLS_MODERN, before it runs. */
 LRR_Controls LRR_GetControls();
 
 #endif /* LEGORRR_PLATFORM_NATIVE_CONFIG_H */

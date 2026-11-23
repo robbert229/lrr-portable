@@ -117,9 +117,9 @@ int main(void)
           "default: display = fit is written under [tweaks]");
     CHECK(LRR_GetDisplayScaling() == LRR_DISPLAY_FIT, "default: the display fits the window");
     CHECK(text.find("controls") > text.find("[" LRR_CONFIG_TWEAKS_SECTION "]") &&
-              text.find("original") != std::string::npos,
-          "default: controls = original is written under [tweaks]");
-    CHECK(LRR_GetControls() == LRR_CONTROLS_ORIGINAL, "default: the original controls");
+              text.find("modern") != std::string::npos,
+          "default: controls = modern is written under [tweaks]");
+    CHECK(LRR_GetControls() == LRR_CONTROLS_MODERN, "default: the modern controls");
 
     /* A later run reads the file the user edited. */
     write_text(defaultIni, "[" LRR_CONFIG_SECTION "]\nsavepath = " + root + "/elsewhere/\n");
@@ -214,24 +214,24 @@ int main(void)
     CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetDisplayScaling() == LRR_DISPLAY_FIT,
           "display: the key is read from [tweaks], not [legorr]");
 
-    /* tweaks:controls: "modern" adds the camera controls; anything else
-     * keeps the original's. */
+    /* tweaks:controls: "original" keeps the original's controls; anything
+     * else adds the camera controls. */
     write_text(custom, "[" LRR_CONFIG_SECTION "]\nother = 1\n");
-    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetControls() == LRR_CONTROLS_ORIGINAL,
-          "controls: a file without the key keeps the original");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetControls() == LRR_CONTROLS_MODERN,
+          "controls: a file without the key is modern");
     write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\ncontrols = modern\n");
     CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetControls() == LRR_CONTROLS_MODERN, "controls: modern");
-    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\ncontrols = Modern\n");
-    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetControls() == LRR_CONTROLS_MODERN,
-          "controls: modern in any case");
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\ncontrols = Original\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetControls() == LRR_CONTROLS_ORIGINAL,
+          "controls: original in any case");
     write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\ncontrols = original\n");
     CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetControls() == LRR_CONTROLS_ORIGINAL,
           "controls: original");
     write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\ncontrols = bogus\n");
-    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetControls() == LRR_CONTROLS_ORIGINAL,
-          "controls: an unknown value keeps the original");
-    write_text(custom, "[" LRR_CONFIG_SECTION "]\ncontrols = modern\n");
-    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetControls() == LRR_CONTROLS_ORIGINAL,
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetControls() == LRR_CONTROLS_MODERN,
+          "controls: an unknown value is modern");
+    write_text(custom, "[" LRR_CONFIG_SECTION "]\ncontrols = original\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetControls() == LRR_CONTROLS_MODERN,
           "controls: the key is read from [tweaks], not [legorr]");
 
     /* An explicit file that does not load fails, as isle-portable's does. */

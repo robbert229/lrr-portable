@@ -121,7 +121,7 @@ reference.
 - **Original:** the top-down view pans only when the pointer touches the
   edge of the screen. The arrow keys tilt and rotate it, `-` and `=` zoom,
   and the middle mouse button and the wheel do nothing.
-- **Port:** with `controls = modern`, the top-down view also takes:
+- **Port:** the top-down view also takes:
   - `W`, `A`, `S` and `D` to pan along the screen's axes, at `Lego.cfg`'s
     `CameraSpeed` and `CameraAcceleration`, as edge panning does;
   - `Q` and `E` to rotate, as the left and right arrows do;
@@ -141,8 +141,8 @@ reference.
   the window instead. Today's strategy games pan with the keyboard and the
   middle button and zoom with the wheel. The original reads none of these
   keys or buttons outside debug mode, so nothing the original does changes.
-- **Configurable:** `[tweaks]` `controls = original` (the default) or
-  `modern`.
+- **Configurable:** `[tweaks]` `controls = modern` (the default) or
+  `original`, which keeps only the original's controls.
 - **Where:** `src/game/lego_unit.c` and `src/gods98/main.c`
   (`[divergence:modern-controls]`); `patches/miniwin` 0046 (the middle
   button and the wheel as `WM_MBUTTONDOWN`, `WM_MBUTTONUP` and
