@@ -551,6 +551,7 @@ if(BUILD_TESTING)
   # Files.c's start-up with the data directory from the diskpath
   # ([library:config]).
   lrr_unit_test(diskpath SOURCES ${ENGINE_DIR}/test_diskpath.cpp LABELS files)
+  include(${CMAKE_SOURCE_DIR}/cmake/tests/gods98.cmake)
   # The block grids' index (game/block_grid.h): a NaN position's INT_MIN
   # coordinates resolve to block 0, as the original's 32-bit arithmetic.
   # GNU ld's --wrap, as the frontend tests above.
