@@ -82,6 +82,12 @@ int main(int argc, char** argv)
     std::string program = "./LegoRR";
 #else
     std::string program = argc > 0 ? argv[0] : "LegoRR.exe";
+    /* A program started from PATH (the Flatpak's command, or LegoRR on an
+     * installed system) has a bare argv[0]. Windows always puts a path in
+     * the command line, and WinMain relies on it: it takes the name after
+     * the last backslash, so without one it keeps the opening quote and
+     * then cuts the name at it, leaving no name and no WADs. */
+    if (program.find('/') == std::string::npos) program = "./" + program;
 #endif
     for (char& c : program) {
         if (c == '/') c = '\\';
