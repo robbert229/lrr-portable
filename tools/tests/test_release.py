@@ -55,9 +55,28 @@ class VersionTests(unittest.TestCase):
         with self.assertRaises(release.ReleaseError):
             release.project_version("project(lrr-portable VERSION 1.2 LANGUAGES C)\n")
 
+    def test_reads_a_prerelease_label(self):
+        cmake = ('project(lrr-portable VERSION 1.0.0 LANGUAGES C CXX)\n'
+                 'set(LRR_VERSION_PRERELEASE "beta1")\n')
+        self.assertEqual(release.project_version(cmake), "1.0.0-beta1")
+        self.assertTrue(release.is_prerelease("1.0.0-beta1"))
+
+    def test_an_empty_label_is_a_release(self):
+        cmake = ('project(lrr-portable VERSION 1.0.0 LANGUAGES C CXX)\n'
+                 'set(LRR_VERSION_PRERELEASE "")\n')
+        self.assertEqual(release.project_version(cmake), "1.0.0")
+        self.assertFalse(release.is_prerelease("1.0.0"))
+
+    def test_rejects_a_label_that_is_not_semver(self):
+        for label in ("beta_1", "beta..1", "01", "beta."):
+            cmake = ('project(lrr-portable VERSION 1.0.0 LANGUAGES C CXX)\n'
+                     f'set(LRR_VERSION_PRERELEASE "{label}")\n')
+            with self.assertRaises(release.ReleaseError):
+                release.project_version(cmake)
+
     def test_the_repository_version_is_semver(self):
         version = release.project_version((ROOT / "CMakeLists.txt").read_text())
-        self.assertRegex(version, r"^\d+\.\d+\.\d+$")
+        self.assertRegex(version, r"^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$")
 
     def test_the_changelog_has_notes_for_the_repository_version(self):
         # The section for the version main is working towards always exists
@@ -84,6 +103,18 @@ class NotesTests(unittest.TestCase):
 
 class TagTests(unittest.TestCase):
     CMAKE = "project(lrr-portable VERSION 0.2.0 LANGUAGES C CXX)\n"
+    PRERELEASE_CMAKE = ('project(lrr-portable VERSION 1.0.0 LANGUAGES C CXX)\n'
+                        'set(LRR_VERSION_PRERELEASE "beta1")\n')
+
+    def test_matching_prerelease_tag(self):
+        changelog = CHANGELOG.replace("## [0.2.0]", "## [1.0.0-beta1]")
+        self.assertEqual(release.check_tag("v1.0.0-beta1", self.PRERELEASE_CMAKE, changelog),
+                         "1.0.0-beta1")
+
+    def test_release_tag_for_a_prerelease_version(self):
+        changelog = CHANGELOG.replace("## [0.2.0]", "## [1.0.0-beta1]")
+        with self.assertRaises(release.ReleaseError):
+            release.check_tag("v1.0.0", self.PRERELEASE_CMAKE, changelog)
 
     def test_matching_tag(self):
         self.assertEqual(release.check_tag("v0.2.0", self.CMAKE, CHANGELOG), "0.2.0")

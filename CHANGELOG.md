@@ -2,13 +2,13 @@
 
 What changed in each release of lrr-portable, written for players. The
 format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
-versions follow [Semantic Versioning](https://semver.org/) (0.x while the
-port is young). Each section below is also the text of that release on
+versions follow [Semantic Versioning](https://semver.org/); a pre-release
+such as `1.0.0-beta1` comes before the release it names. Each section below is also the text of that release on
 GitHub. [docs/releasing.md](docs/releasing.md) explains how a release is
 made. The section for the version `main` is working towards is dated
 `unreleased` until its release.
 
-## [0.1.0] - unreleased
+## [1.0.0-beta1] - 2026-11-22
 
 The first release of lrr-portable: LEGO Rock Raiders (1999), rebuilt to run
 natively on Windows, macOS and Linux, with early test builds for Android and
@@ -20,24 +20,24 @@ contains any game data. lrr-portable uses `LegoRR0.wad`, `LegoRR1.wad` and the
 [README](https://github.com/robbert229/lrr-portable#getting-the-game-running)
 explains how to point it at them.
 
-**This is an early release.** Every part of the game has been rebuilt, and
-you can start missions, dig, build and explore, but crashes are still
-common and you may not reach the end of a mission. Please
+**This is a beta, the first pre-release of 1.0.0.** Every part of the game
+has been rebuilt, and you can start missions, dig, build and explore, but
+crashes are still common and you may not reach the end of a mission. Please
 [report what breaks](https://github.com/robbert229/lrr-portable/issues).
 
 ### Downloads
 
 | System | File |
 | --- | --- |
-| Windows 10 and 11, 64-bit | `lrr-portable-0.1.0-Windows-x64.zip` |
-| Windows on Arm | `lrr-portable-0.1.0-Windows-arm64.zip` |
-| Windows, 32-bit | `lrr-portable-0.1.0-Windows-x86.zip` |
-| macOS 12 or later, Apple silicon | `lrr-portable-0.1.0-Darwin-arm64.dmg` |
-| macOS 12 or later, Intel | `lrr-portable-0.1.0-Darwin-x86_64.dmg` |
-| Linux, x86_64 (glibc 2.39 or later, such as Ubuntu 24.04) | `lrr-portable-0.1.0-Linux-x86_64.AppImage` or `.tar.gz` |
-| Linux, Flatpak (x86_64 or aarch64) | `lrr-portable-0.1.0-Linux-x86_64.flatpak` or `-aarch64.flatpak` |
-| Android 5 or later, **test build** | `lrr-portable-0.1.0-Android-debug-test.apk` |
-| New Nintendo 3DS (homebrew), **test build** | `lrr-portable-0.1.0-3DS-homebrew-test.zip` (`LegoRR.3dsx` and `LegoRR.cia`) |
+| Windows 10 and 11, 64-bit | `lrr-portable-1.0.0-beta1-Windows-x64.zip` |
+| Windows on Arm | `lrr-portable-1.0.0-beta1-Windows-arm64.zip` |
+| Windows, 32-bit | `lrr-portable-1.0.0-beta1-Windows-x86.zip` |
+| macOS 12 or later, Apple silicon | `lrr-portable-1.0.0-beta1-Darwin-arm64.dmg` |
+| macOS 12 or later, Intel | `lrr-portable-1.0.0-beta1-Darwin-x86_64.dmg` |
+| Linux, x86_64 (glibc 2.39 or later, such as Ubuntu 24.04) | `lrr-portable-1.0.0-beta1-Linux-x86_64.AppImage` or `.tar.gz` |
+| Linux, Flatpak (x86_64 or aarch64) | `lrr-portable-1.0.0-beta1-Linux-x86_64.flatpak` or `-aarch64.flatpak` |
+| Android 5 or later, **test build** | `lrr-portable-1.0.0-beta1-Android-debug-test.apk` |
+| New Nintendo 3DS (homebrew), **test build** | `lrr-portable-1.0.0-beta1-3DS-homebrew-test.zip` (`LegoRR.3dsx` and `LegoRR.cia`) |
 
 `SHA256SUMS` lists every file's checksum. Each download carries the licence
 (`LICENSE`) and the notices for the libraries it includes
@@ -165,7 +165,7 @@ details, is in [docs/divergences.md](docs/divergences.md).
 
 ### Coming next
 
-These are in progress and not in 0.1.0:
+These are in progress and not in 1.0.0-beta1:
 
 - Widescreen interface layouts
   ([#915](https://github.com/robbert229/lrr-portable/issues/915)).
@@ -175,4 +175,4 @@ These are in progress and not in 0.1.0:
 - Pause, resume and exit on the 3DS's HOME button
   ([#910](https://github.com/robbert229/lrr-portable/issues/910)).
 
-[0.1.0]: https://github.com/robbert229/lrr-portable/releases/tag/v0.1.0
+[1.0.0-beta1]: https://github.com/robbert229/lrr-portable/releases/tag/v1.0.0-beta1

@@ -28,7 +28,7 @@ OUT="$(cd "$OUT" && pwd)"
 [ "$(uname -m)" = x86_64 ] || { echo "build.sh: the AppImage is x86_64 only" >&2; exit 1; }
 
 APP_ID="$(sed -n 's/^set(LRR_APP_ID "\(.*\)")$/\1/p' "$HERE/../../CMakeLists.txt")"
-VERSION="$(sed -n 's/^CMAKE_PROJECT_VERSION:STATIC=//p' "$BUILD/CMakeCache.txt")"
+VERSION="$(sed -n 's/^LRR_VERSION:INTERNAL=//p' "$BUILD/CMakeCache.txt")"
 [ -n "$APP_ID" ] && [ -n "$VERSION" ] || { echo "build.sh: no app id or version found" >&2; exit 1; }
 
 TOOLS="$BUILD/appimage-tools"

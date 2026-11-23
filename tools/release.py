@@ -2,13 +2,16 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """Release helpers for the release workflow (docs/releasing.md).
 
-    tools/release.py version            print project(VERSION) from CMakeLists.txt
+    tools/release.py version            print the version from CMakeLists.txt
     tools/release.py check-tag TAG      fail unless TAG is v<version> and the
                                         changelog has notes for that version
     tools/release.py notes VERSION      print CHANGELOG.md's notes for VERSION
+    tools/release.py prerelease         print true for a pre-release version,
+                                        false otherwise
 
-project(VERSION) in CMakeLists.txt is the one place the version is set; a
-release is tagged v<version>, and CHANGELOG.md has a "## [<version>]"
+project(VERSION) and LRR_VERSION_PRERELEASE in CMakeLists.txt are the one
+place the version is set: MAJOR.MINOR.PATCH, plus "-<label>" for a
+pre-release such as 1.0.0-beta1. A release is tagged v<version>, and CHANGELOG.md has a "## [<version>]"
 section, whose body is the release's notes.
 """
 from pathlib import Path
@@ -17,6 +20,9 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 SEMVER = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
+# A Semantic Versioning pre-release: dot-separated identifiers of
+# [0-9A-Za-z-], numeric ones without leading zeros.
+PRERELEASE_IDENTIFIER = re.compile(r"^(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)$")
 
 
 class ReleaseError(Exception):
@@ -30,7 +36,17 @@ def project_version(cmake_text):
     version = match.group(1)
     if not SEMVER.match(version):
         raise ReleaseError(f"project VERSION {version} is not MAJOR.MINOR.PATCH")
+    label = re.search(r'^set\(\s*LRR_VERSION_PRERELEASE\s+"([^"]*)"\s*\)', cmake_text, re.M)
+    if label and label.group(1):
+        if not all(PRERELEASE_IDENTIFIER.match(part) for part in label.group(1).split(".")):
+            raise ReleaseError(
+                f"LRR_VERSION_PRERELEASE {label.group(1)} is not a Semantic Versioning pre-release")
+        version += "-" + label.group(1)
     return version
+
+
+def is_prerelease(version):
+    return "-" in version
 
 
 def release_notes(changelog_text, version):
@@ -72,6 +88,8 @@ def main(argv):
             print(project_version(cmake))
         elif argv[:1] == ["check-tag"] and len(argv) == 2:
             print(check_tag(argv[1], cmake, changelog))
+        elif argv[:1] == ["prerelease"] and len(argv) == 1:
+            print("true" if is_prerelease(project_version(cmake)) else "false")
         elif argv[:1] == ["notes"] and len(argv) == 2:
             sys.stdout.write(release_notes(changelog, argv[1]))
         else:

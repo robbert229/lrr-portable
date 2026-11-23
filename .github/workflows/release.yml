@@ -55,6 +55,7 @@ jobs:
       version: ${{ steps.decide.outputs.version }}
       tag: ${{ steps.decide.outputs.tag }}
       draft: ${{ steps.decide.outputs.draft }}
+      prerelease: ${{ steps.decide.outputs.prerelease }}
     steps:
       - name: Check out
         uses: actions/checkout@v4
@@ -91,6 +92,7 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "draft=$draft" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$(python3 tools/release.py prerelease)" >> "$GITHUB_OUTPUT"
           echo "Version $version, tag $tag, draft: $draft" >> "$GITHUB_STEP_SUMMARY"
 
   hosts:
@@ -242,8 +244,15 @@ jobs:
           GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.prepare.outputs.tag }}
           VERSION: ${{ needs.prepare.outputs.version }}
+          PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
         run: |
           set -euo pipefail
+          # A version with a pre-release label (1.0.0-beta1) drafts a
+          # pre-release.
+          prerelease=()
+          if [ "$PRERELEASE" = true ]; then
+            prerelease=(--prerelease)
+          fi
           # Only "release not found" means there is none; any other failure
           # stops here rather than create a second draft.
           if state="$(gh release view "$TAG" --json isDraft --jq .isDraft 2>"$RUNNER_TEMP/view.err")"; then
@@ -251,11 +260,11 @@ jobs:
               echo "::error::release $TAG is already published; this workflow only drafts"
               exit 1
             fi
-            gh release edit "$TAG" --draft --title "lrr-portable $VERSION" \
+            gh release edit "$TAG" --draft "${prerelease[@]}" --title "lrr-portable $VERSION" \
               --notes-file assets/release-notes.md
             gh release upload "$TAG" assets/release/* --clobber
           elif grep -qi 'not found' "$RUNNER_TEMP/view.err"; then
-            gh release create "$TAG" assets/release/* --draft --verify-tag \
+            gh release create "$TAG" assets/release/* --draft "${prerelease[@]}" --verify-tag \
               --title "lrr-portable $VERSION" --notes-file assets/release-notes.md
           else
             cat "$RUNNER_TEMP/view.err" >&2

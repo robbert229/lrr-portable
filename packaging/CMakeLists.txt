@@ -28,16 +28,21 @@ string(TIMESTAMP LRR_BUILD_DATE "%Y-%m-%d" UTC)
 # CI numbers the version recorded in the package metadata and the AppStream
 # release by run, as isle-portable does, so that two runs of one version sort
 # apart. File names carry the plain version. A run on a tag (the release
-# workflow, docs/releasing.md) records the plain version as a stable release.
+# workflow, docs/releasing.md) records the plain version as a stable release,
+# or as a development release when the version carries a pre-release label.
 if("$ENV{GITHUB_ACTIONS}" STREQUAL "true" AND NOT "$ENV{GITHUB_RUN_NUMBER}" STREQUAL ""
     AND NOT "$ENV{GITHUB_REF_TYPE}" STREQUAL "tag")
-  set(LRR_SEMANTIC_VERSION "${PROJECT_VERSION}~build$ENV{GITHUB_RUN_NUMBER}")
+  set(LRR_SEMANTIC_VERSION "${LRR_VERSION}~build$ENV{GITHUB_RUN_NUMBER}")
   set(LRR_RELEASE_TYPE "development")
 elseif("$ENV{GITHUB_REF_TYPE}" STREQUAL "tag")
-  set(LRR_SEMANTIC_VERSION "${PROJECT_VERSION}")
-  set(LRR_RELEASE_TYPE "stable")
+  set(LRR_SEMANTIC_VERSION "${LRR_VERSION}")
+  if(LRR_VERSION_PRERELEASE STREQUAL "")
+    set(LRR_RELEASE_TYPE "stable")
+  else()
+    set(LRR_RELEASE_TYPE "development")
+  endif()
 else()
-  set(LRR_SEMANTIC_VERSION "${PROJECT_VERSION}")
+  set(LRR_SEMANTIC_VERSION "${LRR_VERSION}")
   set(LRR_RELEASE_TYPE "development")
 endif()
 
@@ -108,7 +113,7 @@ else()
   install(FILES ${LRR_NOTICE_FILES} DESTINATION "${LRR_INSTALL_DOCDIR}")
 endif()
 
-# The package name: lrr-portable-0.1.0-Linux-x86_64, -Darwin-arm64,
+# The package name: lrr-portable-<version>-Linux-x86_64, -Darwin-arm64,
 # -Windows-x64 ...
 if(MSVC)
   string(TOLOWER "${MSVC_CXX_ARCHITECTURE_ID}" _lrr_arch)
@@ -129,7 +134,7 @@ set(CPACK_PACKAGE_HOMEPAGE_URL "${LRR_APP_URL}")
 # agreement that a disk image cannot be mounted without accepting. The licence
 # and notices are installed beside LegoRR instead (above).
 set(CPACK_PACKAGE_DIRECTORY "dist")
-set(CPACK_PACKAGE_FILE_NAME "lrr-portable-${PROJECT_VERSION}-${LRR_PACKAGE_NAME}")
+set(CPACK_PACKAGE_FILE_NAME "lrr-portable-${LRR_VERSION}-${LRR_PACKAGE_NAME}")
 if(WIN32)
   set(CPACK_GENERATOR ZIP)
 elseif(APPLE)
