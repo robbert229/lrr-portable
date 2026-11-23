@@ -27,3 +27,25 @@ lrr_unit_test(objinfo SOURCES ${GAME_DIR}/test_objinfo.cpp
 # Panel lookup, hit bounds, control geometry and slide state.
 lrr_unit_test(panel_unit SOURCES ${GAME_DIR}/test_panel_unit.cpp
   WRAP Image_DisplayScaled LABELS panel_unit)
+
+# Cursor name lookup and temporary override expiry.
+lrr_unit_test(pointer SOURCES ${GAME_DIR}/test_pointer.cpp LABELS pointer)
+
+# Priority configuration, ordering, toggle state and reset.
+lrr_unit_test(priorities SOURCES ${GAME_DIR}/test_priorities.cpp
+  WRAP media_action_feedback_sound_dispatch LABELS priorities)
+
+# Per-level event translation preserves the message payload.
+lrr_unit_test(ptl SOURCES ${GAME_DIR}/test_ptl.cpp
+  WRAP block_open block_close LABELS ptl)
+
+# Radar bounds and the screen/world transforms on a synthetic map.
+lrr_unit_test(radarmap SOURCES ${GAME_DIR}/test_radarmap.cpp LABELS radarmap)
+
+# Weighted mission scoring, beyond the existing reward record test.
+lrr_unit_test(reward_score SOURCES ${GAME_DIR}/test_reward_score.cpp
+  WRAP level_current_owner_get LABELS reward)
+
+# Roof diagonals and normal updates using captured mesh vertices.
+lrr_unit_test(roof SOURCES ${GAME_DIR}/test_roof.cpp
+  WRAP container_mesh_set_vertices lwo_layer_polygon_vertex_data_read LABELS roof)
