@@ -74,3 +74,29 @@ lrr_unit_test(teleporter SOURCES ${GAME_DIR}/test_teleporter.cpp
   WRAP legoobject_run_through_lists_skip_upgrade_parts legoobject_transform_position_get
        level_current_terrain_get camera_get_topdown_world_pos
   LABELS teleporter)
+
+# Message formatting, replacement rules and tutorial text reset.
+lrr_unit_test(text SOURCES ${GAME_DIR}/test_text.cpp LABELS text)
+
+# Tooltip hover delay and the laid-out text, box and icon rows.
+lrr_unit_test(tooltip SOURCES ${GAME_DIR}/test_tooltip.cpp
+  WRAP surface_fill_pixel_spans surface_draw_polyline font_print_f Image_DisplayScaled
+  LABELS tooltip)
+
+# Configured upgrade parts and rebuilding the list when a level changes.
+lrr_unit_test(upgrade SOURCES ${GAME_DIR}/test_upgrade.cpp
+  WRAP lego_upgrade_name_entry_find legoobject_create legoobject_remove LABELS upgrade)
+
+# Vehicle upgrade masks, animation overrun and cached attachment lookup.
+lrr_unit_test(vehicle_model SOURCES ${GAME_DIR}/test_vehicle_model.cpp
+  WRAP ddiscene_advance_by_time_target ddiscene_object_frame_position_get
+       xf_texture_name_format resource_name_register_or_query_target
+  LABELS vehicle_model)
+
+# Pool connectivity and opening and sealing an outlet.
+lrr_unit_test(water SOURCES ${GAME_DIR}/test_water.cpp
+  WRAP scene_render_lock_toggle terrain_map_block_vertices_get LABELS water)
+
+# Weapon configuration defaults and overrides, hit bounds and model timers.
+lrr_unit_test(weapons SOURCES ${GAME_DIR}/test_weapons.cpp
+  WRAP lego_entity_type_pair_lookup building_upgrade_admission_check LABELS weapons)
