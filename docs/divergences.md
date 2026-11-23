@@ -182,6 +182,27 @@ reference.
 - **Where:** `src/game/aitask.c` (`[divergence:idleness-syndrome]`);
   `src/game/test_idleness_syndrome.cpp`.
 
+### Raiders take the job they were sent to
+
+- **Original:** when the player sends a raider to dig a wall, clear rubble
+  or pick something up, the raider walks there, and the job is marked as
+  asked for by the player (it then has the top priority). The raider takes
+  the job only once it stands at it, and only if the job is not paused. A
+  job pauses for 75 ticks when an idle raider cannot reach it, and a
+  dynamite job for 100 ticks when a raider gives up on it. If the job is
+  paused when the raider arrives, `AITask.c`'s idle unit update
+  (0x00404280) turns the raider away, and job assignment gives it other
+  work in the same tick, so the order is lost. With no other work, the
+  raider waits on the spot and takes the job when the pause ends.
+- **Port:** a raider standing at a job the player asked for takes it even
+  while the job is paused. The pause still keeps raiders from being sent
+  to the job, and jobs the player did not ask for keep it.
+- **Why:** a raider the player sent to a job should do it.
+- **Configurable:** the same `[tweaks]` `fix_idleness_syndrome` key;
+  `false` keeps the original.
+- **Where:** `src/game/aitask.c` (`[divergence:player-job-pause]`);
+  `src/game/test_idleness_syndrome.cpp`.
+
 ### Cheat: unlimited raiders
 
 - **Original:** the Teleport Rock Raider button greys out once the level

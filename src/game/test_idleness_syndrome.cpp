@@ -304,6 +304,52 @@ void IdleUnitOnItsWay(bool fix)
     CHECK_EQ(aiTaskGlobs.assignCandidateCount, 1u);
 }
 
+constexpr unsigned int kPlayerRequested = 0x10000;
+
+/* An idle unit and a paused Clear job (paused by a route failure). With
+ * the unit at (unitX, unitY), returns whether the unit took the job. */
+bool IdleUnitTakesPausedJob(bool fix, unsigned int jobFlags, int unitX, int unitY)
+{
+    Reset();
+    s_fix = fix;
+    Unit& raider = s_units[0];
+    raider.cellX = unitX;
+    raider.cellY = unitY;
+
+    static AITask job;
+    job = ClearJob(2, 2);
+    job.flags = jobFlags;
+    job.timeIn = 75.0f;
+    aiTaskGlobs.globalHead = &job;
+
+    float elapsed = 1.0f;
+    aitask_cmd_entity_command_chain_tick(&raider.obj, &elapsed);
+
+    CHECK_EQ(job.timeIn, 75.0f);
+    bool took = raider.obj.aiTask == &job;
+    if (took) {
+        CHECK_EQ(aiTaskGlobs.globalHead, (AITask*)nullptr);
+        CHECK_EQ(aiTaskGlobs.assignCandidateCount, 0u);
+    } else {
+        CHECK_EQ(raider.obj.aiTask, (AITask*)nullptr);
+        CHECK_EQ(aiTaskGlobs.globalHead, &job);
+        CHECK_EQ(aiTaskGlobs.assignCandidateCount, 1u);
+    }
+    raider.obj.aiTask = nullptr;
+    return took;
+}
+
+/* The player sent the unit to a job that is paused. The original turns the
+ * unit away when it gets there, so it takes other work. */
+void PlayerJobPaused(bool fix)
+{
+    CHECK_EQ(IdleUnitTakesPausedJob(fix, kPlayerRequested, 2, 2), fix);
+    // Not at the job: the pause still keeps the unit from it.
+    CHECK(!IdleUnitTakesPausedJob(fix, kPlayerRequested, 5, 5), "player job, unit elsewhere");
+    // A job the player did not ask for keeps its pause.
+    CHECK(!IdleUnitTakesPausedJob(fix, 0, 2, 2), "unrequested job, unit at it");
+}
+
 } // namespace
 
 int main(void)
@@ -313,6 +359,7 @@ int main(void)
         UnreachableUnitFirst(fix);
         NoUnitCanReach(fix);
         IdleUnitOnItsWay(fix);
+        PlayerJobPaused(fix);
     }
     Reset();
     return lrr_test_result("idleness_syndrome");
