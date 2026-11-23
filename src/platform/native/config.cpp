@@ -123,6 +123,10 @@ constexpr bool kDefaultUnlimitedRaiders = false;
 
 bool g_unlimitedRaiders = kDefaultUnlimitedRaiders;
 
+constexpr bool kDefaultUnlimitedOxygen = false;
+
+bool g_unlimitedOxygen = kDefaultUnlimitedOxygen;
+
 /* "true" (or on/yes/1) turns the cheat on; anything else keeps the
  * original. */
 bool ParseCheatEnabled(const char* value)
@@ -169,6 +173,7 @@ dictionary* DefaultConfig(const std::string& prefPath)
     iniparser_set(dict, LRR_CONFIG_FIXIDLENESS, BoolName(kDefaultFixIdlenessSyndrome));
     iniparser_set(dict, LRR_CONFIG_CHEATS_SECTION, NULL);
     iniparser_set(dict, LRR_CONFIG_UNLIMITEDRAIDERS, BoolName(kDefaultUnlimitedRaiders));
+    iniparser_set(dict, LRR_CONFIG_UNLIMITEDOXYGEN, BoolName(kDefaultUnlimitedOxygen));
 
 #ifdef __3DS__
     N3DS_SetupDefaultConfigOverrides(dict);
@@ -393,6 +398,7 @@ bool LRR_LoadConfig(const char* iniPath)
     g_fixIdlenessSyndrome = ParseFixIdlenessSyndrome(
         iniparser_getstring(dict, LRR_CONFIG_FIXIDLENESS, BoolName(kDefaultFixIdlenessSyndrome)));
     g_unlimitedRaiders = ParseCheatEnabled(iniparser_getstring(dict, LRR_CONFIG_UNLIMITEDRAIDERS, NULL));
+    g_unlimitedOxygen = ParseCheatEnabled(iniparser_getstring(dict, LRR_CONFIG_UNLIMITEDOXYGEN, NULL));
     iniparser_freedict(dict);
 
 #ifdef __EMSCRIPTEN__
@@ -429,4 +435,9 @@ bool LRR_GetFixIdlenessSyndrome()
 bool LRR_GetUnlimitedRaiders()
 {
     return g_unlimitedRaiders;
+}
+
+bool LRR_GetUnlimitedOxygen()
+{
+    return g_unlimitedOxygen;
 }

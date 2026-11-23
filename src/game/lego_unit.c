@@ -50,7 +50,7 @@
 #include "gods98/textwindow_record.h"
 #include "lego_unit_imports.h"
 #include "lego_globs.h"
-#include "platform/native/config.h" // [divergence:modern-controls] LRR_GetControls
+#include "platform/native/config.h" // [divergence:modern-controls] LRR_GetControls, [divergence:unlimited-oxygen] LRR_GetUnlimitedOxygen
 
 /* ------------------------------------------------------------------ */
 /* State: the unit's .bss and legoGlobs.                               */
@@ -1929,6 +1929,12 @@ void lego_air_supply_amount_update(struct Lego_Object* liveObj, float elapsed)
 
     if (liveObj->type != 4 ||
         (liveObj->flags3 & 0x20000000)) {
+        /* [divergence:unlimited-oxygen] With cheats:unlimited_oxygen, the
+         * air never drains: only a refill changes it, so it stays at the
+         * full 100 the level starts with. */
+        if (LRR_GetUnlimitedOxygen() && coef * level->oxygenRate < 0.0f) { // [library:config]
+            return;
+        }
         level->oxygenLevel += coef * (level->oxygenRate * (elapsed * 0.04f));
         if (level->oxygenLevel > 100.0f) level->oxygenLevel = 100.0f;
         if (level->oxygenLevel <= 0.0f) {
