@@ -53,3 +53,22 @@ lrr_unit_test(mesh_unit SOURCES ${ENGINE_DIR}/test_mesh_unit.cpp LABELS mesh_uni
 
 # Decode disjoint palette packets and verify the RGB565 lookup entries.
 lrr_unit_test(flic_unit SOURCES ${ENGINE_DIR}/test_flic_unit.cpp LABELS flic_unit)
+
+# Exercise the text ring and timed overlay with a glyph sink in memory.
+lrr_unit_test(textwindow SOURCES ${ENGINE_DIR}/test_textwindow.cpp
+  WRAP font_output_char LABELS textwindow)
+
+# Resolve the original key-name table back to DirectInput codes.
+lrr_unit_test(keys SOURCES ${ENGINE_DIR}/test_keys.cpp LABELS keys)
+
+# Read a memory-backed PCM RIFF header and sample data across chunk boundaries.
+lrr_unit_test(soundsys SOURCES ${ENGINE_DIR}/test_soundsys.cpp LABELS soundsys)
+
+# Fill, release and reuse entries in the level-map handle table.
+lrr_unit_test(g98_024 SOURCES ${ENGINE_DIR}/test_g98_024.cpp LABELS g98_024)
+
+# Copy a retained-mode frame tree and verify walk termination and local transforms.
+lrr_unit_test(animclone SOURCES ${ENGINE_DIR}/test_animclone.cpp LABELS animclone)
+
+# Check packed BMP scanline strides and the default 256-entry palette.
+lrr_unit_test(g98_026 SOURCES ${ENGINE_DIR}/test_g98_026.cpp LABELS g98_026)

@@ -220,6 +220,21 @@ int main(void)
         CHECK(fake.locked == 0 && fake.locks == 2, "lines unlock the surface");
     }
 
+    /* A steep reverse line enters and exits the clip midway through its
+     * Bresenham steps. Clipping must preserve the original pixel positions. */
+    {
+        Point2F from = {5.0f, 7.0f}, to = {2.0f, 0.0f};
+        memset(fake.pixels, 0, sizeof(fake.pixels));
+        set_area(&area, 3.0f, 2.0f, 3.0f, 4.0f);
+        viewport_subrectangle_set(&area);
+        surface_draw_polyline(&from, &to, 1, 1.0f, 0.0f, 0.0f, DRAW_EFFECT_NONE);
+        CHECK(pixel16(&fake, 4, 5) == 0xf800 && pixel16(&fake, 4, 4) == 0xf800 &&
+                  pixel16(&fake, 3, 3) == 0xf800 && pixel16(&fake, 3, 2) == 0xf800,
+              "reverse steep line follows the uncut raster inside the clip");
+        CHECK(count16(&fake) == 4, "reverse steep line leaves the outside untouched");
+        viewport_subrectangle_set(NULL);
+    }
+
     /* Draw_RectListEx: the end column and row are exclusive, and a
      * rectangle that reaches the clip edge stops one pixel short of it. */
     {
