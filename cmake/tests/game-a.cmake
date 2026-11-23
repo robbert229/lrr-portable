@@ -91,3 +91,23 @@ lrr_unit_test(info_unit SOURCES ${GAME_DIR}/test_info_unit.cpp LABELS info_unit)
 # Interface menu slide transitions and independent icon state.
 lrr_unit_test(interface_unit SOURCES ${GAME_DIR}/test_interface_unit.cpp
   WRAP sound_alias_play LABELS interface_unit)
+
+# Lego's level resource accounting and object catalog lookups.
+lrr_unit_test(lego_unit SOURCES ${GAME_DIR}/test_lego_unit.cpp
+  WRAP ui_overlay_animation_advance LABELS lego_unit)
+
+# Camera zoom range, free movement, and acceleration on a normalized direction.
+lrr_unit_test(camera_control SOURCES ${GAME_DIR}/test_camera_control.cpp LABELS camera_control)
+
+# Live object work eligibility and capacity of the teleport request queue.
+lrr_unit_test(legoobject_unit SOURCES ${GAME_DIR}/test_legoobject_unit.cpp LABELS legoobject_unit)
+
+# Spotlight dimmer transitions and movement limits relative to the light.
+lrr_unit_test(lighteffects SOURCES ${GAME_DIR}/test_lighteffects.cpp
+  WRAP render_object_set_packed_rgba_from_float_channels ddiscene_object_position_get
+  LABELS lighteffects)
+
+# Loader profile round-trip and progress bar geometry with synthetic files.
+lrr_unit_test(loader SOURCES ${GAME_DIR}/test_loader.cpp
+  WRAP Image_LoadBMPScaled Image_DisplayScaled Image_Remove main_loop_frame_pump
+  LABELS loader)
