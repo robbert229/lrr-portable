@@ -26,3 +26,30 @@ lrr_unit_test(maths SOURCES ${ENGINE_DIR}/test_maths.cpp LABELS maths)
 
 # Measure variable-width glyphs, tabs and line breaks without a font texture.
 lrr_unit_test(font SOURCES ${ENGINE_DIR}/test_font.cpp LABELS font)
+
+# Pin sound-bank volume limits and disabled-audio return values.
+lrr_unit_test(sound3d SOURCES ${ENGINE_DIR}/test_sound3d.cpp LABELS sound3d)
+
+# Verify RGB565 packing and the byte layout of a synthetic screenshot BMP.
+lrr_unit_test(directdraw SOURCES ${ENGINE_DIR}/test_directdraw.cpp LABELS directdraw)
+
+# Convert indexed and BGR bitmap rows to top-down RGB565 with stride padding.
+lrr_unit_test(images_unit SOURCES ${ENGINE_DIR}/test_images_unit.cpp LABELS images_unit)
+
+# Check AVI metadata, seeking and failed stream setup with a synthetic decoder.
+lrr_unit_test(avi_player SOURCES ${ENGINE_DIR}/test_avi_player.cpp
+  WRAP video_open video_get_rate video_get_size video_get_frame_count video_get_frame_dib video_close
+  LABELS avi_player)
+
+# Drive current and previous key maps through synthetic SDL snapshots and focus loss.
+lrr_unit_test(input_unit SOURCES ${ENGINE_DIR}/test_input_unit.cpp
+  WRAP SDL_GetKeyboardState LABELS input_unit)
+
+# Exercise CRLF reads, load notifications and the mounted path rewrite.
+lrr_unit_test(files_dispatch SOURCES ${ENGINE_DIR}/test_files_dispatch.cpp LABELS files)
+
+# Check texture sequence names across zero padding and a decimal carry.
+lrr_unit_test(mesh_unit SOURCES ${ENGINE_DIR}/test_mesh_unit.cpp LABELS mesh_unit)
+
+# Decode disjoint palette packets and verify the RGB565 lookup entries.
+lrr_unit_test(flic_unit SOURCES ${ENGINE_DIR}/test_flic_unit.cpp LABELS flic_unit)
