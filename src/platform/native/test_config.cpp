@@ -129,6 +129,10 @@ int main(void)
               text.find("false", text.find("unlimited_raiders")) != std::string::npos,
           "default: unlimited_raiders = false is written under [cheats]");
     CHECK(!LRR_GetUnlimitedRaiders(), "default: the raider limit is kept");
+    CHECK(text.find("unlimited_oxygen") > text.find("[" LRR_CONFIG_CHEATS_SECTION "]") &&
+              text.find("false", text.find("unlimited_oxygen")) != std::string::npos,
+          "default: unlimited_oxygen = false is written under [cheats]");
+    CHECK(!LRR_GetUnlimitedOxygen(), "default: the air drains");
 
     /* A later run reads the file the user edited. */
     write_text(defaultIni, "[" LRR_CONFIG_SECTION "]\nsavepath = " + root + "/elsewhere/\n");
@@ -280,6 +284,25 @@ int main(void)
     write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nunlimited_raiders = true\n");
     CHECK(LRR_LoadConfig(custom.c_str()) && !LRR_GetUnlimitedRaiders(),
           "unlimited_raiders: the key is read from [cheats], not [tweaks]");
+
+    /* cheats:unlimited_oxygen: "true" stops the air draining; anything
+     * else keeps the original's air supply. */
+    write_text(custom, "[" LRR_CONFIG_CHEATS_SECTION "]\nunlimited_oxygen = true\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetUnlimitedOxygen() && !LRR_GetUnlimitedRaiders(),
+          "unlimited_oxygen: true, apart from unlimited_raiders");
+    write_text(custom, "[" LRR_CONFIG_SECTION "]\nother = 1\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && !LRR_GetUnlimitedOxygen(),
+          "unlimited_oxygen: a file without the key keeps the air supply");
+    write_text(custom, "[" LRR_CONFIG_CHEATS_SECTION "]\nunlimited_oxygen = Yes\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetUnlimitedOxygen(), "unlimited_oxygen: yes in any case");
+    write_text(custom, "[" LRR_CONFIG_CHEATS_SECTION "]\nunlimited_oxygen = false\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && !LRR_GetUnlimitedOxygen(), "unlimited_oxygen: false");
+    write_text(custom, "[" LRR_CONFIG_CHEATS_SECTION "]\nunlimited_oxygen = bogus\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && !LRR_GetUnlimitedOxygen(),
+          "unlimited_oxygen: an unknown value keeps the air supply");
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nunlimited_oxygen = true\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && !LRR_GetUnlimitedOxygen(),
+          "unlimited_oxygen: the key is read from [cheats], not [tweaks]");
 
     /* An explicit file that does not load fails, as isle-portable's does. */
     CHECK(!LRR_LoadConfig((root + "/missing.ini").c_str()), "explicit: a missing file fails");

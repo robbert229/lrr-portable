@@ -25,7 +25,7 @@
  * tweaks:fix_idleness_syndrome.
  *
  * And it holds cheats, off by default, in their own section, [cheats]:
- * cheats:unlimited_raiders. */
+ * cheats:unlimited_raiders and cheats:unlimited_oxygen. */
 #ifndef LEGORRR_PLATFORM_NATIVE_CONFIG_H
 #define LEGORRR_PLATFORM_NATIVE_CONFIG_H
 
@@ -51,6 +51,7 @@
 /* The section for the cheats. */
 #define LRR_CONFIG_CHEATS_SECTION "cheats"
 #define LRR_CONFIG_UNLIMITEDRAIDERS "cheats:unlimited_raiders"
+#define LRR_CONFIG_UNLIMITEDOXYGEN "cheats:unlimited_oxygen"
 
 /* The display settings, in place of the dialog's choices. device is a 3D
  * device's description as DirectDraw.c lists it, e.g. "Miniwin driver
@@ -173,6 +174,13 @@ enum LRR_Controls {
  * be teleported in from any teleporter that takes them;
  * "false", the default, keeps the original's limit. */
 
+/* cheats:unlimited_oxygen (docs/divergences.md, "Cheat: unlimited
+ * oxygen"). In the original, a level's air drains while its raiders
+ * breathe more than its Support Stations make (Lego.c 00424560), and the
+ * level is lost when the air runs out. "true" stops the air draining, so
+ * it stays at the full 100 the level starts with; "false", the default,
+ * keeps the original's air supply. */
+
 /* Reads the configuration from `iniPath`, or from LRR_CONFIG_FILE in the
  * preference directory when it is NULL, writing that file with defaults
  * when it is missing or empty, and applies it (files_native_set_save_path,
@@ -204,5 +212,9 @@ bool LRR_GetFixIdlenessSyndrome();
 /* The cheats:unlimited_raiders setting LRR_LoadConfig read, or the
  * default, false, before it runs. */
 bool LRR_GetUnlimitedRaiders();
+
+/* The cheats:unlimited_oxygen setting LRR_LoadConfig read, or the
+ * default, false, before it runs. */
+bool LRR_GetUnlimitedOxygen();
 
 #endif /* LEGORRR_PLATFORM_NATIVE_CONFIG_H */

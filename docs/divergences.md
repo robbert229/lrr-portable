@@ -199,6 +199,22 @@ reference.
 - **Where:** `src/game/legoobject_unit.c`
   (`[divergence:unlimited-raiders]`).
 
+### Cheat: unlimited oxygen
+
+- **Original:** a level starts with full air (100), which drains while
+  its raiders breathe more than its Support Stations make. The level's
+  `OxygenRate` sets the pace, and each object's `Lego.cfg` `OxygenCoef`
+  its share: -1.0 for a raider, 10.0 for a Support Station (`Lego.c`
+  0x00424560). The level is lost
+  when the air runs out.
+- **Port:** with the cheat on, nothing drains the air, so it stays full.
+  The low-air warnings and heartbeat never play, and the reward screen's
+  oxygen score is 100%.
+- **Why:** a cheat players asked for, off unless they turn it on.
+- **Configurable:** `[cheats]` `unlimited_oxygen = false` (the default,
+  the original's air supply) or `true`.
+- **Where:** `src/game/lego_unit.c` (`[divergence:unlimited-oxygen]`).
+
 ### Movies fill a larger screen mode
 
 - **Original:** the front end plays its movies at 640x480. In a larger
