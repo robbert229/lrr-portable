@@ -69,3 +69,25 @@ lrr_unit_test(encyclopedia SOURCES ${GAME_DIR}/test_encyclopedia.cpp
 
 # Erosion neighbor filtering and lock expiry on a synthetic level.
 lrr_unit_test(erode SOURCES ${GAME_DIR}/test_erode.cpp LABELS erode)
+
+# Landslide eligibility, including reserved cells and safe-cavern edges.
+lrr_unit_test(fallin SOURCES ${GAME_DIR}/test_fallin.cpp LABELS fallin)
+
+# Steering group arrival hides only followers that have reached their targets.
+lrr_unit_test(steering_arrival SOURCES ${GAME_DIR}/test_steering_arrival.cpp
+  WRAP scene_render_lock_toggle LABELS steering)
+
+# Frontend rectangle bounds, menu item types and dynamic menu growth.
+lrr_unit_test(frontend_unit SOURCES ${GAME_DIR}/test_frontend_unit.cpp LABELS frontend_unit)
+
+# Help eligibility, tutorial gating, and recognition of button release.
+lrr_unit_test(helpwindow SOURCES ${GAME_DIR}/test_helpwindow.cpp
+  WRAP text_buffer_reset_target nerpfunc_get_tutorial_flags
+  LABELS helpwindow)
+
+# Info message name lookup and bounded instance queue behavior.
+lrr_unit_test(info_unit SOURCES ${GAME_DIR}/test_info_unit.cpp LABELS info_unit)
+
+# Interface menu slide transitions and independent icon state.
+lrr_unit_test(interface_unit SOURCES ${GAME_DIR}/test_interface_unit.cpp
+  WRAP sound_alias_play LABELS interface_unit)
