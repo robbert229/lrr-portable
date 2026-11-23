@@ -11,7 +11,7 @@
 
 #include "game/bezier.h"
 #include "game/animation_object_record.h"
-#include "lrr_test.h"
+#include "test/lrr_test.h"
 
 static void set_point(Point2F* p, float x, float y)
 {
@@ -36,6 +36,16 @@ int main(void)
         CHECK(r.x == 0.0f && r.y == 0.0f, "t zero lands on p0");
         cubic_bezier_point_evaluate(&r, &p0, &p1, &p2, &p3, 1.0f);
         CHECK(r.x == 2.0f && r.y == 10.0f, "t one lands on p2");
+    }
+
+    /* An interior sample uses both tangent vectors. */
+    {
+        const Point2F start = { 2.0f, 4.0f }, outgoing = { 2.0f, 0.0f };
+        const Point2F end = { 10.0f, 8.0f }, incoming = { 0.0f, 2.0f };
+        Point2F midpoint;
+        cubic_bezier_point_evaluate(&midpoint, &start, &outgoing, &end, &incoming, 0.5f);
+        CHECK_EQ(midpoint.x, 8.25f);
+        CHECK_EQ(midpoint.y, 3.75f);
     }
 
     /* Vector2DistanceVariant and Vector2SetLength. */
@@ -127,6 +137,21 @@ int main(void)
         seg = path_arc_length_interpolate(&curve, 5.0f, &r);
         CHECK(seg == 1u && r.x == 0.0f && r.y == 0.0f,
               "a single-point curve answers its only point");
+    }
+
+    /* Zero-length segments do not consume any arc length. A sample at a
+     * shared boundary belongs to the next nonempty segment. */
+    {
+        BezierCurve curve = {};
+        curve.count = 4u;
+        curve.points[1] = { 4.0f, 0.0f };
+        curve.points[2] = curve.points[1];
+        curve.points[3] = { 4.0f, 4.0f };
+        CHECK_NEAR(polyline_segment_lengths_total(&curve), 8.0f, 1e-6);
+        Point2F r;
+        CHECK_EQ(path_arc_length_interpolate(&curve, 4.0f, &r), 3u);
+        CHECK_EQ(r.x, 4.0f);
+        CHECK_EQ(r.y, 0.0f);
     }
 
     /* SceneObjectModeIsOne: AnimationObject.cameraFlipDir (+0x28 on Win32). */

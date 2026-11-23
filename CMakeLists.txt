@@ -438,6 +438,7 @@ endif()
 
 include(CTest)
 if(BUILD_TESTING)
+  include(${CMAKE_SOURCE_DIR}/cmake/tests/game-a.cmake)
   # lrr_unit_test (cmake/LrrTesting.cmake): one call per test executable.
   include("${PROJECT_SOURCE_DIR}/cmake/LrrTesting.cmake")
   # The units' own tests: each calls one unit directly.
