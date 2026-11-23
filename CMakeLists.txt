@@ -1,7 +1,21 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 cmake_minimum_required(VERSION 3.20)
 
-project(lrr-portable VERSION 0.1.0 LANGUAGES C CXX)
+project(lrr-portable VERSION 1.0.0 LANGUAGES C CXX)
+
+# The pre-release label (docs/releasing.md): empty for a release, or a label
+# such as beta1 for a pre-release of project(VERSION), which makes the
+# version 1.0.0-beta1. project(VERSION) takes numbers only, so the label is
+# set here, and LRR_VERSION is the full version that packages and the game
+# report.
+set(LRR_VERSION_PRERELEASE "beta1")
+if(LRR_VERSION_PRERELEASE STREQUAL "")
+  set(_lrr_version "${PROJECT_VERSION}")
+else()
+  set(_lrr_version "${PROJECT_VERSION}-${LRR_VERSION_PRERELEASE}")
+endif()
+set(LRR_VERSION "${_lrr_version}" CACHE INTERNAL
+  "The full version: project(VERSION) and the pre-release label")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -376,8 +390,8 @@ set_target_properties(program PROPERTIES OUTPUT_NAME "LegoRR")
 target_link_libraries(program PRIVATE units)
 
 # The version the game reports (--version and the log; docs/releasing.md).
-# project(VERSION) above is the one place the version is set, and a release
-# is tagged v<version>. tools/version.cmake writes lrr_version.h at every
+# project(VERSION) and LRR_VERSION_PRERELEASE above are the one place the
+# version is set, and a release is tagged v<version>. tools/version.cmake writes lrr_version.h at every
 # build: the plain version at the release tag, <version>-dev+g<commit>
 # elsewhere in a git checkout, and the plain version without git.
 # LRR_VERSION_OVERRIDE, when set, is reported instead.
@@ -387,7 +401,7 @@ set(LRR_VERSION_HEADER "${CMAKE_CURRENT_BINARY_DIR}/generated/lrr_version.h")
 add_custom_target(lrr_version
   COMMAND "${CMAKE_COMMAND}"
     "-DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}"
-    "-DVERSION=${PROJECT_VERSION}"
+    "-DVERSION=${LRR_VERSION}"
     "-DOVERRIDE=${LRR_VERSION_OVERRIDE}"
     "-DOUTPUT=${LRR_VERSION_HEADER}"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/tools/version.cmake"

@@ -6,8 +6,8 @@
 #   cmake -DSOURCE_DIR=<checkout> -DVERSION=<project version>
 #         [-DOVERRIDE=<string>] -DOUTPUT=<header> -P tools/version.cmake
 #
-# VERSION is project(VERSION) in CMakeLists.txt, the one place the version is
-# set. The header holds:
+# VERSION is LRR_VERSION in CMakeLists.txt: project(VERSION) and the
+# pre-release label, if any. The header holds:
 #   - OVERRIDE, when it is not empty;
 #   - VERSION, when HEAD is the release tag v<VERSION>;
 #   - <VERSION>-dev+g<commit> in any other git checkout;

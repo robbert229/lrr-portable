@@ -7,7 +7,7 @@ the owner's decisions. Nothing here publishes on its own.
 
 | Piece | Where |
 | --- | --- |
-| The version | `project(lrr-portable VERSION x.y.z)` in `CMakeLists.txt` |
+| The version | `project(lrr-portable VERSION x.y.z)` and `LRR_VERSION_PRERELEASE` in `CMakeLists.txt` |
 | The notes | `CHANGELOG.md`, one `## [x.y.z]` section per release |
 | The workflow | `.github/workflows/release.yml` |
 | The checks | `tools/release.py` (version, tag, notes), `tools/check_package.py` (package contents) |
@@ -15,16 +15,29 @@ the owner's decisions. Nothing here publishes on its own.
 
 ## Versions
 
-Versions follow [Semantic Versioning](https://semver.org/). While the port
-is young they stay at `0.x`: `0.y.0` for a release with new features or
-user-facing changes, and `0.y.z` for a release with fixes only. `1.0.0` is
-for the release that plays the whole game through.
+Versions follow [Semantic Versioning](https://semver.org/). The first
+release is a beta of `1.0.0`: `1.0.0-beta1`, then `1.0.0-beta2` and so on,
+until `1.0.0`, the release that plays the whole game through. After that,
+`x.y.0` is a release with new features or user-facing changes, and `x.y.z`
+one with fixes only.
 
-`project(VERSION)` in `CMakeLists.txt` is the only place the version is set.
-CPack's file names, the macOS bundle, the AppStream metadata and the version
-the game reports all come from it. A release is tagged `v` plus that version,
-for example `v0.1.0`. The release workflow refuses a tag that doesn't match
-it, and a version with no notes in `CHANGELOG.md`.
+The version is set in one place, the top of `CMakeLists.txt`:
+
+```cmake
+project(lrr-portable VERSION 1.0.0 LANGUAGES C CXX)
+set(LRR_VERSION_PRERELEASE "beta1")
+```
+
+`project(VERSION)` takes numbers only, so a pre-release's label goes in
+`LRR_VERSION_PRERELEASE`; leave it empty (`""`) for a release. The two make
+`LRR_VERSION` (`1.0.0-beta1`). CPack's file names, the AppStream metadata,
+the APK's `versionName` and the version the game reports all use it. The
+fields that take numbers only use `project(VERSION)` alone: the macOS
+bundle's `CFBundleVersion` and `CFBundleShortVersionString`, the APK's
+`versionCode` and the `.cia`'s title version. A release is tagged `v` plus
+the full version, for example `v1.0.0-beta1`. The release workflow refuses a tag that doesn't match
+it, and a version with no notes in `CHANGELOG.md`. A version with a label
+is drafted as a GitHub pre-release.
 
 The game reports its version in two places:
 
@@ -46,10 +59,10 @@ line goes to the browser console.
 
 | Build | Reports |
 | --- | --- |
-| At the release tag `v0.1.0` | `0.1.0` |
-| Any other commit | `0.1.0-dev+g<commit>` |
+| At the release tag `v1.0.0-beta1` | `1.0.0-beta1` |
+| Any other commit | `1.0.0-beta1-dev+g<commit>` |
 | With uncommitted changes | the above, plus `.dirty` (or `+dirty` at the tag) |
-| Without git (a source archive, the Flatpak) | `0.1.0` |
+| Without git (a source archive, the Flatpak) | `1.0.0-beta1` |
 | `-DLRR_VERSION_OVERRIDE=<string>` | `<string>` |
 
 A `-dev` version is a pre-release of the version it names. So right after a
@@ -185,7 +198,7 @@ fails before you tag.
    - The icon and any new image are original artwork.
 
 Steps 4 to 7 go in one pull request, the release PR, for example
-`chore(release): prepare 0.1.0`. Merge it before tagging.
+`chore(release): prepare 1.0.0-beta1`. Merge it before tagging.
 
 ## Cutting the release
 
@@ -194,8 +207,8 @@ Steps 4 to 7 go in one pull request, the release PR, for example
 
    ```sh
    git fetch origin
-   git tag -a v0.1.0 -m "lrr-portable 0.1.0" <merge commit>
-   git push origin v0.1.0
+   git tag -a v1.0.0-beta1 -m "lrr-portable 1.0.0-beta1" <merge commit>
+   git push origin v1.0.0-beta1
    ```
 
    You can also run *Actions → release → Run workflow* from an existing tag,
@@ -207,9 +220,10 @@ Steps 4 to 7 go in one pull request, the release PR, for example
 2. **Let the workflow run.** On the tag, it builds every package and checks
    the tag against the version and the changelog. It checks the packages'
    contents and that the tagged Linux build reports exactly
-   `lrr-portable 0.1.0`. Then it writes `SHA256SUMS` and creates a **draft**
-   release titled `lrr-portable 0.1.0`, with the changelog section as its
-   notes. If a draft for that tag already exists, the workflow updates it
+   `lrr-portable 1.0.0-beta1`. Then it writes `SHA256SUMS` and creates a
+   **draft** release titled `lrr-portable 1.0.0-beta1`, with the changelog
+   section as its notes, marked as a pre-release when the version has a
+   label. If a draft for that tag already exists, the workflow updates it
    instead; a published release is never touched.
 3. **Review the draft** under *Releases*. Check that:
    - every asset in the table above is there;
@@ -220,17 +234,17 @@ Steps 4 to 7 go in one pull request, the release PR, for example
      but doesn't remove ones a renamed package left behind; delete those by
      hand.
 
-   Then decide whether to mark it as a pre-release, and publish it.
+   Then publish it.
 
 ## After the release
 
-- In a follow-up PR, bump `project(VERSION)` to the next planned version
-  (`0.2.0` after `0.1.0`), and add its section to `CHANGELOG.md` as
-  `## [0.2.0] - unreleased`, with at least a line of notes, and its link
-  reference. `tools/tests/test_release.py`, part of `native-build`, fails while
+- In a follow-up PR, move the version on to the next planned one
+  (`1.0.0-beta2` after `1.0.0-beta1`, `1.1.0` after `1.0.0`), and add its
+  section to `CHANGELOG.md` as `## [1.0.0-beta2] - unreleased`, with at
+  least a line of notes, and its link reference. `tools/tests/test_release.py`, part of `native-build`, fails while
   the version has no notes, so the two changes go in the same PR. Until
-  then, builds from `main` report `0.1.0-dev+g…`, which sorts *before* the
-  release they come after. Player-facing changes add their notes to that
+  then, builds from `main` report `1.0.0-beta1-dev+g…`, which names the
+  release they come after only loosely. Player-facing changes add their notes to that
   section as they merge.
 - Point the README's "Get a build" step at the
   [Releases page](https://github.com/robbert229/lrr-portable/releases).
@@ -240,9 +254,9 @@ Steps 4 to 7 go in one pull request, the release PR, for example
 **Before publishing**, nobody can download a draft. To abandon it:
 
 ```sh
-gh release delete v0.1.0 --yes   # the draft
-git push --delete origin v0.1.0  # the tag
-git tag -d v0.1.0
+gh release delete v1.0.0-beta1 --yes   # the draft
+git push --delete origin v1.0.0-beta1  # the tag
+git tag -d v1.0.0-beta1
 ```
 
 Fix the problem on `main`, then tag again. The workflow updates a draft
@@ -253,7 +267,7 @@ already have the files, and `SHA256SUMS` would stop matching. Instead:
 
 - for a bad build or a serious bug, edit the release notes to warn players.
   Mark the release as a pre-release, or delete the affected assets, and ship
-  a fixed `0.y.(z+1)` as soon as you can;
+  a fixed version (the next beta, or `x.y.(z+1)`) as soon as you can;
 - if a package turns out to hold something it must not (game data, another
   project's art), delete the asset or the whole release at once. Then fix
   `tools/check_package.py` so that it fails on that file, and release
