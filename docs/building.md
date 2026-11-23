@@ -327,8 +327,9 @@ On the SD card, where every lookup is a slow service call, the
 path mapping (`files_native.cpp`) reads each directory once and matches
 case from that listing.
 
-The icon, banner and banner sound are original (`packaging/3ds/regenerate.py`
-renders them). An emulator such as [Azahar](https://azahar-emu.org/) runs
+The icon and banner show the app icon's 40x40 pixel art at whole-number
+scales, so it stays sharp, and the banner sound is original
+(`packaging/3ds/regenerate.py` renders all three). An emulator such as [Azahar](https://azahar-emu.org/) runs
 the `.3dsx` with the game data in its emulated SD card's `3ds/LegoRR`.
 
 ## Android
