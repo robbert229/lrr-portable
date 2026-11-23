@@ -141,7 +141,7 @@ static IDirect3DRMFrame3* only_child(IDirect3DRMFrame3* parent)
 /* Load the scene, set it to `time`, and check the null's frame is at
  * (x, y, z) with a finite transform. */
 static void check_scene(IDirect3DRM3* d3drm, int lastKey, float time, float x, float y, float z,
-                        const char* what)
+                        const char* what, int looping = 0)
 {
     char text[1024];
     char message[256];
@@ -152,7 +152,7 @@ static void check_scene(IDirect3DRM3* d3drm, int lastKey, float time, float x, f
 
     scene_text(text, sizeof(text), lastKey);
     s_text = text;
-    scene = lws_parse("Scene", 0);
+    scene = lws_parse("Scene", looping);
     s_text = NULL;
     snprintf(message, sizeof(message), "%s: the scene parses", what);
     CHECK(scene != NULL, message);
@@ -202,6 +202,11 @@ int main(void)
     check_scene(d3drm, 10, 15.0f, 4.0f, 5.0f, 6.0f, "last key before the last frame");
     /* Between the keys, the blend is unchanged. */
     check_scene(d3drm, 15, 7.5f, 2.0f, 2.5f, 3.0f, "halfway between the keys");
+
+    /* A looping scene returns to its first key at the boundary and
+     * continues to interpolate in the next cycle. */
+    check_scene(d3drm, 15, 15.0f, 0.0f, 0.0f, 0.0f, "loop boundary", 1);
+    check_scene(d3drm, 15, 22.5f, 2.0f, 2.5f, 3.0f, "halfway through the second loop", 1);
 
     s_main_d3drm = NULL;
     d3drm->Release();

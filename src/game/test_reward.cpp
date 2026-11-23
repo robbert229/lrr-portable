@@ -11,16 +11,7 @@
 
 #include "game/frontend_record.h"
 #include "game/reward.h"
-
-static int s_failures = 0;
-
-static void CHECK(int cond, const char* what)
-{
-    if (!cond) {
-        printf("FAIL: %s\n", what);
-        ++s_failures;
-    }
-}
+#include "lrr_test.h"
 
 static uint32_t image_word(const unsigned char* image, unsigned int offset)
 {
@@ -199,10 +190,5 @@ int main(void)
     reward_level_serialize(&parsed, again);
     CHECK(!memcmp(image, again, sizeof(image)), "serialize(parse(image)) == image");
 
-    if (s_failures) {
-        printf("%d failure(s)\n", s_failures);
-        return 1;
-    }
-    printf("reward: all checks passed\n");
-    return 0;
+    return lrr_test_result("reward");
 }

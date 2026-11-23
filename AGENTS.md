@@ -55,7 +55,9 @@ cut. Open PRs against `main`.
   `WAD_DIR` (the game data directory) with `RUN_ARGS` (default
   none: the display settings come from `LegoRR.ini`). For tests, run `cmake -S . -B build`, then
   `cmake --build build` and `ctest --test-dir build --output-on-failure`
-  (`make test` does the same).
+  (`make test` does the same). Register a new test with `lrr_unit_test`
+  and assert with `src/test/lrr_test.h` (docs/building.md, "Writing a
+  test").
 - CI runs one required check, `native-build`
   (`.github/workflows/native-build.yml`), on pull requests and on pushes to
   `main`. It builds the native port, runs ctest with synthetic

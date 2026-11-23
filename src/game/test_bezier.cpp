@@ -11,16 +11,7 @@
 
 #include "game/bezier.h"
 #include "game/animation_object_record.h"
-
-static int s_failures = 0;
-
-static void CHECK(int cond, const char* what)
-{
-    if (!cond) {
-        printf("FAIL: %s\n", what);
-        ++s_failures;
-    }
-}
+#include "lrr_test.h"
 
 static void set_point(Point2F* p, float x, float y)
 {
@@ -149,10 +140,5 @@ int main(void)
         CHECK(scene_object_mode_is_one(&object) == 0, "mode 2 is not one");
     }
 
-    if (s_failures == 0) {
-        printf("bezier_test: PASS\n");
-        return 0;
-    }
-    printf("bezier_test: %d failure(s)\n", s_failures);
-    return 1;
+    return lrr_test_result("bezier_test");
 }
