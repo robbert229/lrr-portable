@@ -116,6 +116,38 @@ reference.
   the filtering, the mouse and frame-buffer locks,
   `miniwin/miniwinpresentation.h`).
 
+### Keyboard and mouse camera controls
+
+- **Original:** the top-down view pans only when the pointer touches the
+  edge of the screen. The arrow keys tilt and rotate it, `-` and `=` zoom,
+  and the middle mouse button and the wheel do nothing.
+- **Port:** with `controls = modern`, the top-down view also takes:
+  - `W`, `A`, `S` and `D` to pan along the screen's axes, at `Lego.cfg`'s
+    `CameraSpeed` and `CameraAcceleration`, as edge panning does;
+  - `Q` and `E` to rotate, as the left and right arrows do;
+  - the mouse wheel to zoom, a tenth of the zoom range per notch, within
+    `Lego.cfg`'s `MinDist` and `MaxDist`;
+  - a middle-button drag to pan, keeping the ground under the pointer
+    where it was grabbed.
+
+  Edge panning still works. The camera stays as far from the map's edge
+  as edge panning keeps it (`MouseScrollIndent`), and none of the controls
+  work where the original stops the camera (a level's script can do so).
+  While debug keys are on (`Lego.cfg` `AllowDebugKeys`), `W`, `A`, `S`,
+  `D` and `E` keep their debug meanings and do not move the camera; the
+  wheel and the drag still work.
+- **Why:** with edge panning alone, looking around means moving the
+  pointer away from what it was doing, and in a window the pointer leaves
+  the window instead. Today's strategy games pan with the keyboard and the
+  middle button and zoom with the wheel. The original reads none of these
+  keys or buttons outside debug mode, so nothing the original does changes.
+- **Configurable:** `[tweaks]` `controls = original` (the default) or
+  `modern`.
+- **Where:** `src/game/lego_unit.c` and `src/gods98/main.c`
+  (`[divergence:modern-controls]`); `patches/miniwin` 0046 (the middle
+  button and the wheel as `WM_MBUTTONDOWN`, `WM_MBUTTONUP` and
+  `WM_MOUSEWHEEL`).
+
 ### Movies fill a larger screen mode
 
 - **Original:** the front end plays its movies at 640x480. In a larger

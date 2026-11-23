@@ -56,6 +56,9 @@ unsigned char inputPrevKeyMap[256];
 struct Input_Globs inputGlobs;
 // GLOBAL: LEGORR 0x0076ab80
 unsigned char inputKeyMap[256];
+/* [divergence:modern-controls] Port-only (input_globs.h). */
+int inputMiddleButton;
+int inputWheelDelta;
 
 // FUNCTION: LEGORR 0x0047ed90
 int input_direct_initialize(void)

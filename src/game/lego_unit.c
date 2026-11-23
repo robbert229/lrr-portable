@@ -50,6 +50,7 @@
 #include "gods98/textwindow_record.h"
 #include "lego_unit_imports.h"
 #include "lego_globs.h"
+#include "platform/native/config.h" // [divergence:modern-controls] LRR_GetControls
 
 /* ------------------------------------------------------------------ */
 /* State: the unit's .bss and legoGlobs.                               */
@@ -2243,6 +2244,146 @@ void lego_exit(void)
     exit(0);
 }
 
+/* [divergence:modern-controls] PORT-ONLY: tweaks:controls = modern adds
+ * camera controls to the top-down view (docs/divergences.md, "Keyboard and
+ * mouse camera controls"). Q and E rotate as the left and right arrows do,
+ * and the mouse wheel zooms as - and = do. W, A, S and D pan, and so does a
+ * middle-button drag (lego_cursor_ray_to_camera_route). While debug keys
+ * are on, the letters keep their debug meanings; the wheel and the drag
+ * still work. */
+
+/* The zoom one notch of the wheel asks for, in the units of Lego.cfg's
+ * MinDist and MaxDist: a tenth of the range the original's Lego.cfg
+ * allows (150 to 250). */
+#define LEGO_MODERN_ZOOM_PER_NOTCH 10.0f
+/* WHEEL_DELTA: inputWheelDelta's units per notch. */
+#define LEGO_MODERN_WHEEL_DELTA 120.0f
+
+/* The zoom the wheel asked for and the camera has not reached yet. */
+static float s_lego_modern_zoom_pending;
+/* The middle-button drag: whether it was held on the last frame, and the
+ * cursor's position then. */
+static int s_lego_modern_dragging;
+static int s_lego_modern_drag_x;
+static int s_lego_modern_drag_y;
+
+static int lego_modern_controls(void)
+{
+    return LRR_GetControls() == LRR_CONTROLS_MODERN; // [library:config]
+}
+
+/* Q, E and the wheel, beside the original's camera keys. The wheel's zoom
+ * is spread over a few frames. Camera_SetZoom ignores a zoom outside
+ * MinDist and MaxDist, so the steps shrink as the zoom nears a limit and
+ * stop just short of it. */
+static void lego_modern_camera_keys(float elapsed)
+{
+    float step;
+
+    if (!(s_panel_highlight_flags & 0x10)) {
+        if (s_global_current_keys[0x10]) camera_tilt_axis_update(s_zoom_step_context, elapsed * 0.02f);
+        if (s_global_current_keys[0x12]) camera_tilt_axis_update(s_zoom_step_context, elapsed * -0.02f);
+    }
+
+    s_lego_modern_zoom_pending -= (float)inputWheelDelta * (LEGO_MODERN_ZOOM_PER_NOTCH / LEGO_MODERN_WHEEL_DELTA);
+    if (s_lego_modern_zoom_pending != 0.0f) {
+        step = elapsed * 0.5f;
+        if (step > 1.0f) step = 1.0f;
+        step *= s_lego_modern_zoom_pending;
+        if (fabsf(s_lego_modern_zoom_pending) < 0.05f) step = s_lego_modern_zoom_pending;
+        camera_zoom_update(s_zoom_step_context, step);
+        s_lego_modern_zoom_pending -= step;
+    }
+}
+
+/* Whether the top-down camera may stand over (x, y): inside the map and
+ * MouseScrollIndent blocks from its edge, as Camera_Update keeps it. */
+static int lego_modern_camera_position_allowed(float x, float y)
+{
+    int bx, by;
+    int indent = (int)view_grid_edge_get();
+
+    if (!terrain_map_world_to_block(legoGlobs_currLevel->map, x, y, &bx, &by)) return 0;
+    return bx >= indent && bx < (int)legoGlobs_currLevel->map->gridWidth - indent &&
+           by >= indent && by < (int)legoGlobs_currLevel->map->gridHeight - indent;
+}
+
+/* The unit vector, on the ground, from the world point under the screen's
+ * (x0, y0) to the one under (x1, y1); zero when they meet. */
+static void lego_modern_ground_direction(int x0, int y0, int x1, int y1, float out[2])
+{
+    float a[2], b[2];
+    float len;
+
+    lego_camera_pointer_ray_route((unsigned int)x0, (unsigned int)y0, &a[0], &a[1]);
+    lego_camera_pointer_ray_route((unsigned int)x1, (unsigned int)y1, &b[0], &b[1]);
+    out[0] = b[0] - a[0];
+    out[1] = b[1] - a[1];
+    len = sqrtf(out[0] * out[0] + out[1] * out[1]);
+    if (len > 0.0f) {
+        out[0] /= len;
+        out[1] /= len;
+    } else {
+        out[0] = out[1] = 0.0f;
+    }
+}
+
+/* The middle-button drag and W, A, S and D. TRUE when either moved the
+ * camera this frame, and edge panning is skipped.
+ *
+ * The drag keeps the ground under the cursor where it was grabbed: the
+ * camera moves by the difference between the world points under the
+ * cursor's last and current positions, an axis at a time so it slides along
+ * the map's edge. W, A, S and D pan along the screen's axes through
+ * Camera_Move, with Lego.cfg's CameraSpeed and CameraAcceleration, as edge
+ * panning does. */
+static int lego_modern_camera_pan(float elapsed)
+{
+    float from[2], to[2], pos[3];
+    float forward[2], right[2];
+    float dir[3];
+    int fwd, side;
+    int cx, cy, d;
+
+    if (inputMiddleButton) {
+        if (s_lego_modern_dragging) {
+            lego_camera_pointer_ray_route((unsigned int)s_lego_modern_drag_x, (unsigned int)s_lego_modern_drag_y,
+                                          &from[0], &from[1]);
+            lego_camera_pointer_ray_route((unsigned int)legoInput_mouseX, (unsigned int)legoInput_mouseY,
+                                          &to[0], &to[1]);
+            camera_topdown_position_get_adapter(s_zoom_step_context, legoGlobs_currLevel->map, pos);
+            if (lego_modern_camera_position_allowed(pos[0] + from[0] - to[0], pos[1]))
+                pos[0] += from[0] - to[0];
+            if (lego_modern_camera_position_allowed(pos[0], pos[1] + from[1] - to[1]))
+                pos[1] += from[1] - to[1];
+            selection_record_point_set((struct ViewContext*)s_zoom_step_context, pos[0], pos[1]);
+        }
+        s_lego_modern_dragging = 1;
+        s_lego_modern_drag_x = legoInput_mouseX;
+        s_lego_modern_drag_y = legoInput_mouseY;
+        cursor_screen_ray_context_reset((struct ViewContext*)s_zoom_step_context);
+        return 1;
+    }
+    s_lego_modern_dragging = 0;
+
+    if (s_panel_highlight_flags & 0x10) return 0;
+    fwd = (s_global_current_keys[0x11] ? 1 : 0) - (s_global_current_keys[0x1f] ? 1 : 0);
+    side = (s_global_current_keys[0x20] ? 1 : 0) - (s_global_current_keys[0x1e] ? 1 : 0);
+    if (fwd == 0 && side == 0) return 0;
+
+    cx = s_display_w / 2;
+    cy = s_display_h / 2;
+    d = s_display_h / 4;
+    lego_modern_ground_direction(cx, cy, cx, cy - d, forward);
+    lego_modern_ground_direction(cx, cy, cx + d, cy, right);
+    dir[0] = (float)fwd * forward[0] + (float)side * right[0];
+    dir[1] = (float)fwd * forward[1] + (float)side * right[1];
+    dir[2] = 0.0f;
+    if (dir[0] == 0.0f && dir[1] == 0.0f) return 0;
+    camera_pointer_pan_update((struct ViewContext*)s_zoom_step_context, dir, elapsed);
+    return 1;
+}
+
 /* MainSimStep [group E]: the original's per-frame key handling (rename,
  * pause, quit, camera keys, debug toggles). Returns FALSE to quit. */
 // FUNCTION: LEGORR 0x004250c0
@@ -2331,6 +2472,7 @@ int lego_main_sim_step(float elapsedGame, float elapsed, int* keyDownT,
             if (s_global_current_keys[0xcd]) camera_tilt_axis_update(s_zoom_step_context, elapsed * -0.02f);
             if (s_global_current_keys[0x0c]) camera_zoom_update(s_zoom_step_context, elapsed * 3.0f);
             if (s_global_current_keys[0x0d]) camera_zoom_update(s_zoom_step_context, elapsed * -3.0f);
+            if (lego_modern_controls()) lego_modern_camera_keys(elapsed); // [divergence:modern-controls]
         }
 
         if (s_panel_highlight_flags & 0x10) {
@@ -2810,6 +2952,7 @@ void lego_cursor_ray_to_camera_route(float elapsed)
     LegoVector3FC dir;
 
     if (s_context_mode == 1 && !(system_state_flags_get_original(NULL) & 0x1000)) {
+        if (lego_modern_controls() && lego_modern_camera_pan(elapsed)) return; // [divergence:modern-controls]
         if (legoInput_mouseX >= legoGlobs_MouseScrollBorder &&
             legoInput_mouseY >= legoGlobs_MouseScrollBorder &&
             legoInput_mouseX <= s_display_w - legoGlobs_MouseScrollBorder &&

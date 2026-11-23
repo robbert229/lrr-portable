@@ -21,7 +21,7 @@
  *
  * And it holds the port's opt-outs from its divergences from the original
  * game (docs/divergences.md), in their own section, [tweaks]:
- * tweaks:Training Save and tweaks:display. */
+ * tweaks:Training Save, tweaks:display and tweaks:controls. */
 #ifndef LEGORRR_PLATFORM_NATIVE_CONFIG_H
 #define LEGORRR_PLATFORM_NATIVE_CONFIG_H
 
@@ -42,6 +42,7 @@
 #define LRR_CONFIG_TWEAKS_SECTION "tweaks"
 #define LRR_CONFIG_TRAININGSAVE "tweaks:Training Save"
 #define LRR_CONFIG_DISPLAY "tweaks:display"
+#define LRR_CONFIG_CONTROLS "tweaks:controls"
 
 /* The display settings, in place of the dialog's choices. device is a 3D
  * device's description as DirectDraw.c lists it, e.g. "Miniwin driver
@@ -135,6 +136,19 @@ enum LRR_DisplayScaling {
     LRR_DISPLAY_FIT = 1,
 };
 
+/* tweaks:controls (docs/divergences.md, "Keyboard and mouse camera
+ * controls"). The original pans the top-down view only when the cursor
+ * touches the edge of the screen. "modern" adds, in the top-down view:
+ * W, A, S and D to pan, Q and E to rotate, the mouse wheel to zoom and a
+ * middle-button drag to pan; edge panning still works. While debug keys
+ * are on (Lego.cfg AllowDebugKeys), W, A, S, D, Q and E keep their debug
+ * meanings and do not move the camera. "original", the default, keeps the
+ * original's controls. */
+enum LRR_Controls {
+    LRR_CONTROLS_ORIGINAL = 0,
+    LRR_CONTROLS_MODERN = 1,
+};
+
 /* Reads the configuration from `iniPath`, or from LRR_CONFIG_FILE in the
  * preference directory when it is NULL, writing that file with defaults
  * when it is missing or empty, and applies it (files_native_set_save_path,
@@ -154,5 +168,9 @@ LRR_TrainingSave LRR_GetTrainingSave();
 /* The tweaks:display setting LRR_LoadConfig read, or the default,
  * LRR_DISPLAY_FIT, before it runs. */
 LRR_DisplayScaling LRR_GetDisplayScaling();
+
+/* The tweaks:controls setting LRR_LoadConfig read, or the default,
+ * LRR_CONTROLS_ORIGINAL, before it runs. */
+LRR_Controls LRR_GetControls();
 
 #endif /* LEGORRR_PLATFORM_NATIVE_CONFIG_H */

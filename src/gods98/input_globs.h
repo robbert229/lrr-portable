@@ -53,4 +53,13 @@ extern struct Input_Globs inputGlobs;
 #define s_window_mouse_word_54 (inputGlobs.word_54)
 #define s_window_mouse_word_58 (inputGlobs.word_58)
 
+/* [divergence:modern-controls] The middle button and the mouse wheel,
+ * which the original never read: the window procedures (Main.c) set them
+ * from WM_MBUTTONDOWN, WM_MBUTTONUP and WM_MOUSEWHEEL. inputMiddleButton is
+ * TRUE while the button is held; inputWheelDelta is the wheel's movement
+ * since the main loop's last frame, in WHEEL_DELTA units, positive away
+ * from the user. Lego.c reads them for tweaks:controls = modern. */
+extern int inputMiddleButton;
+extern int inputWheelDelta;
+
 #endif /* LEGORRR_GODS98_INPUT_GLOBS_H */
