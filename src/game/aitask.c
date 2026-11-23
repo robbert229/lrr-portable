@@ -35,6 +35,24 @@
  * original (aitask_globs.h). The port tail reads its priority tables
  * through it (finding 570). */
 #include "aitask_globs.h"
+#include "platform/native/config.h" // [divergence:idleness-syndrome] LRR_GetFixIdlenessSyndrome
+
+/* [divergence:idleness-syndrome] PORT-ONLY: tweaks:fix_idleness_syndrome
+ * (docs/divergences.md, "Idle raiders take the jobs waiting for them").
+ * The original's job assignment (00405c10) can leave idle units standing
+ * while jobs wait for them:
+ * - a job that has sent a unit on its way still takes the nearest idle unit
+ *   on every tick, gives it nothing, and keeps it from every later job;
+ * - the first unit that cannot reach a job pauses the job for 75 ticks,
+ *   which also turns away every unit after it in the list on that tick;
+ * - a job whose unit never arrives waits for that unit forever.
+ * With the fix, a unit leaves the idle list only when it is given
+ * something, a job pauses only when no unit can reach it, and an idle unit
+ * stops being a job's unit on its way. */
+static int aitask_fix_idleness_syndrome(void)
+{
+    return LRR_GetFixIdlenessSyndrome(); // [library:config]
+}
 
 /* x87 constants. MSVC pools float literals itself, so a literal in the code
  * may replace an item (priorities.c does); an annotated static (config.c)
@@ -4390,6 +4408,16 @@ int aitask_cmd_entity_command_chain_tick(struct Lego_Object* object, void* data)
             AITaskPoint2I blockPos;
             AITaskPoint2I candidate;
 
+            /* [divergence:idleness-syndrome] An idle unit is on its way to
+             * no job: a job that sent it (00405c10) and that it never took,
+             * because its Goto failed or ended elsewhere, lets another unit
+             * take it. The original clears the reference only when the
+             * unit takes a job or its queue is flushed, so the job waits
+             * forever. The Goto is made in the same frame (Message.c runs
+             * after this tick), so a unit on its way is never idle here. */
+            if (aitask_fix_idleness_syndrome())
+                aitask_pending_record_entity_reference_clear(object);
+
             candidate.x = 0;
             candidate.y = 0;
             AITASK_OBJ(object)->aiTimer += *elapsed;
@@ -5795,6 +5823,9 @@ void aitask_pending_command_entity_assignment_tick(void)
             unsigned int bestIndex;
             unsigned int i;
             float bestWPos[2];
+            int fixIdleness = aitask_fix_idleness_syndrome(); // [divergence:idleness-syndrome]
+            int routeFailed = 0;                              // [divergence:idleness-syndrome]
+            int given = 0;                                    // [divergence:idleness-syndrome]
 
             for (i = 0; i < aiTaskGlobs.assignCandidateCount; i++) {
                 object = aiTaskGlobs.assignCandidates[i];
@@ -5823,7 +5854,13 @@ void aitask_pending_command_entity_assignment_tick(void)
                                 (oBPos[1] != bPos[1] || abs(oBPos[0] - bPos[0]) != 1)) {
                                 nearBPos[0] = bPos[0];
                                 nearBPos[1] = bPos[1];
-                                if (!lego_first_free_neighbor_cell_pick(best, nearBPos, bPos, 1))
+                                /* [divergence:idleness-syndrome] The
+                                 * original asks for the cell beside the job
+                                 * that the best unit so far (or any unit,
+                                 * before there is one) can stand on, not
+                                 * this unit, and routes this unit there. */
+                                if (!lego_first_free_neighbor_cell_pick(fixIdleness ? object : best,
+                                                                        nearBPos, bPos, 1))
                                     route = 0;
                             }
                             if (route) {
@@ -5836,6 +5873,14 @@ void aitask_pending_command_entity_assignment_tick(void)
                                 if (ok) {
                                     free(routeX);
                                     free(routeY);
+                                } else if (fixIdleness) {
+                                    /* [divergence:idleness-syndrome] The
+                                     * original pauses the job here, so this
+                                     * unit's failure also fails every unit
+                                     * after it (the eligibility check turns
+                                     * a paused job away). Pause it below,
+                                     * only when no unit can take it. */
+                                    routeFailed = 1;
                                 } else {
                                     task->timeIn = 75.0f;
                                 }
@@ -5893,6 +5938,7 @@ void aitask_pending_command_entity_assignment_tick(void)
                             break;
                         }
                         cmd_produce(message, best, (uintptr_t)task, bPos);
+                        given = 1;
                         if (!(task->flags & 0x100))
                             task->entityRef = best;
                         if (task->type == 0xc && AITASK_OBJ(best)->type == 1) {
@@ -5927,6 +5973,7 @@ void aitask_pending_command_entity_assignment_tick(void)
                         }
                         if (lego_first_free_neighbor_cell_pick(best, bPos, nearBPos, 1)) {
                             cmd_produce(message, best, (uintptr_t)task, nearBPos);
+                            given = 1;
                             if (!(task->flags & 0x100))
                                 task->entityRef = best;
                         } else {
@@ -5937,9 +5984,21 @@ void aitask_pending_command_entity_assignment_tick(void)
                 }
                 if (attach)
                     aitask_entity_record_attach_and_relink(task, prev, best);
-                aiTaskGlobs.assignCandidates[bestIndex] =
-                    aiTaskGlobs.assignCandidates[--aiTaskGlobs.assignCandidateCount];
+                /* [divergence:idleness-syndrome] The original takes the
+                 * unit off the idle list even when it gave it nothing: the
+                 * job already has a unit on its way, or no cell beside it
+                 * is free. The unit then stands idle, and no later job can
+                 * have it. */
+                if (attach || given || !fixIdleness)
+                    aiTaskGlobs.assignCandidates[bestIndex] =
+                        aiTaskGlobs.assignCandidates[--aiTaskGlobs.assignCandidateCount];
             } else {
+                /* [divergence:idleness-syndrome] No unit can take the job:
+                 * pause it as the original does when a unit cannot reach
+                 * it. The tool and training requests below then see a
+                 * paused job, as in the original. */
+                if (fixIdleness && routeFailed)
+                    task->timeIn = 75.0f;
                 if (!(task->flags & 0x1000)) {
                     for (i = 0; i < aiTaskGlobs.assignCandidateCount; i++) {
                         object = aiTaskGlobs.assignCandidates[i];

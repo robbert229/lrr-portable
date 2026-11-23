@@ -21,7 +21,8 @@
  *
  * And it holds the port's opt-outs from its divergences from the original
  * game (docs/divergences.md), in their own section, [tweaks]:
- * tweaks:Training Save, tweaks:display and tweaks:controls. */
+ * tweaks:Training Save, tweaks:display, tweaks:controls and
+ * tweaks:fix_idleness_syndrome. */
 #ifndef LEGORRR_PLATFORM_NATIVE_CONFIG_H
 #define LEGORRR_PLATFORM_NATIVE_CONFIG_H
 
@@ -43,6 +44,7 @@
 #define LRR_CONFIG_TRAININGSAVE "tweaks:Training Save"
 #define LRR_CONFIG_DISPLAY "tweaks:display"
 #define LRR_CONFIG_CONTROLS "tweaks:controls"
+#define LRR_CONFIG_FIXIDLENESS "tweaks:fix_idleness_syndrome"
 
 /* The display settings, in place of the dialog's choices. device is a 3D
  * device's description as DirectDraw.c lists it, e.g. "Miniwin driver
@@ -149,6 +151,14 @@ enum LRR_Controls {
     LRR_CONTROLS_MODERN = 1,
 };
 
+/* tweaks:fix_idleness_syndrome (docs/divergences.md, "Idle raiders take
+ * the jobs waiting for them"). In the original, AITask.c's job assignment
+ * can leave idle units without work while jobs wait: a job with a unit on
+ * the way takes the nearest idle unit each tick and gives it nothing, and
+ * one unit that cannot reach a job stops every other unit from taking it.
+ * "true", the default, fixes both; "false" keeps the original's
+ * behaviour. */
+
 /* Reads the configuration from `iniPath`, or from LRR_CONFIG_FILE in the
  * preference directory when it is NULL, writing that file with defaults
  * when it is missing or empty, and applies it (files_native_set_save_path,
@@ -172,5 +182,9 @@ LRR_DisplayScaling LRR_GetDisplayScaling();
 /* The tweaks:controls setting LRR_LoadConfig read, or the default,
  * LRR_CONTROLS_MODERN, before it runs. */
 LRR_Controls LRR_GetControls();
+
+/* The tweaks:fix_idleness_syndrome setting LRR_LoadConfig read, or the
+ * default, true, before it runs. */
+bool LRR_GetFixIdlenessSyndrome();
 
 #endif /* LEGORRR_PLATFORM_NATIVE_CONFIG_H */

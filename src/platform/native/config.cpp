@@ -100,6 +100,25 @@ LRR_Controls ParseControls(const char* value)
     return LRR_CONTROLS_MODERN;
 }
 
+constexpr bool kDefaultFixIdlenessSyndrome = true;
+
+bool g_fixIdlenessSyndrome = kDefaultFixIdlenessSyndrome;
+
+const char* BoolName(bool value)
+{
+    return value ? "true" : "false";
+}
+
+/* "false" (or off/no/0/original) keeps the original's behaviour; anything
+ * else turns the fix on. */
+bool ParseFixIdlenessSyndrome(const char* value)
+{
+    return !(value != NULL &&
+             (SDL_strcasecmp(value, "false") == 0 || SDL_strcasecmp(value, "off") == 0 ||
+              SDL_strcasecmp(value, "no") == 0 || SDL_strcasecmp(value, "original") == 0 ||
+              SDL_strcmp(value, "0") == 0));
+}
+
 /* The directory that holds the configuration file and, by default, the
  * saves; "" when the host has none. */
 std::string PreferencePath()
@@ -134,6 +153,7 @@ dictionary* DefaultConfig(const std::string& prefPath)
     iniparser_set(dict, LRR_CONFIG_TRAININGSAVE, TrainingSaveName(kDefaultTrainingSave));
     iniparser_set(dict, LRR_CONFIG_DISPLAY, DisplayScalingName(kDefaultDisplayScaling));
     iniparser_set(dict, LRR_CONFIG_CONTROLS, ControlsName(kDefaultControls));
+    iniparser_set(dict, LRR_CONFIG_FIXIDLENESS, BoolName(kDefaultFixIdlenessSyndrome));
 
 #ifdef __3DS__
     N3DS_SetupDefaultConfigOverrides(dict);
@@ -355,6 +375,8 @@ bool LRR_LoadConfig(const char* iniPath)
     g_displayScaling = ParseDisplayScaling(
         iniparser_getstring(dict, LRR_CONFIG_DISPLAY, DisplayScalingName(kDefaultDisplayScaling)));
     g_controls = ParseControls(iniparser_getstring(dict, LRR_CONFIG_CONTROLS, ControlsName(kDefaultControls)));
+    g_fixIdlenessSyndrome = ParseFixIdlenessSyndrome(
+        iniparser_getstring(dict, LRR_CONFIG_FIXIDLENESS, BoolName(kDefaultFixIdlenessSyndrome)));
     iniparser_freedict(dict);
 
 #ifdef __EMSCRIPTEN__
@@ -381,4 +403,9 @@ LRR_DisplayScaling LRR_GetDisplayScaling()
 LRR_Controls LRR_GetControls()
 {
     return g_controls;
+}
+
+bool LRR_GetFixIdlenessSyndrome()
+{
+    return g_fixIdlenessSyndrome;
 }
