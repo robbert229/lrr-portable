@@ -72,3 +72,23 @@ lrr_unit_test(animclone SOURCES ${ENGINE_DIR}/test_animclone.cpp LABELS animclon
 
 # Check packed BMP scanline strides and the default 256-entry palette.
 lrr_unit_test(g98_026 SOURCES ${ENGINE_DIR}/test_g98_026.cpp LABELS g98_026)
+
+# Verify DirectX result decoding, report metadata and bounded formatting.
+lrr_unit_test(dxerror SOURCES ${ENGINE_DIR}/test_dxerror.cpp LABELS dxerror)
+
+# Check startup file-list stream cleanup, scan output, and open failure.
+lrr_unit_test(file_list_streams SOURCES ${ENGINE_DIR}/test_file_list_streams.cpp
+  WRAP game_file_open_dispatch game_file_close resource_file_token_list_load_and_tree_scan_target
+  LABELS file_list_streams)
+
+# Mount synthetic WWAD archives and check precedence, packed entries and handles.
+lrr_unit_test(wad SOURCES ${ENGINE_DIR}/test_wad.cpp LABELS wad)
+
+# Parse a synthetic LightWave triangle and match surface records to the name table.
+lrr_unit_test(lwo SOURCES ${ENGINE_DIR}/test_lwo.cpp LABELS lwo)
+
+# Expand stored and method-2 RNC streams and pin canonical Huffman codes.
+lrr_unit_test(rnc SOURCES ${ENGINE_DIR}/test_rnc.cpp LABELS rnc)
+
+# Filter a synthetic display-mode list and look up its exact descriptions.
+lrr_unit_test(init SOURCES ${ENGINE_DIR}/test_init.cpp LABELS init)
