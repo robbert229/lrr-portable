@@ -49,3 +49,28 @@ lrr_unit_test(reward_score SOURCES ${GAME_DIR}/test_reward_score.cpp
 # Roof diagonals and normal updates using captured mesh vertices.
 lrr_unit_test(roof SOURCES ${GAME_DIR}/test_roof.cpp
   WRAP container_mesh_set_vertices lwo_layer_polygon_vertex_data_read LABELS roof)
+
+# Scrollbar arrow input, thumb dragging and rounded positions.
+lrr_unit_test(scrollinfo SOURCES ${GAME_DIR}/test_scrollinfo.cpp
+  WRAP Image_LoadBMPScaled Image_DisplayScaled LABELS scrollinfo)
+
+# Placement footprint rotation and translation on the block grid.
+lrr_unit_test(selectplace SOURCES ${GAME_DIR}/test_selectplace.cpp LABELS selectplace)
+
+# Sound name registration, sample markers, deferred playback and cooldown.
+lrr_unit_test(sfx SOURCES ${GAME_DIR}/test_sfx.cpp
+  WRAP sound_bank_entry_load s_play_seam sound_source_spatial_refresh_all LABELS sfx)
+
+# Spiderweb damage, teardown and restart, beyond the existing grid tests.
+lrr_unit_test(spiderweb SOURCES ${GAME_DIR}/test_spiderweb.cpp
+  WRAP legoobject_position_to_terrain_cell object_type_name_index_find weapons_get_damage_for_object
+  LABELS spiderweb)
+
+# Stats level changes, counters and tool lookup.
+lrr_unit_test(entity_stats SOURCES ${GAME_DIR}/test_entity_stats.cpp LABELS entity_stats)
+
+# Teleporter object types, ring distance and instant completion.
+lrr_unit_test(teleporter SOURCES ${GAME_DIR}/test_teleporter.cpp
+  WRAP legoobject_run_through_lists_skip_upgrade_parts legoobject_transform_position_get
+       level_current_terrain_get camera_get_topdown_world_pos
+  LABELS teleporter)
