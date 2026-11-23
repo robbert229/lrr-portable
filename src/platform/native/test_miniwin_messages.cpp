@@ -111,6 +111,45 @@ int main()
     const Seen* right = Find(WM_RBUTTONDOWN);
     CHECK(right && LOWORD(right->lParam) == 7 && HIWORD(right->lParam) == 8);
 
+    // The middle button and the wheel (tweaks:controls = modern): the wheel's
+    // movement in WHEEL_DELTA units in wParam's high word, positive away from
+    // the user, and reversed when SDL reports a flipped wheel.
+    seen.clear();
+    PushButton(id, SDL_EVENT_MOUSE_BUTTON_DOWN, SDL_BUTTON_MIDDLE, 10.0f, 20.0f);
+    PushButton(id, SDL_EVENT_MOUSE_BUTTON_UP, SDL_BUTTON_MIDDLE, 11.0f, 21.0f);
+    SDL_Event wheel = {};
+    wheel.type = SDL_EVENT_MOUSE_WHEEL;
+    wheel.wheel.windowID = id;
+    wheel.wheel.y = 1.0f;
+    wheel.wheel.direction = SDL_MOUSEWHEEL_NORMAL;
+    wheel.wheel.mouse_x = 30.0f;
+    wheel.wheel.mouse_y = 40.0f;
+    CHECK(SDL_PushEvent(&wheel));
+    Pump();
+    const Seen* middle = Find(WM_MBUTTONDOWN);
+    CHECK(middle && LOWORD(middle->lParam) == 10 && HIWORD(middle->lParam) == 20);
+    const Seen* middleUp = Find(WM_MBUTTONUP);
+    CHECK(middleUp && LOWORD(middleUp->lParam) == 11 && HIWORD(middleUp->lParam) == 21);
+    const Seen* scrolled = Find(WM_MOUSEWHEEL);
+    CHECK(scrolled && GET_WHEEL_DELTA_WPARAM(scrolled->wParam) == WHEEL_DELTA);
+    CHECK(scrolled && LOWORD(scrolled->lParam) == 30 && HIWORD(scrolled->lParam) == 40);
+
+    seen.clear();
+    wheel.wheel.y = 2.0f;
+    wheel.wheel.direction = SDL_MOUSEWHEEL_FLIPPED;
+    CHECK(SDL_PushEvent(&wheel));
+    wheel.wheel.y = 0.001f; // Less than half a WHEEL_DELTA unit: no message.
+    wheel.wheel.direction = SDL_MOUSEWHEEL_NORMAL;
+    CHECK(SDL_PushEvent(&wheel));
+    Pump();
+    scrolled = Find(WM_MOUSEWHEEL);
+    CHECK(scrolled && GET_WHEEL_DELTA_WPARAM(scrolled->wParam) == -2 * WHEEL_DELTA);
+    int wheels = 0;
+    for (const Seen& s : seen) {
+        wheels += s.message == WM_MOUSEWHEEL;
+    }
+    CHECK(wheels == 1);
+
     // Screen coordinates are client coordinates: ClientToScreen leaves the
     // origin where Input.c and DirectDraw.c expect it.
     POINT origin = {0, 0};

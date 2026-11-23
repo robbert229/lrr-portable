@@ -78,6 +78,28 @@ LRR_DisplayScaling ParseDisplayScaling(const char* value)
     return LRR_DISPLAY_FIT;
 }
 
+constexpr LRR_Controls kDefaultControls = LRR_CONTROLS_MODERN;
+
+LRR_Controls g_controls = kDefaultControls;
+
+const char* ControlsName(LRR_Controls value)
+{
+    return value == LRR_CONTROLS_ORIGINAL ? "original" : "modern";
+}
+
+/* "original" (or off/false/no/0) keeps the original's controls; anything
+ * else adds the camera controls. */
+LRR_Controls ParseControls(const char* value)
+{
+    if (value != NULL &&
+        (SDL_strcasecmp(value, "original") == 0 || SDL_strcasecmp(value, "off") == 0 ||
+         SDL_strcasecmp(value, "false") == 0 || SDL_strcasecmp(value, "no") == 0 ||
+         SDL_strcmp(value, "0") == 0)) {
+        return LRR_CONTROLS_ORIGINAL;
+    }
+    return LRR_CONTROLS_MODERN;
+}
+
 /* The directory that holds the configuration file and, by default, the
  * saves; "" when the host has none. */
 std::string PreferencePath()
@@ -111,6 +133,7 @@ dictionary* DefaultConfig(const std::string& prefPath)
     iniparser_set(dict, LRR_CONFIG_TWEAKS_SECTION, NULL);
     iniparser_set(dict, LRR_CONFIG_TRAININGSAVE, TrainingSaveName(kDefaultTrainingSave));
     iniparser_set(dict, LRR_CONFIG_DISPLAY, DisplayScalingName(kDefaultDisplayScaling));
+    iniparser_set(dict, LRR_CONFIG_CONTROLS, ControlsName(kDefaultControls));
 
 #ifdef __3DS__
     N3DS_SetupDefaultConfigOverrides(dict);
@@ -331,6 +354,7 @@ bool LRR_LoadConfig(const char* iniPath)
         iniparser_getstring(dict, LRR_CONFIG_TRAININGSAVE, TrainingSaveName(kDefaultTrainingSave)));
     g_displayScaling = ParseDisplayScaling(
         iniparser_getstring(dict, LRR_CONFIG_DISPLAY, DisplayScalingName(kDefaultDisplayScaling)));
+    g_controls = ParseControls(iniparser_getstring(dict, LRR_CONFIG_CONTROLS, ControlsName(kDefaultControls)));
     iniparser_freedict(dict);
 
 #ifdef __EMSCRIPTEN__
@@ -352,4 +376,9 @@ LRR_TrainingSave LRR_GetTrainingSave()
 LRR_DisplayScaling LRR_GetDisplayScaling()
 {
     return g_displayScaling;
+}
+
+LRR_Controls LRR_GetControls()
+{
+    return g_controls;
 }

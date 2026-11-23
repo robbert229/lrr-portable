@@ -1,0 +1,79 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sun, 22 Nov 2026 21:21:33 -0800
+Subject: [PATCH] feat(miniwin): post the middle button and the mouse wheel as
+ window messages
+
+Translate SDL's middle-button and wheel events into WM_MBUTTONDOWN,
+WM_MBUTTONUP and WM_MOUSEWHEEL, with WHEEL_DELTA, GET_WHEEL_DELTA_WPARAM
+and MAKEWPARAM, as Win32 delivers them.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/include/miniwin/windows.h b/miniwin/include/miniwin/windows.h
+index 58f84e9..f1b9ab1 100644
+--- a/miniwin/include/miniwin/windows.h
++++ b/miniwin/include/miniwin/windows.h
+@@ -55,6 +55,14 @@
+ #define WM_RBUTTONDOWN 0x0204
+ #define WM_RBUTTONUP 0x0205
+ #define WM_RBUTTONDBLCLK 0x0206
++#define WM_MBUTTONDOWN 0x0207
++#define WM_MBUTTONUP 0x0208
++#define WM_MOUSEWHEEL 0x020A
++
++// WM_MOUSEWHEEL's wParam: the wheel's movement in its high word, in
++// multiples of WHEEL_DELTA for a notched wheel, positive away from the user.
++#define WHEEL_DELTA 120
++#define GET_WHEEL_DELTA_WPARAM(w) ((short) HIWORD(w))
+ 
+ // Virtual-key codes: WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN and WM_SYSKEYUP
+ // carry these in wParam, as on Windows.
+@@ -174,6 +182,7 @@
+ #define ERROR_ALREADY_EXISTS 183L
+ 
+ #define MAKELPARAM(l, h) ((LPARAM) (DWORD) (((WORD) (l)) | (((DWORD) (WORD) (h)) << 16)))
++#define MAKEWPARAM(l, h) ((WPARAM) (DWORD) (((WORD) (l)) | (((DWORD) (WORD) (h)) << 16)))
+ #define LOWORD(l) ((WORD) (((uintptr_t) (l)) & 0xffff))
+ #define HIWORD(l) ((WORD) ((((uintptr_t) (l)) >> 16) & 0xffff))
+ 
+diff --git a/miniwin/src/windows/windowmessages.cpp b/miniwin/src/windows/windowmessages.cpp
+index 6090c26..03e209b 100644
+--- a/miniwin/src/windows/windowmessages.cpp
++++ b/miniwin/src/windows/windowmessages.cpp
+@@ -341,6 +341,9 @@ void Translate(const SDL_Event& event)
+ 		else if (event.button.button == SDL_BUTTON_RIGHT) {
+ 			message = doubleClick ? WM_RBUTTONDBLCLK : (down ? WM_RBUTTONDOWN : WM_RBUTTONUP);
+ 		}
++		else if (event.button.button == SDL_BUTTON_MIDDLE) {
++			message = down ? WM_MBUTTONDOWN : WM_MBUTTONUP;
++		}
+ 		else {
+ 			break;
+ 		}
+@@ -352,6 +355,25 @@ void Translate(const SDL_Event& event)
+ 		);
+ 		break;
+ 	}
++	case SDL_EVENT_MOUSE_WHEEL: {
++		// Win32 reports the wheel in WHEEL_DELTA units, positive away from
++		// the user; a high-resolution wheel sends fractions of a notch.
++		// lParam is the cursor's client position, as for the button
++		// messages (Win32 gives screen coordinates here).
++		float y = event.wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -event.wheel.y : event.wheel.y;
++		int delta = (int) SDL_lroundf(y * WHEEL_DELTA);
++		if (delta == 0) {
++			break;
++		}
++		delta = SDL_clamp(delta, -32768, 32767);
++		Post(
++			WindowOf(event.wheel.windowID),
++			WM_MOUSEWHEEL,
++			MAKEWPARAM(0, (WORD) (short) delta),
++			MousePosition(WindowOf(event.wheel.windowID), event.wheel.mouse_x, event.wheel.mouse_y)
++		);
++		break;
++	}
+ 	case SDL_EVENT_KEY_DOWN:
+ 	case SDL_EVENT_KEY_UP:
+ 		TranslateKey(event.key);

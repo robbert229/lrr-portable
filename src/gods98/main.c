@@ -291,6 +291,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                         s_window_mouse_word_50 = 0;
                         s_window_mouse_word_54 = 0;
                         s_window_mouse_word_58 = 0;
+                        inputWheelDelta = 0; // [divergence:modern-controls]
 
                         window_message_dispatch_pump();
 
@@ -756,6 +757,18 @@ LRESULT window_game_window_procedure_retail(HWND hWnd, UINT message,
     case WM_RBUTTONDBLCLK:
         s_window_mouse_word_58 = TRUE;
         return 0;
+
+    /* [divergence:modern-controls] The middle button and the wheel, for
+     * tweaks:controls = modern (input_globs.h). */
+    case WM_MBUTTONDOWN:
+        inputMiddleButton = TRUE;
+        return 0;
+    case WM_MBUTTONUP:
+        inputMiddleButton = FALSE;
+        return 0;
+    case WM_MOUSEWHEEL:
+        inputWheelDelta += GET_WHEEL_DELTA_WPARAM(wParam);
+        return 0;
     case WM_MOVE:
     case WM_SIZE:
     case WM_ACTIVATE:
@@ -845,6 +858,18 @@ LRESULT window_activation_close_retail(HWND hWnd, UINT message,
 
     case WM_RBUTTONDBLCLK:
         s_window_mouse_word_58 = TRUE;
+        return 0;
+
+    /* [divergence:modern-controls] The middle button and the wheel, for
+     * tweaks:controls = modern (input_globs.h). */
+    case WM_MBUTTONDOWN:
+        inputMiddleButton = TRUE;
+        return 0;
+    case WM_MBUTTONUP:
+        inputMiddleButton = FALSE;
+        return 0;
+    case WM_MOUSEWHEEL:
+        inputWheelDelta += GET_WHEEL_DELTA_WPARAM(wParam);
         return 0;
     }
 
