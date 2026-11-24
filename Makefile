@@ -3,6 +3,9 @@
 SHELL := /bin/bash
 
 BUILD_DIR ?= build
+# The instrumented build for `make coverage`, and where its report goes.
+COVERAGE_BUILD_DIR ?= build-coverage
+COVERAGE_DIR ?= $(COVERAGE_BUILD_DIR)/report
 WAD_DIR ?= $(CURDIR)/reference
 CMAKE_TOOLCHAIN_FILE ?=
 # The shipped exe's flags. Without -best, the display settings come from
@@ -16,7 +19,7 @@ COMPATDATA ?= $(if $(RR_A2_HOME),$(RR_A2_HOME),$(HOME)/.local/share/rock-raider-
 # The packaged build on macOS is an app bundle (packaging/macos).
 LEGORR = $(if $(wildcard $(abspath $(BUILD_DIR))/LegoRR.app/Contents/MacOS/LegoRR),$(abspath $(BUILD_DIR))/LegoRR.app/Contents/MacOS/LegoRR,$(abspath $(BUILD_DIR))/LegoRR)
 
-.PHONY: all setup build run test clean reference-run
+.PHONY: all setup build run test coverage clean reference-run
 
 all: build
 
@@ -32,6 +35,18 @@ build: setup
 test: setup
 	cmake --build "$(BUILD_DIR)"
 	ctest --test-dir "$(BUILD_DIR)" --output-on-failure
+
+# Line coverage of src/ (docs/building.md, "Coverage"): a Debug build with
+# gcov instrumentation in COVERAGE_BUILD_DIR, the tests, then the report in
+# COVERAGE_DIR (html/index.html). Needs GCC, gcovr and diff-cover. Counts from
+# an earlier run are cleared first.
+coverage:
+	tools/setup-miniwin.sh
+	cmake -S . -B "$(COVERAGE_BUILD_DIR)" -DCMAKE_BUILD_TYPE=Debug -DLRR_COVERAGE=ON -DLRR_PACKAGING=OFF $(if $(CMAKE_TOOLCHAIN_FILE),-DCMAKE_TOOLCHAIN_FILE="$(CMAKE_TOOLCHAIN_FILE)",)
+	cmake --build "$(COVERAGE_BUILD_DIR)"
+	find "$(COVERAGE_BUILD_DIR)" -name '*.gcda' -delete
+	ctest --test-dir "$(COVERAGE_BUILD_DIR)" --output-on-failure
+	python3 tools/coverage.py "$(COVERAGE_BUILD_DIR)" "$(COVERAGE_DIR)" --compare-branch origin/main
 
 run: build
 	cd "$(WAD_DIR)" && "$(LEGORR)" $(RUN_ARGS)

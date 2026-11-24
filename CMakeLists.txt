@@ -33,6 +33,19 @@ elseif(MSVC)
   add_compile_options(/fp:precise)
 endif()
 
+# Line coverage (docs/building.md, "Coverage"): every target compiles and
+# links with gcov instrumentation, and each test run adds to the .gcda
+# counts in the build tree. tools/coverage.py reports them. GCC only, since
+# the report reads the counts with gcov.
+option(LRR_COVERAGE "Instrument the build for gcov line coverage" OFF)
+if(LRR_COVERAGE)
+  if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    message(FATAL_ERROR "LRR_COVERAGE needs GCC; the compiler is ${CMAKE_CXX_COMPILER_ID}")
+  endif()
+  add_compile_options(--coverage)
+  add_link_options(--coverage)
+endif()
+
 # The web build (issue #926), with isle-portable's Emscripten flags (its
 # CMakeLists.txt, LGPL-3.0) less OffscreenCanvas. -sPROXY_TO_PTHREAD runs
 # main, and so WinMain's blocking loop and the units' nested modal loops,

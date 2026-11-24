@@ -185,8 +185,8 @@ class AndroidTests(unittest.TestCase):
         self.assertRegex(self.gradle, r"(?m)^def sdlDevelSha256 = '[0-9a-f]{64}'$")
         # The AAR is SDL's release, the same one CMakeLists.txt fetches.
         version = re.search(r"(?m)^def sdlVersion = '([0-9.]+)'$", self.gradle).group(1)
-        workflow = (ROOT / ".github/workflows/native-build.yml").read_text()
-        self.assertRegex(workflow, rf"SDL_VERSION: ['\"]?{re.escape(version)}['\"]?")
+        action = (ROOT / ".github/actions/setup-sdl3/action.yml").read_text()
+        self.assertRegex(action, rf"SDL_VERSION={re.escape(version)}\b")
         wrapper = (self.ANDROID / "gradle/wrapper/gradle-wrapper.properties").read_text()
         self.assertRegex(wrapper, r"(?m)^distributionSha256Sum=[0-9a-f]{64}$")
 

@@ -473,6 +473,25 @@ The SDL GPU backend's shaders are HLSL in miniwin's
 `tools/miniwin-shaders/regenerate.sh` regenerates them on Linux with
 SDL_shadercross and vkd3d-utils; its header lists what it needs.
 
+### Coverage
+
+```sh
+make coverage
+```
+
+builds the port in `build-coverage` (`COVERAGE_BUILD_DIR`) with
+`-DLRR_COVERAGE=ON` and `CMAKE_BUILD_TYPE=Debug`, clears the counts of any
+earlier run, runs ctest, and then runs `tools/coverage.py`. That writes the
+line-by-line report to `build-coverage/report/html/index.html`
+(`COVERAGE_DIR`), and `comment.md` beside it: the coverage of the lines the
+branch changes against `origin/main`, and coverage by area of `src/`.
+`LRR_COVERAGE` compiles and links every target with `--coverage`, and needs
+GCC; the report needs `gcovr` and `diff-cover` on `PATH` (CI pins the
+versions in `.github/workflows/coverage.yml`). The report counts `src/` less
+the tests themselves (`src/test/` and `test_*` sources). With the game data
+in place, the real-data tests count too, so a local report runs higher than
+CI's.
+
 ### Writing a test
 
 A test is one source file, `test_<name>.cpp`, registered with
@@ -550,14 +569,29 @@ C4706): an assignment used as a condition. Add a warning to the list only
 once the code builds cleanly with it.
 
 SDL3 comes from a pinned source build of release-3.4.18 (commit `829a65d7`),
-configured headless with `SDL_UNIX_CONSOLE_BUILD` and without X11 or Wayland.
-The tests use SDL's dummy and offscreen drivers. The build is cached by SDL
-version. `ubuntu-24.04` has no SDL3 development package, so a distro package is
-not used. When you change the SDL version or its build recipe, update
-`SDL_VERSION`, `SDL_COMMIT`, or `SDL_CACHE_VERSION` in the workflow, and
+configured headless with `SDL_UNIX_CONSOLE_BUILD` and without X11 or Wayland,
+by the `setup-sdl3` action (`.github/actions/setup-sdl3`), which the
+`coverage` workflow shares. The tests use SDL's dummy and offscreen drivers.
+The build is cached by SDL version. `ubuntu-24.04` has no SDL3 development
+package, so a distro package is not used. When you change the SDL version or
+its build recipe, update `SDL_VERSION`, `SDL_COMMIT`, or `SDL_CACHE_VERSION`
+in that action, and
 keep `LRR_SDL3_GIT_TAG` in `CMakeLists.txt` on the same commit. An existing
 build directory keeps its cached `LRR_SDL3_GIT_TAG`; delete that entry, or
 the directory, to pick up a new one.
+
+The `coverage` workflow (`.github/workflows/coverage.yml`) runs on the same
+events and is not a required check. On `ubuntu-24.04` it builds as
+[Coverage](#coverage) describes, with the pinned SDL3, and runs ctest and
+`tools/coverage.py`. On a pull request it posts one comment, which later
+pushes update: the coverage of the lines the pull request changes, with the
+lines the tests miss, and coverage by area of `src/` against the last
+`coverage` run on `main`. A push to `main` uploads that run's `summary.json`
+as the `coverage-summary` artifact for later pull requests to compare
+against. Every run writes the comment to its job summary and uploads the
+HTML report as the `coverage-report` artifact. A pull request from a fork
+gets a read-only token, so it gets no comment; its coverage is in the job
+summary. Nothing is sent outside GitHub.
 
 The `native-packages` workflow (`.github/workflows/native-packages.yml`) builds
 the Linux packages: a TGZ and an AppImage on `ubuntu-24.04` (with the AppImage
