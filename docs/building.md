@@ -575,6 +575,11 @@ lrr_unit_test_variant(audio_mix OF audio
   SKIP_RETURN_CODE 77)
 ```
 
+A test of a `LegoRR.ini` key at its unit's site sets the key with
+`LRR_SetSetting` (`src/platform/native/config.h`) rather than wrapping the
+getter, so it needs no `WRAP` for it and runs on every host
+(`src/game/test_cheats.cpp`).
+
 The assertions are in `src/test/lrr_test.h`, header-only, on every test's
 include path:
 

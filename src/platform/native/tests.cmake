@@ -29,6 +29,9 @@ lrr_unit_test(fps_counter
     ${PLATFORM_DIR}/native/fps_counter.cpp
   INCLUDES ${SRC_ROOT} ${SRC_ROOT}/test
   LABELS config)
+# The settings, set in-process: no file, so on every host.
+lrr_unit_test(config_settings SOURCES ${PLATFORM_DIR}/native/test_config_settings.cpp
+  LABELS config)
 # The 3D device Init.c chooses, from synthetic device lists with each
 # platform's default device.
 lrr_unit_test(device_choice SOURCES ${PLATFORM_DIR}/native/test_device_choice.cpp

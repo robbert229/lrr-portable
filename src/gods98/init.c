@@ -67,7 +67,7 @@ int init_initialise(int setup, int debug, int best, int window,
     int res = 1;
     LRR_DeviceCandidate candidates[INIT_MAX_DEVICES]; // [library:config]
     int chosen;                                       // [library:config]
-    int fitWindow = LRR_GetDisplayScaling() == LRR_DISPLAY_FIT; // [divergence:display-fit]
+    int fitWindow = LRR_GetDisplayScaling() == LRR_DISPLAY_FIT; // [library:config] [divergence:display-fit]
 
     /* [divergence:display-fit] tweaks:display = fit draws the 3D view at the
      * window's resolution; = original at the mode's. Either way the 3D view
@@ -188,7 +188,7 @@ int init_initialise(int setup, int debug, int best, int window,
                  * the game draws at, and the window then takes the file's
                  * resolution, centred on the desktop. */
                 if (res && setup && !best && fitWindow) {
-                    const LRR_DisplayConfig* config = LRR_GetDisplayConfig();
+                    const LRR_DisplayConfig* config = LRR_GetDisplayConfig(); // [library:config]
                     RECT desktop;
                     int x = 100, y = 100;
 

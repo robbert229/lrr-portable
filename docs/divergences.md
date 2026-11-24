@@ -9,6 +9,12 @@ should, where they can:
   original (cheats, off by default, go in a `[cheats]` section instead);
 - mark their call site `// [divergence:<name>]`.
 
+A key is one row of the settings table, `kTable` in
+`src/platform/native/config.cpp`, with its `LRR_Setting` and a typed getter
+in `config.h` for the unit to read. The row gives the key's default, which
+the new `LegoRR.ini` is written with, and its kind, which sets the
+spellings it accepts. A test sets the key with `LRR_SetSetting`.
+
 Older ones carry a `PORT-ONLY:` comment instead.
 
 The list has three parts:
