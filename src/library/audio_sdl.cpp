@@ -635,11 +635,19 @@ long audio_listener_commit_deferred_settings(AudioListener* listener)
 
 /* --- mmio ----------------------------------------------------------------- */
 
+/* An mmio handle reads a file through a window of kMmioWindow bytes, not
+ * whole: a streamed sound's file runs to megabytes, and a 3DS has no memory
+ * to hold them. A memory handle (FOURCC_MEM) has the caller's buffer as its
+ * one window. size and pos are positions in the file; data holds the bytes
+ * from windowStart for windowLen of them. */
 struct HMMIO__ {
-    std::vector<char> owned;
+    SDL_IOStream* io;
+    std::vector<char> window;
     char* data;
     LONG size;
     LONG pos;
+    LONG windowStart;
+    LONG windowLen;
 };
 
 namespace {
@@ -650,20 +658,69 @@ DWORD ReadLe32(const char* bytes)
     return (DWORD)b[0] | ((DWORD)b[1] << 8) | ((DWORD)b[2] << 16) | ((DWORD)b[3] << 24);
 }
 
+const LONG kMmioWindow = 64 * 1024;
+
+/* Make the window cover the position (a file handle reads the next
+ * kMmioWindow bytes from it). At or past the end it is empty, so that
+ * pchNext and pchEndRead meet. False when the file cannot be read. */
+bool MmioFill(HMMIO hmmio, LONG pos)
+{
+    if (!hmmio->io) return true;
+    if (pos >= hmmio->windowStart && pos < hmmio->windowStart + hmmio->windowLen) return true;
+    hmmio->windowStart = pos;
+    hmmio->windowLen = 0;
+    if (pos < 0 || pos >= hmmio->size) return pos >= 0;
+    if (hmmio->window.empty()) hmmio->window.resize((size_t)kMmioWindow);
+    if (SDL_SeekIO(hmmio->io, pos, SDL_IO_SEEK_SET) < 0) return false;
+    size_t want = (size_t)std::min<LONG>(kMmioWindow, hmmio->size - pos);
+    size_t got = SDL_ReadIO(hmmio->io, hmmio->window.data(), want);
+    hmmio->windowLen = (LONG)got;
+    hmmio->data = hmmio->window.data();
+    return got > 0;
+}
+
+/* Up to count bytes at a position, from the window or windows that hold
+ * them: how many were read. */
+LONG MmioPeek(HMMIO hmmio, LONG pos, char* out, LONG count)
+{
+    LONG done = 0;
+    while (done < count && pos + done < hmmio->size) {
+        if (!MmioFill(hmmio, pos + done)) break;
+        LONG at = pos + done - hmmio->windowStart;
+        LONG n = std::min(count - done, hmmio->windowLen - at);
+        if (n <= 0) break;
+        memcpy(out + done, hmmio->data + at, (size_t)n);
+        done += n;
+    }
+    return done;
+}
+
+bool MmioPeekLe32(HMMIO hmmio, LONG pos, DWORD* value)
+{
+    char bytes[4];
+    if (MmioPeek(hmmio, pos, bytes, 4) != 4) return false;
+    *value = ReadLe32(bytes);
+    return true;
+}
+
 /* The chunk header at the position, which moves past it (and past a RIFF
  * or LIST form type). */
 bool ReadChunkHeader(HMMIO hmmio, LONG end, MMCKINFO* chunk)
 {
+    DWORD id, size;
     if (hmmio->pos < 0 || (long long)hmmio->pos + 8 > end) return false;
-    chunk->ckid = ReadLe32(hmmio->data + hmmio->pos);
-    chunk->cksize = ReadLe32(hmmio->data + hmmio->pos + 4);
+    if (!MmioPeekLe32(hmmio, hmmio->pos, &id) || !MmioPeekLe32(hmmio, hmmio->pos + 4, &size)) return false;
+    chunk->ckid = id;
+    chunk->cksize = size;
     chunk->dwDataOffset = (DWORD)hmmio->pos + 8;
     chunk->dwFlags = 0;
     chunk->fccType = 0;
     hmmio->pos += 8;
     if (chunk->ckid == FOURCC_RIFF || chunk->ckid == FOURCC_LIST) {
+        DWORD type;
         if ((long long)hmmio->pos + 4 > end) return false;
-        chunk->fccType = ReadLe32(hmmio->data + hmmio->pos);
+        if (!MmioPeekLe32(hmmio, hmmio->pos, &type)) return false;
+        chunk->fccType = type;
         hmmio->pos += 4;
     }
     return true;
@@ -677,24 +734,32 @@ HMMIO audio_mmio_open(const char* path, LPMMIOINFO info, DWORD flags)
 {
     (void)flags;
     HMMIO hmmio = new HMMIO__();
+    hmmio->io = NULL;
+    hmmio->data = NULL;
+    hmmio->size = 0;
+    hmmio->pos = 0;
+    hmmio->windowStart = 0;
+    hmmio->windowLen = 0;
     if (info && info->fccIOProc == FOURCC_MEM) {
         hmmio->data = info->pchBuffer;
         hmmio->size = info->cchBuffer;
+        hmmio->windowLen = info->cchBuffer;
     } else {
-        size_t length = 0;
-        void* loaded = path ? SDL_LoadFile(path, &length) : NULL;
-        if (!loaded || length > 0x7fffffff) {
-            SDL_free(loaded);
+        Sint64 length = -1;
+        hmmio->io = path ? SDL_IOFromFile(path, "rb") : NULL;
+        if (hmmio->io) length = SDL_GetIOSize(hmmio->io);
+        if (!hmmio->io || length < 0 || length > 0x7fffffff) {
+            if (hmmio->io) SDL_CloseIO(hmmio->io);
             delete hmmio;
             if (info) info->wErrorRet = MMIOERR_CANNOTOPEN;
             return NULL;
         }
-        hmmio->owned.assign(static_cast<char*>(loaded), static_cast<char*>(loaded) + length);
-        SDL_free(loaded);
-        hmmio->data = hmmio->owned.data();
         hmmio->size = (LONG)length;
+        hmmio->windowStart = -1;
+        MmioFill(hmmio, 0);
     }
-    if (!hmmio->data || hmmio->size < 0) {
+    if ((!hmmio->data && hmmio->size > 0) || hmmio->size < 0) {
+        if (hmmio->io) SDL_CloseIO(hmmio->io);
         delete hmmio;
         if (info) info->wErrorRet = MMIOERR_CANNOTOPEN;
         return NULL;
@@ -706,6 +771,7 @@ MMRESULT audio_mmio_close(HMMIO hmmio, UINT flags)
 {
     (void)flags;
     if (!hmmio) return MMSYSERR_INVALHANDLE;
+    if (hmmio->io) SDL_CloseIO(hmmio->io);
     delete hmmio;
     return MMSYSERR_NOERROR;
 }
@@ -715,8 +781,7 @@ LONG audio_mmio_read(HMMIO hmmio, HPSTR buffer, LONG bytes)
     if (!hmmio || bytes < 0) return -1;
     LONG left = hmmio->size - hmmio->pos;
     if (left < 0) left = 0;
-    LONG count = std::min(bytes, left);
-    if (count > 0) memcpy(buffer, hmmio->data + hmmio->pos, (size_t)count);
+    LONG count = MmioPeek(hmmio, hmmio->pos, buffer, std::min(bytes, left));
     hmmio->pos += count;
     return count;
 }
@@ -731,19 +796,20 @@ LONG audio_mmio_seek(HMMIO hmmio, LONG offset, int origin)
     return hmmio->pos;
 }
 
-/* The whole file is the I/O buffer, so the info's read window is all of
- * it and advancing past its end finds nothing more. */
+/* The I/O buffer is the window over the position, so advancing past its
+ * end moves the window on, and past the file's end finds nothing more. */
 MMRESULT audio_mmio_get_info(HMMIO hmmio, LPMMIOINFO info, UINT flags)
 {
     (void)flags;
     if (!hmmio || !info) return MMSYSERR_INVALHANDLE;
+    if (!MmioFill(hmmio, hmmio->pos)) return MMIOERR_CANNOTREAD;
     memset(info, 0, sizeof(*info));
-    info->cchBuffer = hmmio->size;
+    info->cchBuffer = hmmio->windowLen;
     info->pchBuffer = hmmio->data;
-    info->pchNext = hmmio->data + hmmio->pos;
-    info->pchEndRead = hmmio->data + hmmio->size;
-    info->pchEndWrite = hmmio->data + hmmio->size;
-    info->lDiskOffset = hmmio->size;
+    info->pchNext = hmmio->data + (hmmio->pos - hmmio->windowStart);
+    info->pchEndRead = hmmio->data + hmmio->windowLen;
+    info->pchEndWrite = hmmio->data + hmmio->windowLen;
+    info->lDiskOffset = hmmio->windowStart + hmmio->windowLen;
     info->hmmio = hmmio;
     return MMSYSERR_NOERROR;
 }
@@ -752,7 +818,7 @@ MMRESULT audio_mmio_set_info(HMMIO hmmio, const MMIOINFO* info, UINT flags)
 {
     (void)flags;
     if (!hmmio || !info) return MMSYSERR_INVALHANDLE;
-    hmmio->pos = (LONG)(info->pchNext - hmmio->data);
+    hmmio->pos = hmmio->windowStart + (LONG)(info->pchNext - hmmio->data);
     return MMSYSERR_NOERROR;
 }
 
