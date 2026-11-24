@@ -356,3 +356,8 @@ lrr_unit_test(water SOURCES ${GAME_DIR}/test_water.cpp
 # Weapon configuration defaults and overrides, hit bounds and model timers.
 lrr_unit_test(weapons SOURCES ${GAME_DIR}/test_weapons.cpp
   WRAP lego_entity_type_pair_lookup building_upgrade_admission_check LABELS weapons)
+# Lego.c's level loader on a synthetic 8x8 level and a headless software
+# device, then the simulation for a while: the path a game session takes
+# through lego_level_load and the main simulation step.
+lrr_unit_test(level_boot SOURCES ${GAME_DIR}/test_level_boot.cpp
+  LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")

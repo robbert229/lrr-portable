@@ -399,6 +399,12 @@ unsigned int effect_update_all(float elapsed, unsigned int** completeTypes,
     *completeIndexes = effectGlobs.rockFallCompletedIndexes;
 
     for (beam = effectGlobs.fenceBeams; beam < &effectGlobs.fenceBeams[EFFECT_FENCEBEAM_NUMTYPES]; beam++) {
+        /* The original reads every beam's instances, loaded or not. A beam
+         * whose model did not load has NULL instances that are never
+         * marked finished, so the loop passed NULL to
+         * Container_MoveAnimation. Skip it, as the rock falls above skip a
+         * type that did not load. */
+        if (beam->cont == NULL) continue;
         for (j = 0; j < EFFECT_FENCEBEAM_MAXINSTANCES; j++) {
             if (!beam->finished[j]) {
                 if (ddiscene_advance_by_time_target(beam->conts[j], elapsed) > 0.0f) {
