@@ -323,6 +323,15 @@ screen. Citro3D has no second vertex colour, so a textured draw leaves out
 its specular colour (the game turns specular off). A frame's GPU commands
 get 1 MiB, about twice what Level01 needs; a draw that would overflow them
 is dropped, with a warning in the log.
+Touch on the 3DS: SDL makes mouse events from a touch only for the window
+it reports the touch to, and on the 3DS that is the fullscreen window of the
+touch screen's display, which SDL does not set for the game's window. So
+miniwin creates the window on that display, and turns each finger event
+into the pointer moving there and the left button pressing and releasing
+(`windowmessages.cpp`, in `patches/miniwin`). A touch is a mouse click at the
+touched point and nothing more: no right click, scrolling, zooming or
+keys, which #986 tracks for Android and iOS, and the 3DS's buttons and
+circle pad are not mapped to anything.
 On the SD card, where every lookup is a slow service call, the
 path mapping (`files_native.cpp`) reads each directory once and matches
 case from that listing.

@@ -1,0 +1,103 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sun, 22 Nov 2026 17:47:45 -0800
+Subject: [PATCH] feat(miniwin): take a touch on the 3DS as the mouse
+
+SDL makes mouse events from a touch only for the window it reports the
+touch to: the fullscreen window of the touch screen's display. SDL does
+not set that for the game's window, so a touch reached no window and made
+no mouse events. Create the window on the touch screen's display, and make
+the pointer move and the left button press from the finger events.
+
+diff --git a/miniwin/src/windows/windowmessages.cpp b/miniwin/src/windows/windowmessages.cpp
+index 6090c26..fd1c7be 100644
+--- a/miniwin/src/windows/windowmessages.cpp
++++ b/miniwin/src/windows/windowmessages.cpp
+@@ -352,6 +352,35 @@ void Translate(const SDL_Event& event)
+ 		);
+ 		break;
+ 	}
++#ifdef __3DS__
++	// SDL makes mouse events from a touch only for the window it reports the
++	// touch to, which is none here (SDL_n3dstouch.c gives the touch screen's
++	// display's fullscreen window, and SDL does not set that for ours). The
++	// touch is then a finger event with no window: move the pointer to it, and
++	// press or release the left button, as the mouse events would have.
++	case SDL_EVENT_FINGER_DOWN:
++	case SDL_EVENT_FINGER_MOTION:
++	case SDL_EVENT_FINGER_UP:
++		if (event.tfinger.windowID == 0) {
++			if (SDL_Window* window = CursorWindow()) {
++				int width = 0;
++				int height = 0;
++				SDL_GetWindowSize(window, &width, &height);
++				float x = SDL_clamp(event.tfinger.x * (float) width, 0.0f, (float) (width - 1));
++				float y = SDL_clamp(event.tfinger.y * (float) height, 0.0f, (float) (height - 1));
++				SDL_WarpMouseInWindow(window, x, y);
++				if (event.type != SDL_EVENT_FINGER_MOTION) {
++					Post(
++						window,
++						event.type == SDL_EVENT_FINGER_DOWN ? WM_LBUTTONDOWN : WM_LBUTTONUP,
++						0,
++						MousePosition(window, x, y)
++					);
++				}
++			}
++		}
++		break;
++#endif
+ 	case SDL_EVENT_KEY_DOWN:
+ 	case SDL_EVENT_KEY_UP:
+ 		TranslateKey(event.key);
+@@ -403,12 +432,35 @@ HWND CreateWindowExA(
+ 		flags |= SDL_WINDOW_RESIZABLE;
+ 	}
+ 	SDL_Window* window = nullptr;
+-	if (Miniwin_GetOpenGLWindows()) {
++#ifdef __3DS__
++	// SDL reports a touch to the fullscreen window of the bottom (touch)
++	// screen's display, which has none unless the window is created there.
++	// Without it a touch reaches no window, and so produces no mouse events.
++	// The game draws on that screen too.
++	SDL_DisplayID touchDisplay = 0;
++	int displayCount = 0;
++	if (SDL_DisplayID* displays = SDL_GetDisplays(&displayCount)) {
++		for (int i = 0; i < displayCount; i++) {
++			const char* name = SDL_GetDisplayName(displays[i]);
++			if (name && SDL_strstr(name, "bottom")) {
++				touchDisplay = displays[i];
++			}
++		}
++		SDL_free(displays);
++	}
++#else
++	const SDL_DisplayID touchDisplay = 0;
++#endif
++	if (Miniwin_GetOpenGLWindows() || touchDisplay) {
+ 		SDL_PropertiesID props = SDL_CreateProperties();
+ 		SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, lpWindowName ? lpWindowName : "");
+ 		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, nWidth);
+ 		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, nHeight);
+ 		SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, (Sint64) flags);
++		if (touchDisplay) {
++			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_UNDEFINED_DISPLAY(touchDisplay));
++			SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_UNDEFINED_DISPLAY(touchDisplay));
++		}
+ 		Miniwin_SetupWindowCreateProperties(props);
+ 		window = SDL_CreateWindowWithProperties(props);
+ 		SDL_DestroyProperties(props);
+@@ -421,6 +473,14 @@ HWND CreateWindowExA(
+ 		return NULL;
+ 	}
+ 	SDL_SetWindowPosition(window, X, Y);
++#ifdef __3DS__
++	{
++		int width = 0;
++		int height = 0;
++		SDL_GetWindowSize(window, &width, &height);
++		SDL_Log("window on display \"%s\", %dx%d", SDL_GetDisplayName(SDL_GetDisplayForWindow(window)), width, height);
++	}
++#endif
+ 	WindowProcedures()[window] = found->second.lpfnWndProc;
+ 	HWND hWnd = reinterpret_cast<HWND>(window);
+ 	found->second.lpfnWndProc(hWnd, WM_CREATE, 0, 0);
