@@ -113,6 +113,13 @@ else()
   install(FILES ${LRR_NOTICE_FILES} DESTINATION "${LRR_INSTALL_DOCDIR}")
 endif()
 
+# RecompLauncher reads recomplauncher.json from the top of the ZIP or TGZ (the
+# AppImage's copy goes to its root: appimage/build.sh). The macOS disk image
+# is not one the launcher installs, so it has none.
+if(WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  install(FILES recomplauncher.json DESTINATION ".")
+endif()
+
 # The package name: lrr-portable-<version>-Linux-x86_64, -Darwin-arm64,
 # -Windows-x64 ...
 if(MSVC)

@@ -12,6 +12,8 @@ This project brings the original PC game back to life on today's Windows,
 macOS and Linux. It doesn't need emulation, a Windows 98 virtual machine or
 compatibility tricks.
 
+<a href="https://recomplauncher.com"><picture><source media="(prefers-color-scheme: dark)" srcset="https://recomplauncher.com/assets/press/launcher/badge-light.svg"><img alt="Get it on RecompLauncher" src="https://recomplauncher.com/assets/press/launcher/badge-dark.svg" height="48"></picture></a>
+
 <img width="2242" height="1440" alt="lrr-portable running a Rock Raiders mission" src="https://github.com/user-attachments/assets/9dae6667-cb3c-4ea5-a882-a837f23f350a" />
 <img width="2242" height="1440" alt="lrr-portable gameplay" src="https://github.com/user-attachments/assets/714ff741-c2b2-4093-8257-8386c593f194" />
 <img width="2037" height="1440" alt="lrr-portable gameplay" src="https://github.com/user-attachments/assets/7c544e7b-fb49-4450-9ac1-0ef29ecafcb2" />
@@ -140,6 +142,15 @@ display = fit
 The original game's command-line options still work too: `-window`,
 `-nosound`, `-best` (skip the settings and pick a screen mode automatically)
 and `-debug`. `--ini <file>` uses a different settings file.
+
+Two more options are for launchers and scripts, and change nothing unless you
+pass them. `--game <folder>` reads the game from that Rock Raiders folder for
+this run, in place of `diskpath`. `--data <folder>` keeps everything the game
+writes in one folder: `LegoRR.ini` in it (unless `--ini` names another file)
+and your saves in its `Saves` folder (unless the file's `savepath` says
+otherwise). [RecompLauncher](https://recomplauncher.com) passes both: it asks
+for your Rock Raiders folder, then starts the game and shows these settings
+on its page.
 
 ## Small improvements over the original
 

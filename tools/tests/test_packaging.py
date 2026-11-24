@@ -4,9 +4,11 @@
 The packages themselves are built by CI; these checks catch a recipe that
 drifts from the application id, the executable name or the icon.
 """
+import json
 from pathlib import Path
 import re
 import struct
+import sys
 import unittest
 import wave
 import xml.etree.ElementTree as ET
@@ -90,6 +92,79 @@ class AppIdentityTests(unittest.TestCase):
         for name in ("LINUXDEPLOY", "APPIMAGETOOL"):
             self.assertRegex(build, rf"(?m)^{name}_SHA256=[0-9a-f]{{64}}$")
             self.assertNotIn("/continuous/", build)
+
+
+class RecompLauncherTests(unittest.TestCase):
+    """packaging/recomplauncher.json (RecompLauncher's manifest) agrees with
+    what the game reads and how the packages are laid out."""
+
+    def setUp(self):
+        self.manifest = json.loads((PACKAGING / "recomplauncher.json").read_text())
+        self.config_h = (ROOT / "src/platform/native/config.h").read_text()
+
+    def test_names_this_repository(self):
+        url = cmake_variable("LRR_APP_URL")
+        self.assertEqual(url, "https://github.com/" + self.manifest["repo"])
+        self.assertEqual(self.manifest["format"], 1)
+
+    def test_asks_for_the_game_folder_and_passes_the_options_the_entry_reads(self):
+        (game,) = self.manifest["inputs"]
+        self.assertEqual(game["id"], "game")
+        self.assertEqual(game["formats"], [{"type": "folder"}])
+        self.assertEqual(game["check"], {"file": "LegoRR0.wad"})
+        args = self.manifest["start"]["args"]
+        self.assertEqual(args, ["--game", "{input:game}", "--data", "{data}"])
+        entry = (ROOT / "src/platform/native/entry.cpp").read_text()
+        for option in ("--game", "--data"):
+            self.assertIn(f'strcmp(argv[i], "{option}") == 0', entry)
+
+    def test_starts_the_one_program_the_game_opens_its_wads_for(self):
+        # The game opens <program name>0.wad, so every entry starts LegoRR
+        # (the AppImage through its AppRun).
+        for program in self.manifest["start"]["program"]:
+            self.assertRegex(program, r"^(LegoRR\.exe|LegoRR\.app|bin/LegoRR|[\w.-]+\.AppImage)$")
+
+    def test_settings_write_keys_the_game_reads(self):
+        keys = {
+            section + "/" + key.lower()
+            for section, key in re.findall(r'#define LRR_CONFIG_\w+ "(\w+):([^"]+)"', self.config_h)
+        }
+        written = set()
+        for setting in self.manifest["settings"]:
+            self.assertEqual(setting.get("in", "main"), "main")
+            for choice in setting["choices"]:
+                written.update(choice["set"])
+            written.update(setting["defaults"])
+        written.update(self.manifest["config"][0]["new"])
+        self.assertTrue(written)
+        for key in written:
+            self.assertIn(key, keys)
+
+    def test_every_choice_of_a_setting_sets_the_same_keys(self):
+        for setting in self.manifest["settings"]:
+            keysets = {frozenset(choice["set"]) for choice in setting["choices"]}
+            self.assertEqual(len(keysets), 1, setting["id"])
+            self.assertEqual(keysets.pop(), frozenset(setting["defaults"]), setting["id"])
+
+    def test_keeps_everything_it_writes_in_the_data_folder(self):
+        (config,) = self.manifest["config"]
+        self.assertEqual(config["file"], [{"path": "{data}/LegoRR.ini"}])
+        self.assertEqual(self.manifest["saves"], ["{data}/Saves"])
+        for place in self.manifest["folders"]["saves"]:
+            self.assertTrue(place["path"].startswith("{data}/"))
+
+    def test_the_packages_carry_it_at_the_top(self):
+        cmake = (PACKAGING / "CMakeLists.txt").read_text()
+        self.assertIn('install(FILES recomplauncher.json DESTINATION ".")', cmake)
+        # An AppImage installs under /usr; the manifest belongs at its root.
+        build = (PACKAGING / "linux/appimage/build.sh").read_text()
+        self.assertIn('mv "$APPDIR/usr/recomplauncher.json" "$APPDIR/recomplauncher.json"', build)
+        sys.path.insert(0, str(ROOT / "tools"))
+        try:
+            import check_package
+        finally:
+            sys.path.pop(0)
+        self.assertEqual(check_package.problems(["recomplauncher.json", "LICENSE", "THIRD-PARTY-NOTICES.txt"]), [])
 
 
 class IconTests(unittest.TestCase):
@@ -206,9 +281,11 @@ class AndroidTests(unittest.TestCase):
 class LicenceTests(unittest.TestCase):
     def test_recipes_carry_spdx_headers(self):
         # The rendered images and sound are generated from sources that
-        # carry the header (the SVGs, regenerate.py).
+        # carry the header (the SVGs, regenerate.py). JSON has no comments,
+        # and RecompLauncher's schema takes no extra keys: recomplauncher.json
+        # is under the repository's licence.
         for path in PACKAGING.rglob("*"):
-            if path.suffix in {".icns", ".png", ".wav", ".jar"} or not path.is_file():
+            if path.suffix in {".icns", ".png", ".wav", ".jar", ".json"} or not path.is_file():
                 continue
             # Build output and Gradle's caches in a local Android build.
             if {"build", ".gradle", ".cxx", "libs"} & set(path.relative_to(PACKAGING).parts):

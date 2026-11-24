@@ -1,0 +1,129 @@
+{
+  "$schema": "https://recomplauncher.com/schema/recomplauncher.json",
+  "format": 1,
+  "repo": "robbert229/lrr-portable",
+  "inputs": [
+    {
+      "id": "game",
+      "label": "Your installed LEGO Rock Raiders (1999) PC game: its folder, the one with LegoRR0.wad, LegoRR1.wad and the Data folder.",
+      "formats": [{ "type": "folder" }],
+      "check": { "file": "LegoRR0.wad" }
+    }
+  ],
+  "start": {
+    "program": ["LegoRR.exe", "LegoRR.app", "bin/LegoRR", "lrr-portable-x86_64.AppImage"],
+    "args": ["--game", "{input:game}", "--data", "{data}"]
+  },
+  "system": {
+    "windows": { "version": "10" },
+    "linux": { "glibc": "2.39" },
+    "macos": { "version": "12" }
+  },
+  "config": [
+    {
+      "id": "main",
+      "format": "ini",
+      "file": [{ "path": "{data}/LegoRR.ini" }],
+      "new": {
+        "legorr/full screen": "false",
+        "legorr/horizontal resolution": "640",
+        "legorr/vertical resolution": "480",
+        "tweaks/training save": "prompt",
+        "tweaks/display": "fit",
+        "tweaks/controls": "modern",
+        "tweaks/fix_idleness_syndrome": "true"
+      }
+    }
+  ],
+  "settings": [
+    {
+      "id": "fullscreen",
+      "label": "Window mode",
+      "group": "Display",
+      "help": "Full screen fills your desktop; a window can be any size.",
+      "choices": [
+        { "label": "Window", "set": { "legorr/full screen": "false" } },
+        { "label": "Full screen", "set": { "legorr/full screen": "true" } }
+      ],
+      "defaults": { "legorr/full screen": "false" }
+    },
+    {
+      "id": "size",
+      "label": "Window size",
+      "group": "Display",
+      "help": "The size of the window when the game opens. You can resize it afterwards.",
+      "choices": [
+        { "label": "640x480", "set": { "legorr/horizontal resolution": "640", "legorr/vertical resolution": "480" } },
+        { "label": "800x600", "set": { "legorr/horizontal resolution": "800", "legorr/vertical resolution": "600" } },
+        { "label": "1024x768", "set": { "legorr/horizontal resolution": "1024", "legorr/vertical resolution": "768" } },
+        { "label": "1280x960", "set": { "legorr/horizontal resolution": "1280", "legorr/vertical resolution": "960" } },
+        { "label": "1600x1200", "set": { "legorr/horizontal resolution": "1600", "legorr/vertical resolution": "1200" } }
+      ],
+      "defaults": { "legorr/horizontal resolution": "640", "legorr/vertical resolution": "480" }
+    },
+    {
+      "id": "display",
+      "label": "Picture",
+      "group": "Display",
+      "help": "Sharp draws the 3D view at the window's size. Original keeps the game's fixed 640x480 picture.",
+      "choices": [
+        { "label": "Sharp, fits the window", "set": { "tweaks/display": "fit" } },
+        { "label": "Original 640x480", "set": { "tweaks/display": "original" } }
+      ],
+      "defaults": { "tweaks/display": "fit" }
+    },
+    {
+      "id": "controls",
+      "label": "Camera controls",
+      "group": "Controls",
+      "help": "Modern adds W, A, S and D to pan, Q and E to rotate and the mouse wheel to zoom. Edge panning always works.",
+      "choices": [
+        { "label": "Modern", "set": { "tweaks/controls": "modern" } },
+        { "label": "Original", "set": { "tweaks/controls": "original" } }
+      ],
+      "defaults": { "tweaks/controls": "modern" }
+    },
+    {
+      "id": "training_save",
+      "label": "Save after training",
+      "group": "Game",
+      "help": "The original never let you save after a training mission. Ask opens the Save Game screen when you finish one.",
+      "choices": [
+        { "label": "Ask", "set": { "tweaks/training save": "prompt" } },
+        { "label": "Never, like the original", "set": { "tweaks/training save": "off" } }
+      ],
+      "defaults": { "tweaks/training save": "prompt" }
+    },
+    {
+      "id": "idleness",
+      "label": "Idle Rock Raiders",
+      "group": "Game",
+      "help": "Fixed lets idle raiders take the jobs waiting for them. Original keeps the game's own job assignment.",
+      "choices": [
+        { "label": "Fixed", "set": { "tweaks/fix_idleness_syndrome": "true" } },
+        { "label": "Original", "set": { "tweaks/fix_idleness_syndrome": "false" } }
+      ],
+      "defaults": { "tweaks/fix_idleness_syndrome": "true" }
+    },
+    {
+      "id": "renderer",
+      "label": "Renderer",
+      "group": "Advanced",
+      "advanced": true,
+      "help": "Automatic picks your graphics card, or the software renderer when it can't.",
+      "choices": [
+        { "label": "Automatic", "set": { "legorr/3d device": "" } },
+        { "label": "Graphics card", "set": { "legorr/3d device": "Miniwin driver (SDL3 GPU HAL)" } },
+        { "label": "Software", "set": { "legorr/3d device": "Miniwin driver (Miniwin Emulation)" } }
+      ],
+      "defaults": { "legorr/3d device": "" }
+    }
+  ],
+  "saves": ["{data}/Saves"],
+  "folders": {
+    "saves": [{ "path": "{data}/Saves" }]
+  },
+  "actions": [
+    { "id": "saves", "label": "Saves", "help": "Your saved games.", "open": "saves" }
+  ]
+}
