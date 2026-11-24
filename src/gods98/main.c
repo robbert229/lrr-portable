@@ -47,6 +47,8 @@
 #include "gods98/main_globs.h"
 #include "platform/native/config.h" // [divergence:display-fit] LRR_GetDisplayScaling
 #include "platform/native/lifecycle.h" // [divergence:suspend-pause] LRR_ApplicationActive
+#include "platform/native/fps_counter.h" // [divergence:fps-overlay] LRR_FpsFrame
+#include "gods98/font_api.h" // [divergence:fps-overlay] font_print_f
 
 #define MAIN_MAXRENDERSTATES        200
 
@@ -188,6 +190,40 @@ int audio_mixer_control_init(float* leftVolume, float* rightVolume,
 }
 #endif
 
+/* [divergence:fps-overlay] PORT-ONLY: tweaks:fps_overlay draws the frames a
+ * second in the top right corner, in Font5_Hi2, over whatever the state
+ * drew. It runs where a frame is presented: the main loop and the frame
+ * pump. */
+#ifdef __cplusplus
+extern "C" {
+#endif
+uint32_t formatted_text_printf_width(const struct TextureSurface* font,
+                                     const char* text, ...);
+#ifdef __cplusplus
+}
+#endif
+
+static struct TextureSurface* s_fpsOverlayFont = NULL;
+static int s_fpsOverlayFontTried = FALSE;
+
+static void main_fps_overlay_draw(void)
+{
+    float fps = LRR_FpsFrame(SDL_GetTicks()); // [library:time]
+
+    if (s_fpsOverlayFont == NULL) {
+        if (s_fpsOverlayFontTried) return;
+        s_fpsOverlayFontTried = TRUE;
+        s_fpsOverlayFont = (struct TextureSurface*)font_atlas_record_create("Interface\\Fonts\\Font5_Hi2.bmp");
+        if (s_fpsOverlayFont == NULL) return;
+    }
+    if (fps <= 0.0f) return; /* the first window is not done */
+    {
+        int shown = (int)(fps + 0.5f);
+        uint32_t width = formatted_text_printf_width(s_fpsOverlayFont, "%d FPS", shown);
+        font_print_f(s_fpsOverlayFont, s_display_w - (int)width - 6, 4, "%d FPS", shown);
+    }
+}
+
 // FUNCTION: LEGORR 0x004777a0
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                    LPSTR lpCmdLine, int cmdShow)
@@ -311,6 +347,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                         if (!mainGlobs.currState.MainLoop(time))
                             s_window_close_requested = TRUE;
 
+                        if (LRR_GetFpsOverlay()) main_fps_overlay_draw(); // [divergence:fps-overlay]
+
                         renderer_begin_frame_once_retail();
                         directdraw_flip();
 
@@ -338,6 +376,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
             }
         }
 
+        if (s_fpsOverlayFont != NULL) { // [divergence:fps-overlay]
+            font_atlas_record_release(s_fpsOverlayFont);
+            s_fpsOverlayFont = NULL;
+        }
         directdraw_shutdown();
         DestroyWindow((HWND)g_platform_cursor_window_handle);
     }
@@ -443,6 +485,7 @@ void main_loop_frame_pump(int clear)
     window_message_dispatch_pump();
     input_state_poll_retail();
     input_cursor_position_update();
+    if (LRR_GetFpsOverlay()) main_fps_overlay_draw(); // [divergence:fps-overlay]
     renderer_begin_frame_once_retail();
     directdraw_flip();
     if (clear) directdraw_clear(NULL, 0);

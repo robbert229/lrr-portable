@@ -21,8 +21,8 @@
  *
  * And it holds the port's opt-outs from its divergences from the original
  * game (docs/divergences.md), in their own section, [tweaks]:
- * tweaks:Training Save, tweaks:display, tweaks:controls and
- * tweaks:fix_idleness_syndrome.
+ * tweaks:Training Save, tweaks:display, tweaks:controls,
+ * tweaks:fix_idleness_syndrome and tweaks:fps_overlay.
  *
  * And it holds cheats, off by default, in their own section, [cheats]:
  * cheats:unlimited_raiders and cheats:unlimited_oxygen. */
@@ -48,6 +48,7 @@
 #define LRR_CONFIG_DISPLAY "tweaks:display"
 #define LRR_CONFIG_CONTROLS "tweaks:controls"
 #define LRR_CONFIG_FIXIDLENESS "tweaks:fix_idleness_syndrome"
+#define LRR_CONFIG_FPSOVERLAY "tweaks:fps_overlay"
 /* The section for the cheats. */
 #define LRR_CONFIG_CHEATS_SECTION "cheats"
 #define LRR_CONFIG_UNLIMITEDRAIDERS "cheats:unlimited_raiders"
@@ -166,6 +167,10 @@ enum LRR_Controls {
  * "true", the default, fixes both; "false" keeps the original's
  * behaviour. */
 
+/* tweaks:fps_overlay (docs/divergences.md, "Frame rate overlay"). The
+ * original shows no frame rate. "true" draws the frames a second in the
+ * top right corner of the screen; "false", the default, draws nothing. */
+
 /* cheats:unlimited_raiders (docs/divergences.md, "Cheat: unlimited
  * raiders"). The original greys out the Teleport Rock Raider button, and
  * its teleporters hold back queued raiders, once the level's raiders would
@@ -221,6 +226,10 @@ LRR_Controls LRR_GetControls();
 /* The tweaks:fix_idleness_syndrome setting LRR_LoadConfig read, or the
  * default, true, before it runs. */
 bool LRR_GetFixIdlenessSyndrome();
+
+/* The tweaks:fps_overlay setting LRR_LoadConfig read, or the default,
+ * false, before it runs. */
+bool LRR_GetFpsOverlay();
 
 /* The cheats:unlimited_raiders setting LRR_LoadConfig read, or the
  * default, false, before it runs. */

@@ -123,6 +123,10 @@ bool ParseFixIdlenessSyndrome(const char* value)
               SDL_strcmp(value, "0") == 0));
 }
 
+constexpr bool kDefaultFpsOverlay = false;
+
+bool g_fpsOverlay = kDefaultFpsOverlay;
+
 constexpr bool kDefaultUnlimitedRaiders = false;
 
 bool g_unlimitedRaiders = kDefaultUnlimitedRaiders;
@@ -190,6 +194,7 @@ dictionary* DefaultConfig(const std::string& prefPath)
     iniparser_set(dict, LRR_CONFIG_DISPLAY, DisplayScalingName(kDefaultDisplayScaling));
     iniparser_set(dict, LRR_CONFIG_CONTROLS, ControlsName(kDefaultControls));
     iniparser_set(dict, LRR_CONFIG_FIXIDLENESS, BoolName(kDefaultFixIdlenessSyndrome));
+    iniparser_set(dict, LRR_CONFIG_FPSOVERLAY, BoolName(kDefaultFpsOverlay));
     iniparser_set(dict, LRR_CONFIG_CHEATS_SECTION, NULL);
     iniparser_set(dict, LRR_CONFIG_UNLIMITEDRAIDERS, BoolName(kDefaultUnlimitedRaiders));
     iniparser_set(dict, LRR_CONFIG_UNLIMITEDOXYGEN, BoolName(kDefaultUnlimitedOxygen));
@@ -429,6 +434,7 @@ bool LRR_LoadConfig(const char* iniPath)
     g_controls = ParseControls(iniparser_getstring(dict, LRR_CONFIG_CONTROLS, ControlsName(kDefaultControls)));
     g_fixIdlenessSyndrome = ParseFixIdlenessSyndrome(
         iniparser_getstring(dict, LRR_CONFIG_FIXIDLENESS, BoolName(kDefaultFixIdlenessSyndrome)));
+    g_fpsOverlay = ParseCheatEnabled(iniparser_getstring(dict, LRR_CONFIG_FPSOVERLAY, NULL));
     g_unlimitedRaiders = ParseCheatEnabled(iniparser_getstring(dict, LRR_CONFIG_UNLIMITEDRAIDERS, NULL));
     g_unlimitedOxygen = ParseCheatEnabled(iniparser_getstring(dict, LRR_CONFIG_UNLIMITEDOXYGEN, NULL));
     iniparser_freedict(dict);
@@ -462,6 +468,11 @@ LRR_Controls LRR_GetControls()
 bool LRR_GetFixIdlenessSyndrome()
 {
     return g_fixIdlenessSyndrome;
+}
+
+bool LRR_GetFpsOverlay()
+{
+    return g_fpsOverlay;
 }
 
 bool LRR_GetUnlimitedRaiders()
