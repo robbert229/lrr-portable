@@ -475,9 +475,14 @@ SDL_shadercross and vkd3d-utils; its header lists what it needs.
 
 ### Writing a test
 
-A test is one source file registered in the `if(BUILD_TESTING)` block of
-`CMakeLists.txt` with `lrr_unit_test` (`cmake/LrrTesting.cmake`, whose header
-lists every option):
+A test is one source file, `test_<name>.cpp`, registered with
+`lrr_unit_test` (`cmake/LrrTesting.cmake`, whose header lists every option)
+in the `tests.cmake` of the test's own directory: `src/game/tests.cmake`,
+`src/gods98/tests.cmake`, `src/platform/native/tests.cmake`,
+`src/library/tests.cmake` or `src/crt/tests.cmake`. The root
+`CMakeLists.txt` only includes those files; a new test leaves it alone. A
+test in another directory gets a `tests.cmake` there, added to the root's
+list.
 
 ```cmake
 # What the test establishes, in a sentence or two.
@@ -492,7 +497,20 @@ symbol to the test's `__wrap_<symbol>` through GNU ld's `--wrap`; where the
 toolchain has no `--wrap` (Apple, Windows, compilers other than GCC and
 Clang), `lrr_unit_test` leaves such a test out, so it needs no platform
 check around it. `ARGS`, `ENVIRONMENT`, `SKIP_RETURN_CODE` (77 for a test
-that skips), `INCLUDES` and `DEFINES` cover the rest.
+that skips), `INCLUDES` and `DEFINES` cover the rest. The `WRAP` list is the
+test's dependency surface on the other units, so it stays beside the source
+it stubs.
+
+Another run of the same executable, with other arguments or environment, is
+`lrr_unit_test_variant`, which takes the same `ARGS`, `LABELS`,
+`ENVIRONMENT` and `SKIP_RETURN_CODE`:
+
+```cmake
+lrr_unit_test_variant(audio_mix OF audio
+  ARGS disk
+  LABELS audio
+  SKIP_RETURN_CODE 77)
+```
 
 The assertions are in `src/test/lrr_test.h`, header-only, on every test's
 include path:

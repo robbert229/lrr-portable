@@ -20,8 +20,18 @@
 # linkers have. Where the toolchain cannot wrap (not GCC or Clang, Apple, or
 # Windows), a test with WRAP is left out: neither built nor registered.
 #
-# More tests on the same executable (other arguments or environments) are
-# plain add_test calls on <name>_test after this one.
+# lrr_unit_test_variant: one more ctest test on an lrr_unit_test executable,
+# with other arguments or environment.
+#
+#   lrr_unit_test_variant(<name>
+#     OF <test>                    # required: an lrr_unit_test name
+#     [ARGS <arg>...]
+#     [LABELS <label>...]
+#     [ENVIRONMENT <VAR=value>...]
+#     [SKIP_RETURN_CODE <code>])
+#
+# It adds the ctest test <name>, which runs <test>_test with ARGS. Where
+# lrr_unit_test left <test> out (WRAP without --wrap), so is <name>.
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang" AND NOT APPLE AND NOT WIN32)
   set(LRR_CAN_WRAP TRUE)
@@ -61,6 +71,30 @@ function(lrr_unit_test name)
   endforeach()
 
   add_test(NAME ${name} COMMAND ${target} ${arg_ARGS})
+  _lrr_test_properties(${name})
+endfunction()
+
+function(lrr_unit_test_variant name)
+  cmake_parse_arguments(PARSE_ARGV 1 arg ""
+    "OF;SKIP_RETURN_CODE"
+    "ARGS;LABELS;ENVIRONMENT")
+  if(arg_UNPARSED_ARGUMENTS)
+    message(FATAL_ERROR "lrr_unit_test_variant(${name}): unknown arguments ${arg_UNPARSED_ARGUMENTS}")
+  endif()
+  if(NOT arg_OF)
+    message(FATAL_ERROR "lrr_unit_test_variant(${name}): OF is required")
+  endif()
+  if(NOT TARGET ${arg_OF}_test)
+    return()
+  endif()
+
+  add_test(NAME ${name} COMMAND ${arg_OF}_test ${arg_ARGS})
+  _lrr_test_properties(${name})
+endfunction()
+
+# The LABELS, ENVIRONMENT and SKIP_RETURN_CODE of the caller's arg_ variables
+# on the test <name>.
+macro(_lrr_test_properties name)
   if(arg_LABELS)
     set_tests_properties(${name} PROPERTIES LABELS "${arg_LABELS}")
   endif()
@@ -70,4 +104,4 @@ function(lrr_unit_test name)
   if(DEFINED arg_SKIP_RETURN_CODE)
     set_tests_properties(${name} PROPERTIES SKIP_RETURN_CODE ${arg_SKIP_RETURN_CODE})
   endif()
-endfunction()
+endmacro()

@@ -38,7 +38,12 @@ src/                Reconstruction source tree: game/ and gods98/ (original
                     units: one <stem>.c or <stem>.cpp per unit, plus legacy
                     mixed files and their private <file>_shared.hpp headers
                     from relocation), platform/ (native entry points), crt/
-                    (stand-ins for the original's static C runtime), main.cpp
+                    (stand-ins for the original's static C runtime), main.cpp;
+                    each directory with tests registers them in its
+                    tests.cmake (building.md#writing-a-test)
+cmake/LrrTesting.cmake
+                    lrr_unit_test and lrr_unit_test_variant, which the
+                    tests.cmake files call
 3rdparty/           Dependency submodules (isle-portable, sparse → miniwin/)
 patches/miniwin/    Our miniwin changes, applied on top of the submodule (ADR 0009)
 ```
