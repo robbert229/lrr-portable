@@ -181,6 +181,19 @@ enum LRR_Controls {
  * it stays at the full 100 the level starts with; "false", the default,
  * keeps the original's air supply. */
 
+/* The launch options a launcher passes (--game and --data, entry.cpp), for
+ * the next LRR_LoadConfig; NULL or "" leaves an option unset, and without
+ * either the configuration is read and written exactly as before.
+ *
+ * `gamePath` is the directory that holds the WADs and Data, in place of
+ * legorr:diskpath for this run (the file is not changed).
+ *
+ * `dataPath` is the one directory for everything the port writes: the
+ * configuration file, unless --ini names another, is LegoRR.ini inside it,
+ * and the saves go in its Saves subdirectory unless the file's savepath
+ * names another place. The directory is made when it is missing. */
+void LRR_SetLaunchOptions(const char* gamePath, const char* dataPath);
+
 /* Reads the configuration from `iniPath`, or from LRR_CONFIG_FILE in the
  * preference directory when it is NULL, writing that file with defaults
  * when it is missing or empty, and applies it (files_native_set_save_path,

@@ -43,6 +43,9 @@ ALLOWED = [
     # The licence and the notices, anywhere.
     r"(.*/)?LICENSE(\.txt)?",
     r"(.*/)?THIRD-PARTY-NOTICES\.txt",
+    # RecompLauncher's manifest: at the top of a ZIP, a TGZ or an AppImage
+    # (and, harmlessly, in the Flatpak's files/).
+    r"(files/)?recomplauncher\.json",
     # Windows: a shared SDL3 and the Visual C++ runtime.
     r"SDL3\.dll",
     r"(msvcp|vcruntime|concrt|vccorlib)140(_\w+)?\.dll",

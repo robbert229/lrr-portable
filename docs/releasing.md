@@ -92,11 +92,20 @@ The Flatpak's AppStream entry says `development` even at the tag, because
 flatpak-builder doesn't pass the CI environment into its build; the other
 packages say `stable`.
 
-Each Windows ZIP holds `LegoRR.exe`, `LICENSE.txt`, `THIRD-PARTY-NOTICES.txt`
-and the Visual C++ runtime DLLs (`msvcp140*.dll`, `vcruntime140*.dll`), so
+Each Windows ZIP holds `LegoRR.exe`, `LICENSE.txt`, `THIRD-PARTY-NOTICES.txt`,
+`recomplauncher.json` and the Visual C++ runtime DLLs (`msvcp140*.dll`, `vcruntime140*.dll`), so
 it runs without the Visual C++ Redistributable installed. Each DMG holds
 `LegoRR.app`, with the licence and notices in `Contents/Resources` and
 beside the app. The Linux packages hold them in `share/doc/lrr-portable`.
+
+`recomplauncher.json` (`packaging/recomplauncher.json`) is
+[RecompLauncher](https://recomplauncher.com)'s manifest: it says how to ask
+for the player's Rock Raiders folder, how to start the game with `--game` and
+`--data`, and which settings to show. It sits at the top of each Windows ZIP,
+Linux `.tar.gz` and AppImage, where the launcher looks for it, and nowhere
+else; the macOS disk image has none, since the launcher installs a zipped
+`.app`. Keep its settings in step with `LegoRR.ini`'s keys
+(`tools/tests/test_packaging.py` checks them against `config.h`).
 
 The two **test builds** are labelled as such in their names and in the
 notes:

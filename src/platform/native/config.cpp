@@ -37,6 +37,10 @@ constexpr LRR_DisplayConfig kDefaultDisplay = {false, 640, 480, ""};
 
 LRR_DisplayConfig g_display = kDefaultDisplay;
 
+/* LRR_SetLaunchOptions: --game and --data, "" when not given. */
+std::string g_launchGame;
+std::string g_launchData;
+
 constexpr LRR_TrainingSave kDefaultTrainingSave = LRR_TRAINING_SAVE_PROMPT;
 
 LRR_TrainingSave g_trainingSave = kDefaultTrainingSave;
@@ -140,6 +144,14 @@ bool ParseCheatEnabled(const char* value)
  * saves; "" when the host has none. */
 std::string PreferencePath()
 {
+    /* --data: the launcher's one directory, made here as SDL_GetPrefPath
+     * makes the preference directory. */
+    if (!g_launchData.empty()) {
+        std::string path = g_launchData;
+        if (path.back() != '/' && path.back() != '\\') path += '/';
+        SDL_CreateDirectory(path.c_str());
+        return path;
+    }
 #ifdef IOS
     const char* documents = SDL_GetUserFolder(SDL_FOLDER_DOCUMENTS);
     return documents != NULL ? documents : "";
@@ -154,12 +166,19 @@ std::string PreferencePath()
 #endif
 }
 
+/* The save directory when the file names none: the preference directory,
+ * or Saves inside the --data directory. */
+std::string DefaultSavePath(const std::string& prefPath)
+{
+    return g_launchData.empty() ? prefPath : prefPath + "Saves/";
+}
+
 /* The defaults written to a new configuration file. */
 dictionary* DefaultConfig(const std::string& prefPath)
 {
     dictionary* dict = dictionary_new(0);
     iniparser_set(dict, LRR_CONFIG_SECTION, NULL);
-    iniparser_set(dict, LRR_CONFIG_SAVEPATH, prefPath.c_str());
+    iniparser_set(dict, LRR_CONFIG_SAVEPATH, DefaultSavePath(prefPath).c_str());
     /* The working directory, as the original; a host overrides it below. */
     iniparser_set(dict, LRR_CONFIG_DISKPATH, "");
     iniparser_set(dict, LRR_CONFIG_FULLSCREEN, kDefaultDisplay.fullScreen ? "true" : "false");
@@ -306,6 +325,12 @@ bool LRR_UseOpenGLWindow(const char* configured, const char* platformDefault)
     return device != NULL && SDL_strstr(device, "OpenGL") != NULL;
 }
 
+void LRR_SetLaunchOptions(const char* gamePath, const char* dataPath)
+{
+    g_launchGame = gamePath != NULL ? gamePath : "";
+    g_launchData = dataPath != NULL ? dataPath : "";
+}
+
 bool LRR_LoadConfig(const char* iniPath)
 {
 #ifdef __EMSCRIPTEN__
@@ -375,8 +400,15 @@ bool LRR_LoadConfig(const char* iniPath)
     IOS_SetupDefaultConfigOverrides(dict);
 #endif
 
-    files_native_set_save_path(iniparser_getstring(dict, LRR_CONFIG_SAVEPATH, prefPath.c_str()));
-    files_native_set_disk_path(iniparser_getstring(dict, LRR_CONFIG_DISKPATH, ""));
+    files_native_set_save_path(
+        iniparser_getstring(dict, LRR_CONFIG_SAVEPATH, DefaultSavePath(prefPath).c_str()));
+    if (!g_launchGame.empty()) {
+        SDL_Log("Game folder \"%s\" (--game)", g_launchGame.c_str());
+        files_native_set_disk_path(g_launchGame.c_str());
+    }
+    else {
+        files_native_set_disk_path(iniparser_getstring(dict, LRR_CONFIG_DISKPATH, ""));
+    }
 
     g_display = kDefaultDisplay;
     g_display.fullScreen = iniparser_getboolean(dict, LRR_CONFIG_FULLSCREEN, g_display.fullScreen) != 0;

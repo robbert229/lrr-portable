@@ -47,6 +47,8 @@ export APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64
 APPDIR="$BUILD/AppDir"
 rm -rf "$APPDIR"
 DESTDIR="$APPDIR" cmake --install "$BUILD" --prefix /usr
+# RecompLauncher reads recomplauncher.json from the AppImage's root, not usr/.
+mv "$APPDIR/usr/recomplauncher.json" "$APPDIR/recomplauncher.json"
 
 # NO_STRIP: linuxdeploy's bundled strip predates the .relr.dyn sections of
 # current toolchains and corrupts them.
