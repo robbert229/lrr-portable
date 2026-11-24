@@ -82,6 +82,13 @@ extern "C" void loader_initialise(const char* loadScreenName, const char* shutdo
 
 static const unsigned W = 8, H = 8;
 
+/* Names each step on stderr, unbuffered, so a crash's log shows where. */
+static void step(const char* name)
+{
+    std::fprintf(stderr, "level_boot: %s\n", name);
+    std::fflush(stderr);
+}
+
 /* A map file: "MAP ", the file size, width, height, then a uint16 per
  * block, row by row. */
 static bool write_map(const char* path, unsigned (*value)(unsigned x, unsigned y))
@@ -265,6 +272,7 @@ static Census census()
  * on, in its order (lego_unit.c, lego_game_config_init). */
 static bool boot_game()
 {
+    step("config");
     block_text_token_pool_init();
     legoGlobs.config = block_parse(CONFIG, sizeof(CONFIG) - 1);
     legoGlobs.gameName = "Lego";
@@ -283,6 +291,7 @@ static bool boot_game()
     ui_pointer_cursor_name_registry_init();
     bubble_action_strings_initialize();
 
+    step("message windows");
     /* The message windows, in one font. */
     void* font = font_atlas_record_create("L\\font.bmp");
     if (!CHECK(font != nullptr, "load the font")) return false;
@@ -293,6 +302,7 @@ static bool boot_game()
     Area2F panelImageArea = { 55.0f, 363.0f, 325.0f, 140.0f };
     text_message_panel_initialise_adapter("L\\load.bmp", 42, 409, 338, &textArea, &panelImageArea, 20.0f);
 
+    step("cameras, viewports and lights");
     /* The cameras, viewports and lights. */
     s_zoom_step_context = (LegoCamera*)camera_create(legoGlobs_rootCont, 1);
     legoGlobs_cameraFP = (LegoCamera*)camera_create(legoGlobs_rootCont, 3);
@@ -304,18 +314,21 @@ static bool boot_game()
     if (!CHECK(legoGlobs_viewMain && legoGlobs_viewTrack, "create the viewports")) return false;
     if (!CHECK(lego_scene_lights_build_from_config(), "build the lights")) return false;
     if (!CHECK(lego_render_quality_config_apply(), "apply the render quality")) return false;
+    step("sounds, meshes and placement grid");
     sound_alias_registry_init();
     mesh_initialise(nullptr);
     /* The building placement grid, hidden, and the top-down view. */
     s_refresh_record = select_place_create_adapter(legoGlobs_rootCont, 5.0f);
     surface_visibility_set(s_refresh_record, 1);
     s_context_mode = 1;
+    step("ore and crystal models");
     /* Lego_LoadMiscObjects' ore and crystal models. */
     legoGlobs_contOresTable = Container_Load((Container*)legoGlobs_rootCont, "L\\ore", "LWO", 1);
     legoGlobs_contCrystal = Container_Load((Container*)legoGlobs_rootCont, "L\\ore", "LWO", 1);
     if (!CHECK(legoGlobs_contOresTable && legoGlobs_contCrystal, "load the ore and crystal models")) return false;
     Container_Hide((Container*)legoGlobs_contOresTable, 1);
     Container_Hide((Container*)legoGlobs_contCrystal, 1);
+    step("stats, panels, advisor and loader");
     if (!CHECK(stats_initialise((BlockRec*)legoGlobs.config, legoGlobs.gameName), "load the stats")) return false;
     lego_panels_config_entry_apply((BlockRec*)legoGlobs.config, 640, 480);
     advisor_scene_controller_initialize(legoGlobs.gameName, s_zoom_step_context, legoGlobs_viewMain);
@@ -329,6 +342,7 @@ static bool boot_game()
 static void check_level()
 {
     if (!boot_game()) return;
+    step("load the level");
     int loaded = lego_level_load("Level01");
     CHECK(loaded, "load the level");
     if (!loaded) return;
@@ -355,6 +369,7 @@ static void check_level()
     CHECK_EQ(bx, 2);
     CHECK_EQ(by, 2);
 
+    step("destroy the wall");
     /* Destroying one half of the wall leaves the other half one block
      * thick, which collapses too: the caves join. */
     CHECK_EQ(lego_terrain_cell_mutate(level, 4, 3, 0), 1);
@@ -362,6 +377,7 @@ static void check_level()
     CHECK(block_at(level, 3, 3)->flags1 & 0x8, "the unsupported half collapses");
     CHECK_EQ(lego_terrain_cell_mutate(level, 0, 3, 0), 0);
 
+    step("main loop");
     /* The main loop: simulation, effects, interface and a software render
      * of each frame. */
     for (int frame = 0; frame < 250; ++frame) lego_engine_tick(1.0f);
