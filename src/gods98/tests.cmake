@@ -1,4 +1,14 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
+# The tests of the engine units (src/gods98).
+# CMakeLists.txt includes this file inside if(BUILD_TESTING), after
+# cmake/LrrTesting.cmake; docs/building.md, "Writing a test".
+
+# Files.c's SDL3 streams and path mapping, and the configuration file
+# ([library:filesystem], [library:config]).
+lrr_unit_test(files SOURCES ${ENGINE_DIR}/test_files.cpp LABELS files)
+# Files.c's start-up with the data directory from the diskpath
+# ([library:config]).
+lrr_unit_test(diskpath SOURCES ${ENGINE_DIR}/test_diskpath.cpp LABELS files)
 
 # Movie playback blits a decoded frame and clears its sample at end of stream.
 lrr_unit_test(movie_unit SOURCES ${ENGINE_DIR}/test_movie_unit.cpp
@@ -92,3 +102,48 @@ lrr_unit_test(rnc SOURCES ${ENGINE_DIR}/test_rnc.cpp LABELS rnc)
 
 # Filter a synthetic display-mode list and look up its exact descriptions.
 lrr_unit_test(init SOURCES ${ENGINE_DIR}/test_init.cpp LABELS init)
+
+# Lws.c holds a scene's last key instead of blending toward the slot
+# after it: the unit's file reads come from memory, and its allocations
+# are padded and filled with all-ones bytes.
+lrr_unit_test(lws SOURCES ${ENGINE_DIR}/test_lws.cpp
+  WRAP
+    malloc
+    game_file_open_dispatch
+    game_file_read_crlf_line
+    game_file_close
+  LABELS lws)
+# Font.c's format copy stops at its buffer: long formats and many "%b".
+lrr_unit_test(font_format_bound SOURCES ${ENGINE_DIR}/test_font_format_bound.cpp
+  LABELS font
+  ENVIRONMENT "UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+# A failed directdraw_setup (Init.c's fallback to the next 3D device)
+# leaves no surface, clipper or Direct3DRM object behind (issue #966).
+lrr_unit_test(directdraw_retry SOURCES ${ENGINE_DIR}/test_directdraw_retry.cpp
+  LABELS draw)
+lrr_unit_test(draw SOURCES ${ENGINE_DIR}/test_draw.cpp LABELS draw)
+# The BMP and FLIC readers on synthetic data at odd addresses.
+# Under -fsanitize=undefined, a misaligned load fails the test.
+lrr_unit_test(unaligned_readers SOURCES ${ENGINE_DIR}/test_unaligned_readers.cpp
+  LABELS unaligned_readers
+  ENVIRONMENT "UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+# G98-016's frame-size getters, which the menu overlays, pointers and
+# panels size their blits from.
+lrr_unit_test(flic_size SOURCES ${ENGINE_DIR}/test_flic_size.cpp)
+lrr_unit_test(flic_chunk_walk SOURCES ${ENGINE_DIR}/test_flic_chunk_walk.cpp)
+# A flic that fails to open leaves its caller a NULL pointer, not a struct
+# with no surface to animate (issue #983).
+lrr_unit_test(flic_open_failure SOURCES ${ENGINE_DIR}/test_flic_open_failure.cpp)
+# G98-029's registry walk over the test's own registry: the unit alone,
+# without the seam's stubs.
+lrr_unit_test(registry SOURCES ${ENGINE_DIR}/test_registry.cpp ${ENGINE_DIR}/g98_029.c
+  INCLUDES ${SRC_ROOT} ${ENGINE_DIR}
+  LINK miniwin
+  LABELS registry)
+set_source_files_properties(${ENGINE_DIR}/g98_029.c TARGET_DIRECTORY registry_test
+  PROPERTIES LANGUAGE CXX)
+# Input.c's keyboard substitution: the SDL scancode to DIK_* table.
+lrr_unit_test(input_keys SOURCES ${ENGINE_DIR}/test_input_keys.cpp
+  INCLUDES ${ENGINE_DIR}
+  LINK SDL3::SDL3
+  LABELS input)
