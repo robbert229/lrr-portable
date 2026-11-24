@@ -359,7 +359,8 @@ list(REMOVE_ITEM LRR_SEAM_SOURCES "${LRR_ENTRY_SOURCE}")
 # on the web, the OPFS save directory and the page's save events
 # (src/platform/native/config.h). Adapted from isle-portable's ISLE/<host>/.
 if(NINTENDO_3DS)
-  list(APPEND LRR_SEAM_SOURCES "${PLATFORM_DIR}/native/3ds/config.cpp")
+  list(APPEND LRR_SEAM_SOURCES "${PLATFORM_DIR}/native/3ds/config.cpp"
+    "${PLATFORM_DIR}/native/3ds/apthooks.cpp")
 endif()
 if(NINTENDO_SWITCH)
   list(APPEND LRR_SEAM_SOURCES "${PLATFORM_DIR}/native/switch/config.cpp")

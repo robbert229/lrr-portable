@@ -18,6 +18,10 @@ lrr_unit_test(web_manifest
 lrr_unit_test(config SOURCES ${PLATFORM_DIR}/native/test_config.cpp
   LABELS config
   SKIP_RETURN_CODE 77)
+# The host's suspend, resume and exit events (platform/native/lifecycle.h):
+# what the game's main loop reads as its activity, and the exit request.
+lrr_unit_test(lifecycle SOURCES ${PLATFORM_DIR}/native/test_lifecycle.cpp
+  LABELS config)
 # The 3D device Init.c chooses, from synthetic device lists with each
 # platform's default device.
 lrr_unit_test(device_choice SOURCES ${PLATFORM_DIR}/native/test_device_choice.cpp
