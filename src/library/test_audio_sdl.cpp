@@ -327,6 +327,84 @@ void TestWaveReaders(const std::string& dir)
     CHECK(sound_wave_file_open_read_chunks(missing.c_str(), &hmmio, &format, &riff) != 0);
 }
 
+/* A wave file much larger than mmio's window, read as a stream reads it:
+ * in pieces, through the window, and again from the start. A 'JUNK' chunk
+ * puts the 'fmt ' header across the first window's end, so a chunk header
+ * must be read from two windows. The file is never in memory whole: the
+ * I/O buffer an info call gives stays within the window. */
+void TestStreamedWaveFile(const std::string& dir)
+{
+    const size_t kDataSize = 300001; /* odd, over four windows */
+    const size_t kJunk = 65512;      /* the next header at byte 65532 */
+    std::vector<char> samples(kDataSize);
+    for (size_t i = 0; i < kDataSize; i++) samples[i] = (char)((i * 7 + 3) & 0xff);
+
+    std::vector<char> body;
+    PutId(body, "WAVE");
+    PutId(body, "JUNK");
+    PutLe32(body, (unsigned long)kJunk);
+    body.insert(body.end(), kJunk, 'j');
+    PutId(body, "fmt ");
+    PutLe32(body, 16);
+    PutLe16(body, 1);
+    PutLe16(body, 1);
+    PutLe32(body, 11025);
+    PutLe32(body, 11025);
+    PutLe16(body, 1);
+    PutLe16(body, 8);
+    PutId(body, "data");
+    PutLe32(body, (unsigned long)kDataSize);
+    body.insert(body.end(), samples.begin(), samples.end());
+    body.push_back(0);
+    std::vector<char> wave;
+    PutId(wave, "RIFF");
+    PutLe32(wave, (unsigned long)body.size());
+    wave.insert(wave.end(), body.begin(), body.end());
+    CHECK(wave.size() > 4 * 65536);
+    CHECK(WriteFile(dir + "/Long.wav", wave));
+    std::string name = dir + "/Long.wav";
+
+    CHECK(sound_wave_file_average_bytes_per_second_read(name.c_str()) == 11025);
+    HMMIO hmmio = NULL;
+    WAVEFORMATEX* format = NULL;
+    MMCKINFO riff, data;
+    CHECK(sound_wave_file_open_read_chunks(name.c_str(), &hmmio, &format, &riff) == 0);
+    if (!hmmio || !format) return;
+    CHECK(format->nSamplesPerSec == 11025 && format->wBitsPerSample == 8);
+
+    /* Windowed: the buffer an info call gives is a part of the file. */
+    MMIOINFO mmioInfo;
+    CHECK(audio_mmio_get_info(hmmio, &mmioInfo, 0) == MMSYSERR_NOERROR);
+    CHECK(mmioInfo.cchBuffer > 0 && mmioInfo.cchBuffer <= 65536);
+    CHECK(mmioInfo.pchEndRead - mmioInfo.pchBuffer == mmioInfo.cchBuffer);
+
+    /* The stream's reads: odd sizes, across windows, to the end and past. */
+    CHECK(sound_wave_data_chunk_open(&hmmio, &data, &riff) == 0);
+    CHECK(data.cksize == kDataSize);
+    const UINT sizes[] = { 1, 4093, 65536, 70001, 3, 100000 };
+    std::vector<BYTE> read(200000);
+    size_t at = 0;
+    for (UINT size : sizes) {
+        UINT actual = 0;
+        CHECK(sound_wave_data_read(hmmio, size, read.data(), &data, &actual) == 0);
+        CHECK(actual == size);
+        CHECK(memcmp(read.data(), samples.data() + at, actual) == 0);
+        at += actual;
+    }
+    UINT actual = 0;
+    CHECK(sound_wave_data_read(hmmio, 100000, read.data(), &data, &actual) == 0);
+    CHECK(actual == kDataSize - at);
+    CHECK(memcmp(read.data(), samples.data() + at, actual) == 0);
+    CHECK(sound_wave_data_read(hmmio, 16, read.data(), &data, &actual) == 0 && actual == 0);
+
+    /* A looping stream starts the data chunk over. */
+    CHECK(sound_wave_data_chunk_open(&hmmio, &data, &riff) == 0);
+    CHECK(sound_wave_data_read(hmmio, 65600, read.data(), &data, &actual) == 0);
+    CHECK(actual == 65600 && memcmp(read.data(), samples.data(), actual) == 0);
+    sound_wave_handle_and_buffer_release(&hmmio, &format);
+    CHECK(hmmio == NULL && format == NULL);
+}
+
 void TestBuffers()
 {
     AudioDevice* device = NULL;
@@ -535,6 +613,7 @@ int RunDummy()
     TestArithmetic();
     TestMixer();
     TestWaveReaders(dir);
+    TestStreamedWaveFile(dir);
     TestBuffers();
     /* Sound_Initialise starts 3D sound on the library's device. */
     CHECK(media_cd_audio_device_state_update(0) == 1);
