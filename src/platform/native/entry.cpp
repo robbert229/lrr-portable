@@ -36,6 +36,9 @@
 #include <miniwin/miniwindevice.h>
 
 #include "platform/native/config.h"
+#ifdef __3DS__
+#include "platform/native/3ds/apthooks.h"
+#endif
 
 #include "lrr_version.h"
 
@@ -137,6 +140,11 @@ int main(int argc, char** argv)
         SDL_Quit();
         return 1;
     }
+#ifdef __3DS__
+    /* Sleep, the HOME menu and exit reach the game as its application
+     * lifecycle (lifecycle.h). */
+    N3DS_SetupAptHooks();
+#endif
     /* WinMain creates its window before it lists the 3D devices, and
      * miniwin lists its OpenGL devices only on an OpenGL window. */
     const char* device = LRR_GetDisplayConfig()->device;
