@@ -304,6 +304,44 @@ int main(void)
     CHECK(LRR_LoadConfig(custom.c_str()) && !LRR_GetUnlimitedOxygen(),
           "unlimited_oxygen: the key is read from [cheats], not [tweaks]");
 
+    /* --game and --data (LRR_SetLaunchOptions), which a launcher passes.
+     * --game is the data directory for the run, over the file's diskpath,
+     * which is not changed. */
+    write_text(custom, "[" LRR_CONFIG_SECTION "]\ndiskpath = " + root + "/install/\n");
+    LRR_SetLaunchOptions((root + "/launcher-game").c_str(), NULL);
+    CHECK(LRR_LoadConfig(custom.c_str()), "--game: loads");
+    CHECK(disk_path() == root + "/launcher-game", "--game: the folder replaces diskpath");
+    CHECK(read_text(custom).find("install") != std::string::npos &&
+              read_text(custom).find("launcher-game") == std::string::npos,
+          "--game: the file is not rewritten");
+
+    /* --data is the one directory: the file is made inside it, the saves go
+     * in its Saves, and a file that exists is read from there. */
+    const std::string dataDir = root + "/launcher-data";
+    LRR_SetLaunchOptions(NULL, dataDir.c_str());
+    CHECK(LRR_LoadConfig(NULL), "--data: loads");
+    CHECK(fixture_is_directory(dataDir), "--data: the folder is made");
+    text = read_text(dataDir + "/" LRR_CONFIG_FILE);
+    CHECK(!text.empty() && text.find("[" LRR_CONFIG_SECTION "]") != std::string::npos,
+          "--data: the defaults are written inside it");
+    CHECK(save_path() == dataDir + "/Saves", "--data: the saves go in its Saves folder");
+    CHECK(files_native_disk_path() == NULL, "--data: the data is still read from the working directory");
+    write_text(dataDir + "/" LRR_CONFIG_FILE, "[" LRR_CONFIG_TWEAKS_SECTION "]\ncontrols = original\n");
+    CHECK(LRR_LoadConfig(NULL) && LRR_GetControls() == LRR_CONTROLS_ORIGINAL,
+          "--data: the file inside it is read");
+    CHECK(save_path() == dataDir + "/Saves", "--data: a file without savepath keeps the saves inside it");
+    CHECK(LRR_LoadConfig(custom.c_str()) && save_path() == dataDir + "/Saves",
+          "--data: --ini names another file, and a missing savepath still follows --data");
+
+    /* Both, a trailing slash, and the options cleared again. */
+    LRR_SetLaunchOptions((root + "/launcher-game").c_str(), (dataDir + "/").c_str());
+    CHECK(LRR_LoadConfig(NULL) && save_path() == dataDir + "/Saves" &&
+              disk_path() == root + "/launcher-game",
+          "--game and --data: both apply");
+    LRR_SetLaunchOptions(NULL, NULL);
+    CHECK(LRR_LoadConfig(NULL) && save_path() == prefDir && files_native_disk_path() == NULL,
+          "no launch options: the preference directory again");
+
     /* An explicit file that does not load fails, as isle-portable's does. */
     CHECK(!LRR_LoadConfig((root + "/missing.ini").c_str()), "explicit: a missing file fails");
 

@@ -16,6 +16,12 @@
  * names the file, which otherwise lives in the preference directory. The
  * option does not reach WinMain.
  *
+ * A launcher (RecompLauncher, a script, a Steam shortcut) can pass two more
+ * options, which do not reach WinMain either: --game <folder> reads the game
+ * data (the WADs and Data) from that folder in place of legorr:diskpath, and
+ * --data <folder> keeps everything the port writes in that one folder
+ * (config.h, LRR_SetLaunchOptions). Without them nothing changes.
+ *
  * --version prints the port's version (lrr_version.h, written by
  * tools/version.cmake; docs/releasing.md) and exits; every run also logs it
  * at start-up. */
@@ -61,6 +67,8 @@ int main(int argc, char** argv)
 {
     std::string arguments;
     const char* iniPath = NULL;
+    const char* gamePath = NULL;
+    const char* dataPath = NULL;
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--version") == 0) {
             printf("lrr-portable %s\n", LRR_VERSION);
@@ -68,6 +76,14 @@ int main(int argc, char** argv)
         }
         if (strcmp(argv[i], "--ini") == 0 && i + 1 < argc) {
             iniPath = argv[++i];
+            continue;
+        }
+        if (strcmp(argv[i], "--game") == 0 && i + 1 < argc) {
+            gamePath = argv[++i];
+            continue;
+        }
+        if (strcmp(argv[i], "--data") == 0 && i + 1 < argc) {
+            dataPath = argv[++i];
             continue;
         }
         if (!arguments.empty()) arguments += ' ';
@@ -116,6 +132,7 @@ int main(int argc, char** argv)
         return 1;
     }
     SDL_Log("lrr-portable %s", LRR_VERSION);
+    LRR_SetLaunchOptions(gamePath, dataPath);
     if (!LRR_LoadConfig(iniPath)) {
         SDL_Quit();
         return 1;
