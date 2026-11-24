@@ -1,0 +1,50 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+#
+# SDL3 for the Linux jobs (native-build, coverage): a headless shared build of
+# a pinned release, cached by version, with CMAKE_PREFIX_PATH pointing at it.
+# Ubuntu 24.04 has no libsdl3-dev package, so SDL3 is built from source. Keep
+# LRR_SDL3_GIT_TAG in CMakeLists.txt on the same commit, and bump
+# SDL_CACHE_VERSION when the build recipe changes.
+name: Set up SDL3
+description: Restore or build the pinned headless SDL3 and point CMake at it.
+runs:
+  using: composite
+  steps:
+    - name: Pin SDL3
+      shell: bash
+      run: |
+        # Tag release-3.4.18 (lightweight tag, commit below).
+        echo "SDL_VERSION=3.4.18" >> "$GITHUB_ENV"
+        echo "SDL_COMMIT=829a65d769d935c4852f8159e964312c0957260a" >> "$GITHUB_ENV"
+        echo "SDL_CACHE_VERSION=1" >> "$GITHUB_ENV"
+
+    - name: Restore SDL3 build
+      id: sdl3-cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ runner.temp }}/sdl3-prefix
+        key: sdl3-${{ env.SDL_VERSION }}-v${{ env.SDL_CACHE_VERSION }}-${{ runner.os }}-${{ runner.arch }}
+
+    - name: Build SDL3 from the pinned commit
+      if: steps.sdl3-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        src="$RUNNER_TEMP/sdl3-src"
+        git init --quiet "$src"
+        git -C "$src" fetch --depth 1 https://github.com/libsdl-org/SDL.git "$SDL_COMMIT"
+        git -C "$src" -c advice.detachedHead=false checkout --quiet FETCH_HEAD
+        test "$(git -C "$src" rev-parse HEAD)" = "$SDL_COMMIT"
+        # Headless: no X11 or Wayland. The tests use the dummy/offscreen drivers.
+        cmake -S "$src" -B "$RUNNER_TEMP/sdl3-build" -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/sdl3-prefix" \
+          -DBUILD_SHARED_LIBS=ON \
+          -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF -DSDL_INSTALL_TESTS=OFF \
+          -DSDL_X11=OFF -DSDL_WAYLAND=OFF -DSDL_UNIX_CONSOLE_BUILD=ON
+        cmake --build "$RUNNER_TEMP/sdl3-build"
+        cmake --install "$RUNNER_TEMP/sdl3-build"
+
+    - name: Point CMake at SDL3
+      shell: bash
+      run: echo "CMAKE_PREFIX_PATH=$RUNNER_TEMP/sdl3-prefix" >> "$GITHUB_ENV"

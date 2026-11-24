@@ -1,0 +1,131 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+#
+# Line coverage of src/ from the synthetic-fixture tests (docs/building.md,
+# "Coverage"). Not a required check. On a pull request it posts one comment,
+# updated on each push: the coverage of the lines the PR changes, and coverage
+# by area of src/ against main's last run. Every run writes the same summary
+# to the job summary and uploads the line-by-line HTML report as the
+# coverage-report artifact; a push to main also uploads coverage-summary,
+# which later pull requests compare against. Nothing leaves GitHub.
+name: coverage
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coverage-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  coverage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      # Download main's coverage-summary artifact from another run.
+      actions: read
+      # Post the coverage comment.
+      pull-requests: write
+    env:
+      GCOVR_VERSION: "8.8"
+      DIFF_COVER_VERSION: "11.0.4"
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+          # diff-cover needs the merge base with the base branch.
+          fetch-depth: 0
+
+      - name: Install build and report tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends cmake ninja-build pkg-config
+          python3 -m venv "$RUNNER_TEMP/coverage-venv"
+          "$RUNNER_TEMP/coverage-venv/bin/pip" install --quiet \
+            "gcovr==$GCOVR_VERSION" "diff-cover==$DIFF_COVER_VERSION"
+          echo "$RUNNER_TEMP/coverage-venv/bin" >> "$GITHUB_PATH"
+
+      - name: Set up SDL3
+        uses: ./.github/actions/setup-sdl3
+
+      - name: Bootstrap sparse miniwin
+        run: tools/setup-miniwin.sh
+
+      - name: Configure, build, and test with coverage
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: "4"
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLRR_COVERAGE=ON -DLRR_PACKAGING=OFF
+          cmake --build build
+          ctest --test-dir build --output-on-failure
+
+      - name: Fetch main's coverage summary
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run_id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow coverage.yml \
+            --branch "$GITHUB_BASE_REF" --event push --status success --limit 1 \
+            --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$run_id" ]; then
+            gh run download "$run_id" --repo "$GITHUB_REPOSITORY" \
+              --name coverage-summary --dir "$RUNNER_TEMP/base" ||
+              echo "No coverage-summary artifact in run $run_id"
+          else
+            echo "No coverage run on $GITHUB_BASE_REF yet"
+          fi
+
+      - name: Report
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          args=(build coverage --run-url "$RUN_URL")
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            args+=(--compare-branch "origin/$GITHUB_BASE_REF" \
+                   --base-summary "$RUNNER_TEMP/base/summary.json")
+          fi
+          python3 tools/coverage.py "${args[@]}"
+          cat coverage/comment.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/html
+          retention-days: 14
+
+      - name: Upload the summary for pull requests to compare against
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-summary
+          path: coverage/summary.json
+          retention-days: 90
+
+      - name: Comment on the pull request
+        # A pull request from a fork gets a read-only token; its coverage is
+        # in the job summary instead.
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          comment_id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+            --jq '.[] | select(.user.login == "github-actions[bot]"
+                            and (.body | startswith("<!-- lrr-coverage -->"))) | .id' |
+            head -n 1)
+          if [ -n "$comment_id" ]; then
+            gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$comment_id" \
+              -F body=@coverage/comment.md > /dev/null
+          else
+            gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+              -F body=@coverage/comment.md > /dev/null
+          fi

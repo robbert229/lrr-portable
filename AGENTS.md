@@ -61,7 +61,9 @@ cut. Open PRs against `main`.
 - CI runs one required check, `native-build`
   (`.github/workflows/native-build.yml`), on pull requests and on pushes to
   `main`. It builds the native port, runs ctest with synthetic
-  fixtures only, and runs the Python tool tests in `tools/tests`. Real-data
+  fixtures only, and runs the Python tool tests in `tools/tests`. The
+  `coverage` workflow, not required, comments each PR with the line
+  coverage of the lines it changes (`make coverage` locally). Real-data
   tests need licensed inputs, so run them locally.
 - Source files carry SPDX headers; keep them, and follow the surrounding C++
   style. There is no repository-wide formatter. The build lints the
