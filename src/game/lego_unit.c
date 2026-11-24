@@ -4472,7 +4472,11 @@ int lego_level_load(const char* levelName)
     float slugValue;
     int number;
     unsigned int i;
-    uint32_t rockFallStyle;
+    /* The original left this unset: Effect_GetRockFallStyle writes it only
+     * when the level's RockFallStyle names a loaded style, and the style is
+     * set either way, so a missing or unknown name indexed the style table
+     * with stack garbage. Start at the first style. */
+    uint32_t rockFallStyle = 0;
 
     movie_play_level_video_adapter(levelName, 1);
     global_linked_record_chain_clear();
