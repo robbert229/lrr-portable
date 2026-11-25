@@ -6,6 +6,7 @@
 # Files.c's SDL3 streams and path mapping, and the configuration file
 # ([library:filesystem], [library:config]).
 lrr_unit_test(files SOURCES ${ENGINE_DIR}/test_files.cpp LABELS files)
+lrr_unit_test(file_line_reader SOURCES ${ENGINE_DIR}/test_file_line_reader.cpp LABELS files)
 # Files.c's start-up with the data directory from the diskpath
 # ([library:config]).
 lrr_unit_test(diskpath SOURCES ${ENGINE_DIR}/test_diskpath.cpp LABELS files)
