@@ -2415,16 +2415,19 @@ int lego_main_sim_step(float elapsedGame, float elapsed, int* keyDownT,
         camera_project_point_to_screen((struct ViewProjectionAdapter*)legoGlobs_viewMain, sPos, wPos);
         if (sPos[0] >= 40.0f && sPos[1] >= 40.0f &&
             sPos[0] <= s_display_w - 40.0f && sPos[1] <= s_display_h - 80.0f) {
-            lego_transition_control(0, 1);
             if (liveObj->customName == NULL) {
                 lego_object_custom_name_set_adapter(liveObj,
                     // STRING: LEGORR 0x004a4128
                     "Object");
-                liveObj->customName[0] = '\0';
+                if (liveObj->customName != NULL)
+                    liveObj->customName[0] = '\0';
             }
-            legoGlobs_renameInput = liveObj->customName;
-            legoGlobs_renamePosition[0] = sPos[0];
-            legoGlobs_renamePosition[1] = sPos[1];
+            if (liveObj->customName != NULL) {
+                lego_transition_control(0, 1);
+                legoGlobs_renameInput = liveObj->customName;
+                legoGlobs_renamePosition[0] = sPos[0];
+                legoGlobs_renamePosition[1] = sPos[1];
+            }
         }
     }
 
