@@ -478,3 +478,12 @@ lrr_unit_test_variant(scene_teardown_initializer_rejection OF scene_teardown
   ARGS initializer-rejection LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
 lrr_unit_test_variant(scene_teardown_engine_shutdown OF scene_teardown
   ARGS engine-shutdown LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Loaded primitive catalog objects: upgrade resources, boarding and recall.
+lrr_unit_test(upgrade_recall_progression SOURCES ${GAME_DIR}/test_upgrade_recall_progression.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS upgrade vehicle_model level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(vehicle_driver_progression OF upgrade_recall_progression
+  ARGS drive LABELS vehicle_model legoobject level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(teleport_recall_progression OF upgrade_recall_progression
+  ARGS recall LABELS teleporter objectrecall level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
