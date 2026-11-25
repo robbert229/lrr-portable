@@ -1246,3 +1246,20 @@ lines are in `flic_unit.c`, whose line coverage rises from 171/531
 renderer skips, zero failures. Both new cases also passed focused
 ASan/UBSan (leak detection disabled) and a MinGW64 GCC 14/SDL3 3.4.18
 cross-build under Wine, separately from native Windows CI.
+
+#### Generic container resource ownership
+
+`container_resource` independently creates a triangle and a quad with
+separate retained mesh groups, plus a generated 4x4 grayscale indexed
+BMP. It verifies group dimensions, vertex/UV readback and replacement,
+combined bounds, hide/show and visual counts, render quality, material
+binding, texture loading/binding, and forward/inverse frame transforms.
+Destruction callbacks confirm that removing the mesh destroys its
+separate group and group-owned material, while the caller-owned texture
+remains live until explicitly freed.
+
+An independent immediate mesh checks geometry scaling, diffuse/alpha
+and emissive material values, group visibility and visual destruction.
+Both use the real engine software device on SDL's dummy video driver.
+No application or game initialization is involved; retained-mode mesh
+scaling and comprehensive device/pool leak accounting are not asserted.

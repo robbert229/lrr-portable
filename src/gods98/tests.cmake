@@ -18,6 +18,8 @@ lrr_unit_test(movie_unit SOURCES ${ENGINE_DIR}/test_movie_unit.cpp
 
 # Parse container types and exercise a retained-mode parent and child.
 lrr_unit_test(container SOURCES ${ENGINE_DIR}/test_container.cpp LABELS container)
+lrr_unit_test(container_resource SOURCES ${ENGINE_DIR}/test_container_resource.cpp
+  LABELS container mesh_unit ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
 
 # Validate viewport sizing, camera, clipping and field on a dummy-driver device.
 lrr_unit_test(viewports SOURCES ${ENGINE_DIR}/test_viewports.cpp
