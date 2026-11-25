@@ -531,7 +531,7 @@ lrr_unit_test_variant(startup_advisor_reduced OF startup_advisor
 lrr_unit_test(object_command_states SOURCES ${GAME_DIR}/test_object_command_states.cpp
   ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
   ARGS training LABELS aitask legoobject level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
-foreach(scenario IN ITEMS repair-eat follow-clear drill)
+foreach(scenario IN ITEMS repair-eat follow-clear drill turn-slide)
   lrr_unit_test_variant(object_command_${scenario} OF object_command_states
     ARGS ${scenario} LABELS aitask legoobject level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
 endforeach()
