@@ -554,3 +554,8 @@ foreach(outcome IN ITEMS success failure object)
 endforeach()
 lrr_unit_test_variant(terrain_fence_lifecycle OF terrain_objectives
   ARGS fence LABELS terrain_map level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Independent generic menu-resource loading and owned-item teardown.
+lrr_unit_test(menu_resource_load SOURCES ${GAME_DIR}/test_menu_resource_load.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS frontend level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")

@@ -1125,3 +1125,15 @@ grid and its independent accounting and object count, advances another
 tick, and calls the real engine shutdown before releasing DirectDraw.
 This verifies the success path previously missing from the startup
 probes. It is not a complete frontend boot or memory-leak accounting test.
+
+#### Generic menu resource loading
+
+`menu_resource_load` parses two original abstract menu definitions with
+uniform placeholder textures and fonts. It verifies cache reuse, menu
+position/anchor fields, cycle labels and callback bindings, integer and
+real slider ranges, trigger ownership, optional overlay resources and
+links between the two generated menu records. No shipped menu layout or
+artwork is reproduced. It also releases the loaded menu items through
+the real cleanup routine; the item array must remain live until those
+items have been released. The fixture is process-isolated and does not
+establish comprehensive cache or frontend teardown accounting.
