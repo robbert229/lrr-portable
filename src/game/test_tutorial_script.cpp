@@ -2,6 +2,7 @@
 /* test_tutorial_script — independent NERPs registers and timers, and
  * resolving only zero-argument calls when decoding a script argument. */
 #include "game/tutorial_script.h"
+#include "game/level.h"
 #include "test/lrr_test.h"
 
 extern "C" {
@@ -45,5 +46,12 @@ int main(void)
     arg = 32;
     nerps_runtime_resolve_argument(&arg);
     CHECK_EQ(arg, 32u);
+    // Unknown names and non-countable catalog entries must not index the
+    // fixed-size object counter table. No catalog or scene boot is needed.
+    CHECK_EQ(entity_type_grid_record_count_get("MissingSyntheticType", 0), 0u);
+    CHECK_EQ(entity_type_grid_record_count_get("TVcamera", 0), 0u);
+    CHECK_EQ(entity_type_grid_record_count_get("Ore", -1), 0u);
+    CHECK_EQ(entity_type_grid_record_count_get("Ore", 16), 0u);
+    CHECK_EQ(entity_type_grid_record_count_get("Ore", 0), 0u);
     return lrr_test_result();
 }

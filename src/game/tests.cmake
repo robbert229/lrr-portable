@@ -582,3 +582,11 @@ lrr_unit_test_variant(environment_mission_balance OF environment_runtime
 # Abstract rectangular-grid search and route ownership contracts.
 lrr_unit_test(grid_search_contracts SOURCES ${GAME_DIR}/test_grid_search_contracts.cpp
   LABELS navigation)
+
+# Mission-result accounting and reset on invented grid/counter inputs.
+lrr_unit_test(reward_accounting SOURCES ${GAME_DIR}/test_reward_accounting.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS reward level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(reward_accounting_defaults OF reward_accounting
+  ARGS defaults LABELS reward level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
