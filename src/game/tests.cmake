@@ -450,6 +450,7 @@ lrr_unit_test(object_lifecycle_extra SOURCES ${GAME_DIR}/test_object_lifecycle_e
 
 # Generated model catalogs and startup resource loading.
 lrr_unit_test(positive_startup SOURCES ${GAME_DIR}/test_positive_startup.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
   ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
   LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
 lrr_unit_test_variant(startup_missing_catalog OF positive_startup
@@ -559,3 +560,11 @@ lrr_unit_test_variant(terrain_fence_lifecycle OF terrain_objectives
 lrr_unit_test(menu_resource_load SOURCES ${GAME_DIR}/test_menu_resource_load.cpp
   ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
   LABELS frontend level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Input release, heterogeneous selection and live command dispatch.
+lrr_unit_test(selection_commands SOURCES ${GAME_DIR}/test_selection_commands.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  ARGS selection LABELS selection aitask level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(selection_commands_pointer OF selection_commands
+  ARGS pointer LABELS selection aitask level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
