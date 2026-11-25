@@ -578,3 +578,7 @@ lrr_unit_test_variant(environment_texture_lifetime OF environment_runtime
   ARGS transitions LABELS terrain_map level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
 lrr_unit_test_variant(environment_mission_balance OF environment_runtime
   ARGS mission LABELS objective level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Abstract rectangular-grid search and route ownership contracts.
+lrr_unit_test(grid_search_contracts SOURCES ${GAME_DIR}/test_grid_search_contracts.cpp
+  LABELS navigation)
