@@ -838,3 +838,52 @@ Adding the four subsystem scenarios in the same instrumented build
 yielded 15,980 lines (37.0%), 1,558 functions (50.0%) and 9,186 branches
 (21.0%). These are local incremental results, not a comparison against
 a separate main CI run.
+
+#### Positive startup configuration and resource loading
+
+`positive_startup` loads all five object type catalogs through the real
+catalog functions, using two generic vehicle entries and one entry each
+for the figure, creature, building, and upgrade catalogs. The only model
+geometry is a triangle; `write_null_scene(path)` adds a reusable LWS
+fixture containing one moving null (Anchor) with two keyframes and no
+external mesh or sound. The test verifies the activity selection, wheel
+mesh and explicit radius, upgrade-part binding, attachment metadata,
+building shape and power scene, and both display-name tables.
+
+Three separate process variants test additional startup paths:
+
+- `startup_missing_catalog`: an absent upgrade section and missing
+  model files in each of the other four catalogs are rejected.
+- `startup_misc_resources`: maps required resource slots to the same
+  triangle or null scene (with a minimal activity wrapper when required),
+  verifying that the loaded templates are hidden. None represents the
+  named game object or its appearance.
+- `startup_config_loader`: checks graphics quality acceptance and
+  rejection, configured tooltip and upgrade names, and the real software
+  loading and shutdown screens, font, progress callback, and profile
+  write-back.
+
+The catalog and miscellaneous resource tests are process-isolated rather
+than exercising full scene shutdown (see the preceding teardown probes).
+A local probe calling the real `lego_game_config_init` with the new catalog
+and generic font, message and loader BMPs progressed past all five catalog
+gates, then crashed in `container_load` at its filename copy in
+`lego_misc_object_resources_load` because a required filename was absent.
+With the generic miscellaneous resource inputs supplied, the same probe
+progressed further, to `info_set_overflow_image_file`, and crashed in
+`Image_SetPenZeroTrans` when the required overflow image was missing.
+Neither probe is registered as a passing test. Complete initialization
+still requires additional interface resources and configuration, and the
+earlier shutdown ordering problems remain unresolved. No production
+path was replaced or failure masked.
+
+Local matched coverage on the stacked building-lifecycle base (GCC Debug,
+`LRR_COVERAGE=ON`, gcovr 8.8, test sources excluded): the 158 existing
+cases covered 16,645/43,166 lines (38.6%), 1,611/3,115 functions (51.7%)
+and 9,618/43,738 branches (22.0%). Adding the four startup scenarios
+reached 17,338 lines (40.2%), 1,648 functions (52.9%) and 10,110 branches
+(23.1%). The 693 additional covered lines include 265 in
+`lego_unit.c`, 160 in `container.c`, 62 in `vehicle_model.c`,
+53 in `building_model.c` and 20 in `animation_object.c`.
+The full suite registered 162 cases, with 150 passing and the 12
+optional renderer-backend cases skipped.

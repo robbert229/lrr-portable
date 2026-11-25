@@ -163,6 +163,17 @@ bool write_triangle(const char* path)
     return std::fclose(f) == 0 && ok;
 }
 
+bool write_null_scene(const char* path)
+{
+    return write_text(path,
+        "LWSC\n1\n\nFirstFrame 0\nLastFrame 15\nFramesPerSecond 25\n\n"
+        "AddNullObject Anchor\nObjectMotion (unnamed)\n"
+        "  9\n  2\n"
+        "  0 0 0 0 0 0 1 1 1\n  0 0 0 0 0\n"
+        "  1 2 3 0 0 0 1 1 1\n  15 0 0 0 0\n"
+        "EndBehavior 1\nShadowOptions 7\n");
+}
+
 static bool border(unsigned x, unsigned y) { return x == 0 || y == 0 || x == W - 1 || y == H - 1; }
 static unsigned height_of(unsigned, unsigned) { return 0; }
 /* The walls x = 3 and 4 run the height of the level, splitting it into

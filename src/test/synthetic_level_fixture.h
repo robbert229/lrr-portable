@@ -8,6 +8,8 @@ bool write_map(const char* path, unsigned width, unsigned height,
                unsigned (*value)(unsigned x, unsigned y));
 bool write_bmp(const char* path, unsigned width, unsigned height);
 bool write_triangle(const char* path);
+// One animated null, two keyframes, no mesh or sound dependencies.
+bool write_null_scene(const char* path);
 bool make_fixture(const char* directory);
 bool initialise_headless(const char* programName);
 bool boot_game();
