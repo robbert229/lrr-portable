@@ -992,3 +992,62 @@ Adding the three transition cases covered 18,579 lines (43.0%),
 1,746 functions (56.1%) and 11,112 branches (25.4%): 50 additional
 lines, 3 functions and 77 branches. The complete 174-case suite had
 162 passing, 12 optional backend skips and zero failures.
+
+#### Independent startup resources and host options
+
+The `startup_resources` test uses two grayscale BMPs and a small,
+independent configuration record. It runs the real panel and button
+loaders (including a missing panel and a missing button image), checks
+resolution fallback and bounds, loads a tutorial icon, registers tooltips
+and their sound aliases, and loads text and info messages. Replacing an
+image-bearing text message releases that image; the test releases its
+font and the image pool in the real shutdown functions. Panel button
+storage and text strings are freed explicitly where there is no exposed
+subsystem shutdown function. The process is isolated; this does not
+establish complete ownership or leak accounting for the static info
+and tooltip records.
+
+The two `startup_advisor` variants initialise a camera and viewport,
+then load a single generic animated null into two configured animation
+slots, with a third missing scene. They verify the actual child-frame
+count, parsed positions with resolution fallback, invalid position
+rejection, animation admission and end cleanup, then release the
+viewport, camera, container pool and device. The reduced-animation
+variant verifies that an optional `!key` is not loaded. The normal
+optional animation fallback was observed to re-query the unprefixed key
+instead of the generated prefixed key in `advisor_config_slots_load_target`;
+this existing defect is not changed or asserted as desired behaviour.
+
+`startup_options` exercises the existing WinMain option parser and
+start-level override getter without invoking WinMain or the game
+initializer. The `startup_device_fit`, `startup_device_original` and
+`startup_device_best` variants load isolated explicit preferences (or
+skip if the host cannot isolate its preference directory), initialise the
+real dummy-driver window and DirectDraw selection and setup, check the
+chosen device, mode and dimensions, then shut down DirectDraw and the
+window. The hardware flag in the best-device test is the flag returned
+by miniwin, not a claim that the dummy driver uses physical hardware.
+
+Three additional rejection tests use linker wrapping solely at the
+external driver/device enumeration and setup boundary: no driver,
+no hardware-flagged device, and all setup attempts failing. The real
+`init_initialise` must reject the first two without attempting setup and
+try each enumerated device once in the last case. No successful device
+setup or game callback is fabricated. The wrapping cases are registered
+where the toolchain supports the existing GNU linker-wrap mechanism.
+
+All input is generated in scratch directories. These tests do not
+exercise or claim successful complete game initialization, and they do
+not require a substitute game asset pack. Malformed bitmap decoding is
+not covered by the missing-file tests.
+
+Matched local coverage on the `913cbcfa` stack tip (GCC Debug,
+`LRR_COVERAGE=ON`, gcovr 8.8, test code and miniwin excluded):
+178 base cases covered 19,810/43,166 lines (45.9%), 1,834/3,115
+functions (58.9%) and 12,108/43,738 branches (27.7%). The ten new
+cases raised these to 20,052 lines (46.5%), 1,850 functions (59.4%)
+and 12,380 branches (28.3%), an increase of 242 lines, 16 functions
+and 272 branches. Newly covered lines include 83 in `init.c`, 48
+in `lego_unit.c`, 41 in `advisor.c` and 27 in `directdraw.c`.
+The complete 188-case suite had 176 passing, 12 optional renderer
+skips and zero failures.
