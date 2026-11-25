@@ -660,6 +660,7 @@ int legoobject_remove(Lego_Object* obj)
         free(obj->upgradePart);
     }
 
+    legoobject_rename(obj, NULL);
     obj->nextFree = (Lego_Object*)s_pool_record_head;
     s_pool_record_head = obj;
     return 0;
@@ -702,12 +703,15 @@ void legoobject_rename(Lego_Object* obj, const char* name)
 {
     if (name != NULL && *name != '\0') {
         if (obj->customName == NULL) {
-            obj->customName = (char*)malloc(11);
+            obj->customName = (char*)malloc(12); // 11 characters and the terminator.
+            if (obj->customName == NULL) return;
         }
         strncpy(obj->customName, name, 11);
         obj->customName[11] = '\0';
     } else {
         if (obj->customName != NULL) {
+            if (legoGlobs_renameInput == obj->customName)
+                legoGlobs_renameInput = NULL;
             free(obj->customName);
         }
         obj->customName = NULL;
@@ -4815,6 +4819,9 @@ int legoobject_terrain_cell_to_world_position(Lego_Object* obj, int noUnloadCell
     ddiscene_object_position_get(cont, NULL, pos);
     if (!terrain_map_world_to_block(Lego_GetMap(), pos[0], pos[1], &blockPos[0], &blockPos[1]))
         return 0;
+    // Land and adjacent-cell exits keep the driver's facing. The dock
+    // branch below replaces it with the entrance's facing.
+    ddiscene_object_facing_pair_get(driverCont, NULL, dir, NULL);
     if ((entity_stats_word_get(LEGOOBJ_SLOT(obj)) & 0x2000000) &&
         terrain_cell_route_and_occupancy_check_current(LEGOOBJ_SLOT(driver), blockPos[0], blockPos[1], blockPos[0], blockPos[1], 1))
         goto getOut;

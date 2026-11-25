@@ -501,3 +501,7 @@ lrr_unit_test_variant(distinct_level_missing_surface OF distinct_level_lifecycle
 lrr_unit_test(terrain_transitions SOURCES ${GAME_DIR}/test_terrain_transitions.cpp
   ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
   LABELS level_boot navigation ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Direct/adjacent exit and owned-name checks without loading an LWS catalog.
+lrr_unit_test_variant(driver_recall_ownership OF upgrade_recall_progression
+  ARGS ownership LABELS vehicle_model objectrecall level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
