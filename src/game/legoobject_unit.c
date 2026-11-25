@@ -437,7 +437,7 @@ void legoobject_tool_tip_icons_load(void* config)
     unsigned int i;
 
     // STRING: LEGORR 0x004a5050
-    for (item = block_subgroup((struct BlockRec*)config, string_path_join(s_engine_config_root, "ToolTipIcons", NULL));
+    for (item = block_subgroup((struct BlockRec*)config, string_path_join(s_engine_config_root, "ToolTipIcons", (const char*)NULL));
          item != NULL; item = block_next_equal_key(item)) {
         for (i = 0; i < 11; i++) {
             if (s_tool_type_names[i] != NULL && stricmp(item->key, s_tool_type_names[i]) == 0) {
@@ -1805,7 +1805,7 @@ void legoobject_tool_name_strings_load(void* config, const char* gameName)
         legoGlobs_langToolName[i] = block_get_str_copy(
             (struct BlockRec*)config,
             // STRING: LEGORR 0x004a5068
-            string_path_join(gameName, "ToolNames", legoGlobs_toolName[i], NULL));
+            string_path_join(gameName, "ToolNames", legoGlobs_toolName[i], (const char*)NULL));
     }
 }
 
@@ -9674,7 +9674,7 @@ void* legoobject_poly_variant_section_model_build(void* config, const char* game
         else if (polyKind == 1)
             // STRING: LEGORR 0x004a5128
             snprintf(buffer, sizeof(buffer), "MediumPoly");
-        for (item = block_subgroup((struct BlockRec*)config, string_path_join(gameName, buffer, NULL));
+        for (item = block_subgroup((struct BlockRec*)config, string_path_join(gameName, buffer, (const char*)NULL));
              item != NULL; item = block_next_equal_key(item)) {
             name = item->key;
             if (*name != '!' || !(s_engine_feature_word & 0x800000)) {
@@ -9798,7 +9798,7 @@ void legoobject_sfx_grid_config_load(void* config, const char* gameName)
         }
     }
     // STRING: LEGORR 0x004a5154
-    for (item = block_subgroup((struct BlockRec*)config, string_path_join(gameName, "ObjTtSFXs", NULL));
+    for (item = block_subgroup((struct BlockRec*)config, string_path_join(gameName, "ObjTtSFXs", (const char*)NULL));
          item != NULL; item = block_next_equal_key(item)) {
         if (entity_type_pair_lookup(item->key, &x, &y, NULL) &&
             sound_alias_lookup(item->value, &sfx)) {

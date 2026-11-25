@@ -1742,17 +1742,17 @@ void front_menu_item_draw_save_image(Front_Menu* menu, int selIndex,
             snprintf(buff, sizeof(buff), "pos%d", selIndex + 1);
             str = block_get_str_copy(legoGlobs_config,
                                      string_path_join(s_engine_config_root,
-                                                      s_menuSaveImage, buff, NULL));
+                                                      s_menuSaveImage, buff, (const char*)NULL));
             // STRING: LEGORR 0x004a2378
             sound_variant_split(str, stringParts, "|");
             dest.x = (float)atoi(stringParts[0]);
             dest.y = (float)atoi(stringParts[1]);
             size.x = (float)FRONT_CONFIG_INT(string_path_join(s_engine_config_root, s_menuSaveImage,
                                                               // STRING: LEGORR 0x004a2370
-                                                              "Width", NULL));
+                                                              "Width", (const char*)NULL));
             size.y = (float)FRONT_CONFIG_INT(string_path_join(s_engine_config_root, s_menuSaveImage,
                                                               // STRING: LEGORR 0x004a2368
-                                                              "Height", NULL));
+                                                              "Height", (const char*)NULL));
             if (bigSize) {
                 dest.x -= ((float)frontGlobs_saveImageBigWidth - size.x) * 0.25f;
                 dest.y -= ((float)frontGlobs_saveImageBigHeight - size.y) * 0.25f;
@@ -2358,7 +2358,7 @@ void front_menu_load_slot_images(void)
                 block_get_str_copy(legoGlobs_config,
                                    string_path_join(s_engine_config_root, s_menuSaveImage,
                                                     // STRING: LEGORR 0x004a23a4
-                                                    "Path", NULL)),
+                                                    "Path", (const char*)NULL)),
                 i);
         *image = image_load_bmp_scaled(buff, 0, 0);
         i++;
@@ -2473,7 +2473,7 @@ void front_run_screen_menu(Front_Menu* menu)
             snprintf(buff, sizeof(buff), "%s\\%d.dat",
                     block_get_str_copy(legoGlobs_config,
                                        string_path_join(s_engine_config_root, s_menuSaveImage,
-                                                        "Path", NULL)),
+                                                        "Path", (const char*)NULL)),
                     s_saveSlotToWrite);
             /* RewardLevel.saveCapture (+0x08), an Image. */
             front_image_save_bmp_adapter((char*)level + 8, buff);
@@ -2658,7 +2658,7 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
     snprintf(menuPath, sizeof(menuPath), "Menu::%s", menuName);
     menuCount = FRONT_CONFIG_INT(string_path_join(s_engine_config_root, menuPath,
                                                   // STRING: LEGORR 0x004a24cc
-                                                  "MenuCount", NULL));
+                                                  "MenuCount", (const char*)NULL));
     menuSet = front_menu_set_create(menuCount);
     for (i = 0; i < menuCount; i++) {
         centerOffset = 0;
@@ -2666,13 +2666,13 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
         snprintf(itemPath, sizeof(itemPath), "%s::Menu%i", menuPath, i + 1);
         menuTitle = block_get_str_copy(legoGlobs_config,
                                        // STRING: LEGORR 0x004a24b8
-                                       string_path_join(s_engine_config_root, itemPath, "Title", NULL));
+                                       string_path_join(s_engine_config_root, itemPath, "Title", (const char*)NULL));
         menuFullName = block_get_str_copy(legoGlobs_config,
                                           // STRING: LEGORR 0x004a24ac
-                                          string_path_join(s_engine_config_root, itemPath, "FullName", NULL));
+                                          string_path_join(s_engine_config_root, itemPath, "FullName", (const char*)NULL));
         positionStr = block_get_str_copy(legoGlobs_config,
                                          // STRING: LEGORR 0x004a24a0
-                                         string_path_join(s_engine_config_root, itemPath, "Position", NULL));
+                                         string_path_join(s_engine_config_root, itemPath, "Position", (const char*)NULL));
         sound_variant_split(positionStr, stringParts, ":");
         xPos = atoi(stringParts[0]);
         yPos = atoi(stringParts[1]);
@@ -2681,16 +2681,16 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
         }
         menuFont = front_cache_load_font(block_get_strptr(legoGlobs_config,
                                                           // STRING: LEGORR 0x004a2494
-                                                          string_path_join(s_engine_config_root, itemPath, "MenuFont", NULL)));
+                                                          string_path_join(s_engine_config_root, itemPath, "MenuFont", (const char*)NULL)));
         autoCenter = block_get_bool_path(legoGlobs_config,
                                          // STRING: LEGORR 0x004a2488
-                                         string_path_join(s_engine_config_root, itemPath, "AutoCenter", NULL)) == 1;
+                                         string_path_join(s_engine_config_root, itemPath, "AutoCenter", (const char*)NULL)) == 1;
         displayTitle = block_get_bool_path(legoGlobs_config,
                                            // STRING: LEGORR 0x004a2478
-                                           string_path_join(s_engine_config_root, itemPath, "DisplayTitle", NULL)) != 0;
+                                           string_path_join(s_engine_config_root, itemPath, "DisplayTitle", (const char*)NULL)) != 0;
         anchored = block_get_str_copy(legoGlobs_config,
                                       // STRING: LEGORR 0x004a246c
-                                      string_path_join(s_engine_config_root, itemPath, "Anchored", NULL));
+                                      string_path_join(s_engine_config_root, itemPath, "Anchored", (const char*)NULL));
         if (autoCenter && menuTitle != NULL && *menuTitle != '\0') {
             centerOffset = -((int)formatted_text_printf_width(menuFont, menuTitle) / 2);
         }
@@ -2699,23 +2699,23 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
             menuFont, xPos, yPos, autoCenter, displayTitle, centerOffset,
             block_get_bool_path(legoGlobs_config,
                                 // STRING: LEGORR 0x004a2460
-                                string_path_join(s_engine_config_root, itemPath, "CanScroll", NULL)) == 1,
+                                string_path_join(s_engine_config_root, itemPath, "CanScroll", (const char*)NULL)) == 1,
             anchored);
         front_menu_load_menu_image(menuSet->menus[i],
                                    block_get_strptr(legoGlobs_config,
                                                     // STRING: LEGORR 0x004a2454
-                                                    string_path_join(s_engine_config_root, itemPath, "MenuImage", NULL)),
+                                                    string_path_join(s_engine_config_root, itemPath, "MenuImage", (const char*)NULL)),
                                    1);
         front_menu_load_menu_image(menuSet->menus[i],
                                    block_get_strptr(legoGlobs_config,
                                                     // STRING: LEGORR 0x004a2444
-                                                    string_path_join(s_engine_config_root, itemPath, "MenuImageDark", NULL)),
+                                                    string_path_join(s_engine_config_root, itemPath, "MenuImageDark", (const char*)NULL)),
                                    0);
         snprintf(menuSet->menus[i]->name, sizeof(menuSet->menus[i]->name), "%s", itemPath);
         menuSet->menus[i]->playRandom =
             block_get_bool_path(legoGlobs_config,
                                 // STRING: LEGORR 0x004a2438
-                                string_path_join(s_engine_config_root, menuSet->menus[i]->name, "PlayRandom", NULL));
+                                string_path_join(s_engine_config_root, menuSet->menus[i]->name, "PlayRandom", (const char*)NULL));
         free(menuTitle);
     }
 
@@ -2724,26 +2724,26 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
         snprintf(itemPath, sizeof(itemPath), "%s::Menu%i", menuPath, i + 1);
         loFont = front_cache_load_font(block_get_strptr(legoGlobs_config,
                                                         // STRING: LEGORR 0x004a2430
-                                                        string_path_join(s_engine_config_root, itemPath, "LoFont", NULL)));
+                                                        string_path_join(s_engine_config_root, itemPath, "LoFont", (const char*)NULL)));
         hiFont = front_cache_load_font(block_get_strptr(legoGlobs_config,
                                                         // STRING: LEGORR 0x004a2428
-                                                        string_path_join(s_engine_config_root, itemPath, "HiFont", NULL)));
+                                                        string_path_join(s_engine_config_root, itemPath, "HiFont", (const char*)NULL)));
         itemCount = FRONT_CONFIG_INT(string_path_join(s_engine_config_root, itemPath,
                                                       // STRING: LEGORR 0x004a241c
-                                                      "ItemCount", NULL));
+                                                      "ItemCount", (const char*)NULL));
 
         for (j = 1;; j++) {
             int sfxType;
             // STRING: LEGORR 0x004a2410
             snprintf(buff, sizeof(buff), "Overlay%i", j);
-            itemString = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, itemPath, buff, NULL));
+            itemString = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, itemPath, buff, (const char*)NULL));
             if (itemString == NULL) {
                 if (s_engine_feature_word & 0x1000000) {
                     break;
                 }
                 // STRING: LEGORR 0x004a2404
                 snprintf(buff, sizeof(buff), "!Overlay%i", j);
-                itemString = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, itemPath, buff, NULL));
+                itemString = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, itemPath, buff, (const char*)NULL));
                 if (itemString == NULL) {
                     break;
                 }
@@ -2765,7 +2765,7 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
             if (itemString != NULL) {
                 free(itemString);
             }
-            itemString = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, itemPath, buff, NULL));
+            itemString = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, itemPath, buff, (const char*)NULL));
             numParts = sound_variant_split(itemString, stringParts, ":");
             switch (front_menu_item_parse_type_string(stringParts[0])) {
             case Front_MenuItem_Cycle:
@@ -2915,7 +2915,7 @@ int front_is_intros_enabled(void)
                             // STRING: LEGORR 0x004a24e4
                             string_path_join(s_engine_config_root, "Main",
                                              // STRING: LEGORR 0x004a24ec
-                                             "DontPlayAvis", NULL)) != 1 &&
+                                             "DontPlayAvis", (const char*)NULL)) != 1 &&
         FRONT_PROGRAMMER_LEVEL < 3) {
         return 1;
     }
@@ -3435,18 +3435,18 @@ int front_level_set_load_level_names(struct BlockRec* config, Front_LevelSet* le
     int i;
 
     levelName = block_get_str_copy(legoGlobs_config,
-                                   string_path_join(s_engine_config_root, "Main", startLevel, NULL));
+                                   string_path_join(s_engine_config_root, "Main", startLevel, (const char*)NULL));
     if (levelName == NULL) {
         return 0;
     }
     count = 1;
     levelName = block_get_str_copy(legoGlobs_config,
                                    // STRING: LEGORR 0x004a2528
-                                   string_path_join(s_engine_config_root, levelName, "NextLevel", NULL));
+                                   string_path_join(s_engine_config_root, levelName, "NextLevel", (const char*)NULL));
     while (levelName != NULL) {
         count++;
         levelName = block_get_str_copy(legoGlobs_config,
-                                       string_path_join(s_engine_config_root, levelName, "NextLevel", NULL));
+                                       string_path_join(s_engine_config_root, levelName, "NextLevel", (const char*)NULL));
     }
 
     levelSet->count = count;
@@ -3465,10 +3465,10 @@ int front_level_set_load_level_names(struct BlockRec* config, Front_LevelSet* le
     }
 
     levelSet->idNames[0] = block_get_str_copy(legoGlobs_config,
-                                              string_path_join(s_engine_config_root, "Main", startLevel, NULL));
+                                              string_path_join(s_engine_config_root, "Main", startLevel, (const char*)NULL));
     levelName = levelSet->idNames[0];
     levelSet->langNames[0] = block_get_str_copy(legoGlobs_config,
-                                                string_path_join(s_engine_config_root, levelName, "FullName", NULL));
+                                                string_path_join(s_engine_config_root, levelName, "FullName", (const char*)NULL));
     if (levelSet->langNames[0] == NULL) {
         levelSet->langNames[0] = front_util_string_copy(levelSet->idNames[0]);
     } else {
@@ -3477,10 +3477,10 @@ int front_level_set_load_level_names(struct BlockRec* config, Front_LevelSet* le
 
     for (i = 1; i < levelSet->count; i++) {
         levelSet->idNames[i] = block_get_str_copy(legoGlobs_config,
-                                                  string_path_join(s_engine_config_root, levelName, "NextLevel", NULL));
+                                                  string_path_join(s_engine_config_root, levelName, "NextLevel", (const char*)NULL));
         levelName = levelSet->idNames[i];
         levelSet->langNames[i] = block_get_str_copy(legoGlobs_config,
-                                                    string_path_join(s_engine_config_root, levelName, "FullName", NULL));
+                                                    string_path_join(s_engine_config_root, levelName, "FullName", (const char*)NULL));
         if (levelSet->langNames[i] == NULL) {
             levelSet->langNames[i] = front_util_string_copy(levelSet->idNames[i]);
         } else {
@@ -3543,9 +3543,9 @@ void front_play_intro_splash(const char* imageKey, int skippable, const char* ti
     struct Image* image;
 
     seconds = (float)atof(block_get_strptr(legoGlobs_config,
-                                           string_path_join(s_engine_config_root, "Main", timeKey, NULL))
+                                           string_path_join(s_engine_config_root, "Main", timeKey, (const char*)NULL))
                               ? block_get_strptr(legoGlobs_config,
-                                                 string_path_join(s_engine_config_root, "Main", timeKey, NULL))
+                                                 string_path_join(s_engine_config_root, "Main", timeKey, (const char*)NULL))
                               : "");
     if (0.0f == seconds) {
         seconds = 3.0f;
@@ -3553,7 +3553,7 @@ void front_play_intro_splash(const char* imageKey, int skippable, const char* ti
     endTime = (DWORD)SDL_GetTicks() - (int)(seconds * -1000.0f); // [library:time]
     if (imageKey != NULL) {
         imageName = block_get_str_copy(legoGlobs_config,
-                                       string_path_join(s_engine_config_root, "Main", imageKey, NULL));
+                                       string_path_join(s_engine_config_root, "Main", imageKey, (const char*)NULL));
         if (imageName != NULL && (image = (struct Image*)image_load_bmp_scaled(imageName, 0, 0)) != NULL) {
             {
                 while (1) {
@@ -3587,7 +3587,7 @@ void front_play_intro_movie(const char* movieKey, int skippable)
 
     if (movieKey != NULL) {
         movieName = block_get_str_copy(legoGlobs_config,
-                                       string_path_join(s_engine_config_root, "Main", movieKey, NULL));
+                                       string_path_join(s_engine_config_root, "Main", movieKey, (const char*)NULL));
         if (movieName != NULL && file_exists(movieName)) {
             movie = movie_load(movieName);
             front_play_movie(movie, skippable);
@@ -3606,7 +3606,7 @@ void front_play_level_movie(const char* levelName, int skippable)
     if (levelName != NULL) {
         movieName = block_get_str_copy(legoGlobs_config,
                                        // STRING: LEGORR 0x004a2534
-                                       string_path_join(s_engine_config_root, levelName, "Video", NULL));
+                                       string_path_join(s_engine_config_root, levelName, "Video", (const char*)NULL));
         if (movieName != NULL) {
             if (file_exists(movieName)) {
                 movie = movie_load(movieName);
@@ -3670,7 +3670,7 @@ void front_load_levels(Front_MenuSet* menuSet)
                                                   // STRING: LEGORR 0x004a2544
                                                   "Menu",
                                                   // STRING: LEGORR 0x004a254c
-                                                  "Save_Game", NULL)),
+                                                  "Save_Game", (const char*)NULL)),
                 i + 1);
         mission_replace_char(buffer, '_', ' ');
         front_save_get_save_summary(saveData, buffer);
@@ -3706,42 +3706,42 @@ void front_load_menu_text_window(struct BlockRec* config, const char* blockPath,
     float area[4] = { 0 };
 
     // STRING: LEGORR 0x004a25c0
-    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, blockPath, "Load", NULL));
+    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, blockPath, "Load", (const char*)NULL));
     if (str != NULL) {
         strcpy(menuWnd->loadText, front_util_replace_text_spaces(str));
     }
     // STRING: LEGORR 0x004a25b8
-    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, blockPath, "Save", NULL));
+    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, blockPath, "Save", (const char*)NULL));
     if (str != NULL) {
         strcpy(menuWnd->saveText, front_util_replace_text_spaces(str));
     }
     // STRING: LEGORR 0x004a25b0
-    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, blockPath, "Slot", NULL));
+    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, blockPath, "Slot", (const char*)NULL));
     if (str != NULL) {
         strcpy(menuWnd->slotText, front_util_replace_text_spaces(str));
     }
     // STRING: LEGORR 0x004a25a8
-    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, blockPath, "SaveSel", NULL));
+    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, blockPath, "SaveSel", (const char*)NULL));
     if (str != NULL) {
         strcpy(menuWnd->saveSelText, front_util_replace_text_spaces(str));
     }
     // STRING: LEGORR 0x004a25a0
-    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, blockPath, "LoadSel", NULL));
+    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, blockPath, "LoadSel", (const char*)NULL));
     if (str != NULL) {
         strcpy(menuWnd->loadSelText, front_util_replace_text_spaces(str));
     }
     // STRING: LEGORR 0x004a2598
-    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, blockPath, "Level", NULL));
+    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, blockPath, "Level", (const char*)NULL));
     if (str != NULL) {
         strcpy(menuWnd->levelText, front_util_replace_text_spaces(str));
     }
     // STRING: LEGORR 0x004a258c
-    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, blockPath, "Tutorial", NULL));
+    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, blockPath, "Tutorial", (const char*)NULL));
     if (str != NULL) {
         strcpy(menuWnd->tutorialText, front_util_replace_text_spaces(str));
     }
     // STRING: LEGORR 0x004a2584
-    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, blockPath, "Window", NULL));
+    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, blockPath, "Window", (const char*)NULL));
     if (str != NULL && sound_variant_split(str, stringParts, "|") == 4) {
         menuWnd->window[0] = area[0] = (float)atoi(stringParts[0]);
         menuWnd->window[1] = area[1] = (float)atoi(stringParts[1]);
@@ -3750,7 +3750,7 @@ void front_load_menu_text_window(struct BlockRec* config, const char* blockPath,
         menuWnd->textWindow = text_buffer_create(s_lego_text_window_font, area, 0x200);
     }
     // STRING: LEGORR 0x004a257c
-    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, blockPath, "Panel", NULL));
+    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, blockPath, "Panel", (const char*)NULL));
     if (str != NULL && sound_variant_split(str, stringParts, "|") == 5 && stringParts[0] != NULL) {
         menuWnd->panelImage = (struct Image*)image_load_bmp_scaled(stringParts[0], 0, 0);
         if (menuWnd->panelImage != NULL) {
@@ -3805,7 +3805,7 @@ void front_load_menus(struct BlockRec* config)
 
     str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, "Menu",
                                                                                               // STRING: LEGORR 0x004a26d0
-                                                                                              "MenuWipe", NULL));
+                                                                                              "MenuWipe", (const char*)NULL));
     if (str != NULL) {
         if (strnicmp(str, "Null", 4) != 0) {
             frontGlobs_rockWipeAnim = container_load(NULL, str, "LWS", 1);
@@ -3814,7 +3814,7 @@ void front_load_menus(struct BlockRec* config)
     } else {
         str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, "Menu",
                                                                                                   // STRING: LEGORR 0x004a26c4
-                                                                                                  "!MenuWipe", NULL));
+                                                                                                  "!MenuWipe", (const char*)NULL));
         if (str != NULL) {
             if (!(s_engine_feature_word & 0x400000) && strnicmp(str, "Null", 4) != 0) {
                 frontGlobs_rockWipeAnim = container_load(NULL, str, "LWS", 1);
@@ -3830,39 +3830,39 @@ void front_load_menus(struct BlockRec* config)
     memset(frontGlobs_saveLevelWnd, 0, sizeof(Front_LevelTextWindow));
     front_load_menu_text_window(config, s_menuLevelText, frontGlobs_saveLevelWnd);
 
-    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, "Menu", "Save_Game", NULL));
+    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, "Menu", "Save_Game", (const char*)NULL));
     if (str != NULL) {
         strcpy(frontGlobs_langSaveGame, front_util_replace_text_spaces(str));
         free(str);
     }
     str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, "Menu",
                                                                                               // STRING: LEGORR 0x004a26b8
-                                                                                              "Load_Game", NULL));
+                                                                                              "Load_Game", (const char*)NULL));
     if (str != NULL) {
         strcpy(frontGlobs_saveSlotFormat, front_util_replace_text_spaces(str));
         free(str);
     }
-    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, s_menuOverwrite, "Title", NULL));
+    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, s_menuOverwrite, "Title", (const char*)NULL));
     if (str != NULL) {
         strcpy(frontGlobs_overwriteTitle, front_util_replace_text_spaces(str));
         free(str);
     }
     str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, s_menuOverwrite,
                                                                                                          // STRING: LEGORR 0x004a26b0
-                                                                                                         "Text", NULL));
+                                                                                                         "Text", (const char*)NULL));
     if (str != NULL) {
         strcpy(frontGlobs_overwriteText, front_util_replace_text_spaces(str));
         free(str);
     }
     str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, s_menuOverwrite,
                                                                                                          // STRING: LEGORR 0x004a26ac
-                                                                                                         "Ok", NULL));
+                                                                                                         "Ok", (const char*)NULL));
     if (str != NULL) {
         strcpy(frontGlobs_overwriteOK, front_util_replace_text_spaces(str));
     }
     str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, s_menuOverwrite,
                                                                                                          // STRING: LEGORR 0x004a26a4
-                                                                                                         "Cancel", NULL));
+                                                                                                         "Cancel", (const char*)NULL));
     if (str != NULL) {
         strcpy(frontGlobs_overwriteCancel, front_util_replace_text_spaces(str));
     }
@@ -3871,11 +3871,11 @@ void front_load_menus(struct BlockRec* config)
     frontGlobs_versionString = block_get_str_copy(legoGlobs_config,
                                                   string_path_join(s_engine_config_root, "Main",
                                                                                                  // STRING: LEGORR 0x004a269c
-                                                                                                 "Version", NULL));
+                                                                                                 "Version", (const char*)NULL));
     frontGlobs_defaultLevelBMPS = block_get_str_copy(legoGlobs_config,
         string_path_join(s_engine_config_root, "Menu",
                                                        // STRING: LEGORR 0x004a2688
-                                                       "DefaultLevelBMPS", NULL));
+                                                       "DefaultLevelBMPS", (const char*)NULL));
 
     frontGlobs_rockWipeLight = ddiscene_light_create(legoGlobs_rootCont, 3, FRONT_FLOAT_ARG(0.8f),
                                                      FRONT_FLOAT_ARG(0.8f), FRONT_FLOAT_ARG(0.8f));
@@ -3933,8 +3933,8 @@ void front_load_menus(struct BlockRec* config)
     frontGlobs_maxLevelScreens = atoi(
         block_get_strptr(config, string_path_join(s_engine_config_root, "Menu",
                                                                                 // STRING: LEGORR 0x004a2624
-                                                                                "MaxLevelScreens", NULL))
-            ? block_get_strptr(config, string_path_join(s_engine_config_root, "Menu", "MaxLevelScreens", NULL))
+                                                                                "MaxLevelScreens", (const char*)NULL))
+            ? block_get_strptr(config, string_path_join(s_engine_config_root, "Menu", "MaxLevelScreens", (const char*)NULL))
             : "");
     if (frontGlobs_maxLevelScreens == 0) {
         frontGlobs_maxLevelScreens = 1;
@@ -3946,8 +3946,8 @@ void front_load_menus(struct BlockRec* config)
                                                   // STRING: LEGORR 0x004a260c
                                                   "SaveImage",
                                                   // STRING: LEGORR 0x004a2618
-                                                  "BigWidth", NULL))
-            ? block_get_strptr(config, string_path_join(s_engine_config_root, "Menu", "SaveImage", "BigWidth", NULL))
+                                                  "BigWidth", (const char*)NULL))
+            ? block_get_strptr(config, string_path_join(s_engine_config_root, "Menu", "SaveImage", "BigWidth", (const char*)NULL))
             : "");
     if (frontGlobs_saveImageBigWidth == 0) {
         frontGlobs_saveImageBigWidth = 80;
@@ -3955,8 +3955,8 @@ void front_load_menus(struct BlockRec* config)
     frontGlobs_saveImageBigHeight = atoi(
         block_get_strptr(config, string_path_join(s_engine_config_root, "Menu", "SaveImage",
                                                                                              // STRING: LEGORR 0x004a2600
-                                                                                             "BigHeight", NULL))
-            ? block_get_strptr(config, string_path_join(s_engine_config_root, "Menu", "SaveImage", "BigHeight", NULL))
+                                                                                             "BigHeight", (const char*)NULL))
+            ? block_get_strptr(config, string_path_join(s_engine_config_root, "Menu", "SaveImage", "BigHeight", (const char*)NULL))
             : "");
     if (frontGlobs_saveImageBigHeight == 0) {
         frontGlobs_saveImageBigHeight = 60;
@@ -4099,7 +4099,7 @@ int front_is_front_end_enabled(void)
 {
     if (block_get_bool_path(legoGlobs_config, string_path_join(s_engine_config_root, "Main",
                                                                                              // STRING: LEGORR 0x004a26dc
-                                                                                             "FrontEnd", NULL)) == 1 &&
+                                                                                             "FrontEnd", (const char*)NULL)) == 1 &&
         FRONT_PROGRAMMER_LEVEL < 3) {
         return 1;
     }
@@ -4267,7 +4267,7 @@ Front_LevelLink* front_level_set_load_level_links(Front_LevelSet* levelSet, cons
                     linksString = block_get_str_copy(legoGlobs_config,
                                                      string_path_join(s_engine_config_root, levelName,
                                                                       // STRING: LEGORR 0x004a26e8
-                                                                      "LevelLinks", NULL));
+                                                                      "LevelLinks", (const char*)NULL));
                     link->setIndex = index;
                     i = 0;
                     if (linksString != NULL) {
@@ -4457,7 +4457,7 @@ void front_callback_select_mission_item(float elapsed, int selectIndex)
         snprintf(buffer, sizeof(buffer), " %s (%i)",
                 block_get_strptr(legoGlobs_config, string_path_join(s_engine_config_root, "Menu",
                                                                                                   // STRING: LEGORR 0x004a2718
-                                                                                                  "Level_Completed", NULL)),
+                                                                                                  "Level_Completed", (const char*)NULL)),
                 front_save_get_level_score(link->setIndex, saveData));
         mission_replace_char(buffer, '_', ' ');
     } else {
@@ -4465,7 +4465,7 @@ void front_callback_select_mission_item(float elapsed, int selectIndex)
         snprintf(buffer, sizeof(buffer), " %s",
                 block_get_strptr(legoGlobs_config, string_path_join(s_engine_config_root, "Menu",
                                                                                                   // STRING: LEGORR 0x004a26f8
-                                                                                                  "Level_Incomplete", NULL)));
+                                                                                                  "Level_Incomplete", (const char*)NULL)));
         mission_replace_char(buffer, '_', ' ');
     }
 
@@ -4530,17 +4530,17 @@ int front_level_link_callback_load_menu_item(Front_LevelLink* link, void* data)
 
     levelName = ((Front_LevelMenuBuild*)data)->levelSet->idNames[link->setIndex];
     // STRING: LEGORR 0x004a2758
-    x = FRONT_CONFIG_INT(string_path_join(s_engine_config_root, levelName, "FrontEndX", NULL));
+    x = FRONT_CONFIG_INT(string_path_join(s_engine_config_root, levelName, "FrontEndX", (const char*)NULL));
     // STRING: LEGORR 0x004a274c
-    y = FRONT_CONFIG_INT(string_path_join(s_engine_config_root, levelName, "FrontEndY", NULL));
+    y = FRONT_CONFIG_INT(string_path_join(s_engine_config_root, levelName, "FrontEndY", (const char*)NULL));
     frontEndOpen = block_get_bool_path(legoGlobs_config,
                                        // STRING: LEGORR 0x004a273c
-                                       string_path_join(s_engine_config_root, levelName, "FrontEndOpen", NULL));
+                                       string_path_join(s_engine_config_root, levelName, "FrontEndOpen", (const char*)NULL));
     if (frontEndOpen == 2) {
         frontEndOpen = 0;
     }
     // STRING: LEGORR 0x004a2734
-    menuBMP = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, levelName, "MenuBMP", NULL));
+    menuBMP = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, levelName, "MenuBMP", (const char*)NULL));
     if (menuBMP != NULL) {
         front_menu_item_add_select_item(((Front_LevelMenuBuild*)data)->select, menuBMP, 0, NULL, x, y, frontEndOpen);
         free(menuBMP);

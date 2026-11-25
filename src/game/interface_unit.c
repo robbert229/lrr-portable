@@ -443,7 +443,7 @@ void interface_load_object_items(BlockFile* config, const char* gameName)
 
     for (i = 0; i < LEGO_VEHICLE_TYPE_COUNT; i++) {
         // STRING: LEGORR 0x004a34d8
-        str = block_get_strptr(config, string_path_join(gameName, "InterfaceBuildImages", LEGO_VEHICLE_NAME(i), NULL));
+        str = block_get_strptr(config, string_path_join(gameName, "InterfaceBuildImages", LEGO_VEHICLE_NAME(i), (const char*)NULL));
         if (str != NULL) {
             sound_variant_split((char*)str, argv, ":");
             interfaceGlobs.vehicleItemIcons[i] =
@@ -470,7 +470,7 @@ void interface_load_object_items(BlockFile* config, const char* gameName)
         (Image**)malloc(sizeof(Image*) * LEGO_BUILDING_TYPE_COUNT);
 
     for (i = 0; i < LEGO_BUILDING_TYPE_COUNT; i++) {
-        str = block_get_strptr(config, string_path_join(gameName, "InterfaceBuildImages", LEGO_BUILDING_NAME(i), NULL));
+        str = block_get_strptr(config, string_path_join(gameName, "InterfaceBuildImages", LEGO_BUILDING_NAME(i), (const char*)NULL));
         if (str != NULL) {
             sound_variant_split((char*)str, argv, ":");
             interfaceGlobs.buildingItemIcons[i] =
@@ -503,7 +503,7 @@ void interface_load_menu_items(BlockFile* config, const char* gameName)
     int useName;
 
     // STRING: LEGORR 0x004a34f0
-    for (item = block_subgroup(config, string_path_join(gameName, "InterfaceImages", NULL));
+    for (item = block_subgroup(config, string_path_join(gameName, "InterfaceImages", (const char*)NULL));
          item != NULL; item = block_next_equal_key(item)) {
         if (interface_get_menu_item_type(item->key, &type)) {
             useName = 0;
@@ -555,7 +555,7 @@ void interface_load_item_panels(BlockFile* config, const char* gameName)
     for (i = 0; i < INTERFACE_SURROUND_COUNT; i++) {
         itoa(i + 1, num, 10);
         // STRING: LEGORR 0x004a3500
-        str = block_get_strptr(config, string_path_join(gameName, "InterfaceSurroundImages", num, NULL));
+        str = block_get_strptr(config, string_path_join(gameName, "InterfaceSurroundImages", num, (const char*)NULL));
         if (str != NULL) {
             sound_variant_split((char*)str, argv, ":");
             if (stricmp(argv[0], "NULL")) {
@@ -595,7 +595,7 @@ void interface_load_back_button(BlockFile* config, const char* gameName)
     char* argv[20];
 
     // STRING: LEGORR 0x004a3518
-    str = block_get_strptr(config, string_path_join(gameName, "InterfaceBackButton", NULL));
+    str = block_get_strptr(config, string_path_join(gameName, "InterfaceBackButton", (const char*)NULL));
     if (str != NULL) {
         sound_variant_split((char*)str, argv, ":");
         interfaceGlobs.backButtonWidth = atoi(argv[0]);

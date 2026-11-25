@@ -120,7 +120,7 @@ void dependencies_initialise(BlockRec* config, const char* gameName)
     unsigned int i;
 
     // STRING: LEGORR 0x004a1d98
-    for (arrayItem = block_subgroup(config, string_path_join(gameName, "Dependencies", 0));
+    for (arrayItem = block_subgroup(config, string_path_join(gameName, "Dependencies", (const char*)NULL));
          arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
         numParts = sound_variant_split(arrayItem->key, stringParts, ":");
         if (lego_entity_type_pair_lookup(stringParts[1], &objType, &objID, NULL)) {
