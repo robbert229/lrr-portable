@@ -530,3 +530,7 @@ foreach(scenario IN ITEMS repair-eat follow-clear drill)
   lrr_unit_test_variant(object_command_${scenario} OF object_command_states
     ARGS ${scenario} LABELS aitask legoobject level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
 endforeach()
+
+# Actual initializer on an ephemeral abstract grid with generic input fixtures.
+lrr_unit_test_variant(synthetic_initializer_smoke OF positive_startup
+  ARGS initializer LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy" "SDL_AUDIO_DRIVER=dummy")

@@ -1106,3 +1106,22 @@ The before/after denominator is from the same instrumented build,
 which includes the second compilation of `main.c`. The complete
 197-case suite had 185 passing, 12 optional renderer skips and
 zero failures.
+
+#### Real initializer smoke test
+
+`synthetic_initializer_smoke` exercises the actual `lego_game_config_init`
+entry point rather than the partial-boot helper. It combines the existing
+abstract grids with the primitive catalog and generates uniform grayscale
+placeholder inputs only for the resource slots necessary to initialize.
+The fixture is temporary; it is not a data pack or a reproduction of
+shipped artwork, sounds, models or levels. The frontend and intro media
+are disabled through configuration so this test exercises direct level
+startup rather than menu interaction.
+
+The test checks that complete initialization installs GridA and the
+configured catalog, counts the two expected resource objects, advances
+three ticks, follows the real level transition to GridB, verifies the new
+grid and its independent accounting and object count, advances another
+tick, and calls the real engine shutdown before releasing DirectDraw.
+This verifies the success path previously missing from the startup
+probes. It is not a complete frontend boot or memory-leak accounting test.
