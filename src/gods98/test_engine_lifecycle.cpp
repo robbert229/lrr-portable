@@ -8,8 +8,12 @@
 
 #include "platform/native/test_fixture.h"
 #include <miniwin/windows.h>
+#include <miniwin/miniwinpresentation.h>
 #include "gods98/config.h"
+#include "gods98/container_link_names.h"
+#include "gods98/container_unit.h"
 #include "gods98/directdraw.h"
+#include "gods98/init.h"
 #include "gods98/input_globs.h"
 #include "gods98/main_globs.h"
 #include "platform/native/config.h"
@@ -41,6 +45,50 @@ unsigned registrations, inits, shutdowns;
 SDL_WindowID windowId;
 BlockFile* applicationConfig;
 bool returned;
+Container* sceneRoot;
+Container* sceneMesh;
+Container* sceneLight;
+
+bool config_variant()
+{
+    return scenario == "fit-config" || scenario == "debug-config" ||
+           scenario == "resource-reject";
+}
+
+void release_scene()
+{
+    if (sceneLight) Container_Remove(sceneLight);
+    if (sceneMesh) Container_Remove(sceneMesh);
+    if (sceneRoot) Container_Shutdown();
+    sceneLight = sceneMesh = sceneRoot = nullptr;
+}
+
+bool setup_scene()
+{
+    sceneRoot = Container_Initialise("Fixture");
+    if (!CHECK(sceneRoot != nullptr, "create generic scene root")) return false;
+    Container_SetSharedTextureDirectory("unused");
+    sceneMesh = Container_MakeMesh2(sceneRoot, 1);
+    sceneLight = Container_MakeLight(sceneRoot, static_cast<unsigned long>(D3DRMLIGHT_SPOT),
+                                     0.25f, 0.5f, 0.75f);
+    if (!CHECK(sceneMesh && sceneLight, "create empty mesh and light")) return false;
+    CHECK_EQ(Container_GetParent(sceneMesh), sceneRoot);
+    CHECK_EQ(Container_GetParent(sceneLight), sceneRoot);
+    CHECK_EQ(Container_Frame_GetOwner(Container_GetMasterFrame(sceneMesh)), sceneMesh);
+    CHECK(Container_Light_SetSpotPenumbra(sceneLight, 0.5f), "set generic light penumbra");
+    CHECK(Container_Light_SetSpotUmbra(sceneLight, 0.25f), "set generic light umbra");
+    CHECK(Container_Light_SetSpotRange(sceneLight, 25.0f), "set generic light range");
+    Container* missing = Container_Load(sceneRoot, "absent", "ACT", 0);
+    CHECK_EQ(missing, nullptr);
+    CHECK_EQ(Container_Load(sceneRoot, "empty", "ACT", 0), nullptr);
+    CHECK_EQ(Container_Load(sceneRoot, "absent", "ANIM", 0), nullptr);
+    CHECK_EQ(Container_Load(sceneRoot, "absent", "MESH", 0), nullptr);
+    CHECK_EQ(Container_Load(sceneRoot, "absent", "unknown", 0), nullptr);
+    // Missing optional resources must not invalidate the existing scene.
+    CHECK_EQ(Container_GetParent(sceneMesh), sceneRoot);
+    const bool required = block_get_bool_path(applicationConfig, "Fixture::RequireResource") == 1;
+    return (!required || missing != nullptr) && lrr_test_failures() == 0;
+}
 
 void exit_guard()
 {
@@ -61,13 +109,13 @@ void push_window_event(Uint32 type)
     CHECK(SDL_PushEvent(&event), "queue synthetic window event");
 }
 
-void push_mouse_event(Uint32 type)
+void push_mouse_event(Uint32 type, Uint8 button = SDL_BUTTON_MIDDLE)
 {
     SDL_Event event = {};
     event.type = type;
     event.button.windowID = windowId;
-    event.button.button = SDL_BUTTON_MIDDLE;
-    CHECK(SDL_PushEvent(&event), "queue synthetic middle button");
+    event.button.button = button;
+    CHECK(SDL_PushEvent(&event), "queue synthetic mouse button");
 }
 
 int init_callback()
@@ -77,8 +125,8 @@ int init_callback()
     CHECK(times.empty(), "initialise before the first tick");
     CHECK(s_main_device != nullptr, "real retained-mode device set up");
     CHECK(s_main_im_device != nullptr, "real immediate-mode device set up");
-    CHECK_EQ(directDrawGlobs.width, 640u);
-    CHECK_EQ(directDrawGlobs.height, 480u);
+    CHECK_EQ(directDrawGlobs.width, scenario == "debug-config" ? 800u : 640u);
+    CHECK_EQ(directDrawGlobs.height, scenario == "debug-config" ? 600u : 480u);
     CHECK(block_text_token_pool_resident_peek() != 0, "configuration pool is live");
     CHECK(windowId != 0, "real miniwin window");
     // Check the filter in the actual selected display mode, independently
@@ -94,6 +142,30 @@ int init_callback()
     applicationConfig = block_open("application.cfg");
     if (!CHECK(applicationConfig != nullptr, "read isolated application record")) return 0;
     CHECK_STREQ(block_get_strptr(applicationConfig, "Fixture::Value"), "Example");
+    if (config_variant()) {
+        CHECK_EQ(initGlobs.validModeCount, scenario == "debug-config" ? 3u : 1u);
+        CHECK(initGlobs.selMode != nullptr, "selected display mode");
+        if (initGlobs.selMode) CHECK_EQ(initGlobs.selMode->width, directDrawGlobs.width);
+        CHECK(initGlobs.selDevice != nullptr, "selected renderer");
+        if (initGlobs.selDevice) CHECK_STREQ(initGlobs.selDevice->desc, LRR_DEVICE_SOFTWARE);
+        const bool fit = scenario == "fit-config";
+        CHECK_EQ(Miniwin_GetRenderResolution(), fit ? MiniwinRenderResolution::Window :
+                                                    MiniwinRenderResolution::Virtual);
+        int w = 0, h = 0;
+        CHECK(SDL_GetWindowSize(SDL_GetWindowFromID(windowId), &w, &h), "query host window");
+        CHECK_EQ(w, fit ? 713 : scenario == "debug-config" ? 800 : 640);
+        CHECK_EQ(h, fit ? 521 : scenario == "debug-config" ? 600 : 480);
+        CHECK_EQ(block_get_bool_path(applicationConfig, "Fixture::Enabled"), fit ? 1 : 0);
+        CHECK_EQ(block_get_bool_path(applicationConfig, "Fixture::Optional"), 2);
+        const bool ready = setup_scene();
+        CHECK_EQ(ready, scenario != "resource-reject");
+        if (!ready) {
+            release_scene();
+            block_close(applicationConfig);
+            applicationConfig = nullptr;
+            return 0;
+        }
+    }
     if (scenario == "reject") {
         block_close(applicationConfig);
         applicationConfig = nullptr;
@@ -109,6 +181,10 @@ void shutdown_callback()
     CHECK_EQ(inits, 1u);
     CHECK(block_text_token_pool_resident_peek() != 0, "callback shuts down before engine config pool");
     CHECK(SDL_GetWindowFromID(windowId) != nullptr, "callback shuts down before window destruction");
+    if (config_variant()) {
+        CHECK(sceneRoot && sceneMesh && sceneLight, "scene still owned by application");
+        release_scene();
+    }
     if (CHECK(applicationConfig != nullptr, "application still owns its configuration"))
         block_close(applicationConfig);
     applicationConfig = nullptr;
@@ -123,7 +199,30 @@ int tick_callback(float elapsed)
     CHECK(applicationConfig != nullptr, "application initialized");
     CHECK(!(s_engine_feature_word & updated), "per-frame renderer update flag cleared");
 
-    if (scenario == "fixed") {
+    if (config_variant()) {
+        CHECK_EQ(Container_GetParent(sceneMesh), sceneRoot);
+        const bool dual = scenario == "debug-config";
+        switch (tick) {
+        case 1:
+            push_mouse_event(SDL_EVENT_MOUSE_BUTTON_DOWN, SDL_BUTTON_LEFT);
+            break;
+        case 2:
+            CHECK_EQ(g_renderer_word_c, 1);
+            CHECK_EQ(s_window_mouse_word_40, dual ? 0 : 1);
+            push_mouse_event(SDL_EVENT_MOUSE_BUTTON_UP, SDL_BUTTON_LEFT);
+            push_mouse_event(SDL_EVENT_MOUSE_BUTTON_DOWN, SDL_BUTTON_RIGHT);
+            break;
+        case 3:
+            CHECK_EQ(g_renderer_word_c, dual ? 0 : 1);
+            CHECK_EQ(s_window_mouse_word_40, 1);
+            push_mouse_event(SDL_EVENT_MOUSE_BUTTON_UP, SDL_BUTTON_RIGHT);
+            break;
+        case 4:
+            CHECK_EQ(g_renderer_word_c, 0);
+            CHECK_EQ(s_window_mouse_word_40, 0);
+            return 0;
+        }
+    } else if (scenario == "fixed") {
         switch (tick) {
         case 1:
             // Update only once even if an application requests it twice.
@@ -221,7 +320,8 @@ int main(int argc, char** argv)
 {
     scenario = argc == 2 ? argv[1] : "fixed";
     if (!CHECK(scenario == "fixed" || scenario == "realtime" || scenario == "events" ||
-               scenario == "fullscreen" || scenario == "reject" || scenario == "no-loop" || scenario == "no-state",
+               scenario == "fullscreen" || scenario == "reject" || scenario == "no-loop" || scenario == "no-state" ||
+               config_variant(),
                "known scenario")) return lrr_test_result();
     const std::string dir = "engine_lifecycle_" + scenario;
     if (!CHECK(fixture_enter(dir.c_str()) && fixture_mkdir("Data"), "isolated scratch directory"))
@@ -230,14 +330,23 @@ int main(int argc, char** argv)
     const std::string prefs = root + "/prefs";
     {
         std::ofstream config("Data/application.cfg");
-        config << "Fixture { Value Example }\n";
+        config << "Fixture { Value Example Enabled " << (scenario == "fit-config" ? "TRUE" : "FALSE")
+               << " RequireResource " << (scenario == "resource-reject" ? "TRUE" : "FALSE") << " }\n";
         config.close();
         if (!CHECK(config.good(), "write generic application config")) return lrr_test_result();
+        if (config_variant()) {
+            if (!CHECK(fixture_mkdir("Data/empty"), "create isolated resource directory")) return lrr_test_result();
+            std::ofstream empty("Data/empty/empty.ae");
+            empty << "Fixture { Value Example }\n";
+            empty.close();
+            if (!CHECK(empty.good(), "write config without optional activity group")) return lrr_test_result();
+        }
         std::ofstream ini("fixture.ini");
         ini << "[legorr]\nFull Screen = " << (scenario == "fullscreen" ? "true" : "false")
-            << "\nHorizontal Resolution = 640\nVertical Resolution = 480\n"
+            << "\nHorizontal Resolution = " << (scenario == "debug-config" ? 800 : config_variant() ? 713 : 640)
+            << "\nVertical Resolution = " << (scenario == "debug-config" ? 600 : config_variant() ? 521 : 480) << "\n"
             << "3D Device = " << LRR_DEVICE_SOFTWARE << "\n"
-            << "[tweaks]\ndisplay = original\nfps_overlay = "
+            << "[tweaks]\ndisplay = " << (scenario == "fit-config" ? "fit" : "original") << "\nfps_overlay = "
             << (scenario == "realtime" ? "true" : "false") << "\n";
         ini.close();
         if (!CHECK(ini.good(), "write host preferences")) return lrr_test_result();
@@ -249,11 +358,14 @@ int main(int argc, char** argv)
     seam_command_line = commandLine;
     char fixedArgs[] = "-nosound -window -fpslock 50";
     char realArgs[] = "-nosound -window";
+    char debugArgs[] = "-nosound -window -debug -dualmouse -fpslock 50";
     std::atexit(exit_guard);
-    CHECK_EQ(WinMain(nullptr, nullptr, scenario == "realtime" ? realArgs : fixedArgs, SW_SHOWNORMAL), 0);
+    CHECK_EQ(WinMain(nullptr, nullptr, scenario == "realtime" ? realArgs :
+                         scenario == "debug-config" ? debugArgs : fixedArgs, SW_SHOWNORMAL), 0);
     CHECK_EQ(registrations, 1u);
     CHECK_EQ(inits, scenario == "no-state" ? 0u : 1u);
-    CHECK_EQ(shutdowns, (scenario == "reject" || scenario == "no-state") ? 0u : 1u);
+    CHECK_EQ(shutdowns, (scenario == "reject" || scenario == "no-state" || scenario == "resource-reject") ? 0u : 1u);
+    CHECK(sceneRoot == nullptr && sceneMesh == nullptr && sceneLight == nullptr, "no application scene owners");
     CHECK(applicationConfig == nullptr, "application owns no config after exit");
     CHECK_EQ(block_text_token_pool_resident_peek(), 0);
     CHECK_EQ(block_text_token_pool_head_peek(), nullptr);
@@ -263,7 +375,7 @@ int main(int argc, char** argv)
     if (scenario == "no-state") {
         CHECK_EQ(mainGlobs.stateSet, 0);
         CHECK(times.empty(), "unregistered application never ticks");
-    } else if (scenario == "reject") {
+    } else if (scenario == "reject" || scenario == "resource-reject") {
         CHECK(times.empty(), "rejected init never ticks");
         for (const void* callback : mainGlobs.currState) CHECK(callback == nullptr, "callback cleared");
     } else if (scenario == "no-loop") {
