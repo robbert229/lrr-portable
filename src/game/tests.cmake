@@ -401,3 +401,9 @@ lrr_unit_test(construction_progress SOURCES ${GAME_DIR}/test_construction_progre
     entity_indexed_record_word_at_b4_get stats_table_word_at_b8 legoobject_query_center_mask02
     aitask_bobbin_clear_delay aitask_cmd_create_task aitask_cmd_cancel_by_coords
   LABELS construction)
+
+# Vehicle unload terrain changes and a crystal-carrying monster's damage/removal.
+lrr_unit_test(vehicle_creature_progress SOURCES ${GAME_DIR}/test_vehicle_creature_progress.cpp
+  WRAP scene_object_resource_get ddiscene_object_position_get entity_capability_flags_get
+    entity_state_flags_get flagged_object_timer_registry_insert
+  LABELS vehicle_model legoobject)

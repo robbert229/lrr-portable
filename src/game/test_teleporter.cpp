@@ -6,7 +6,7 @@
 #include "game/teleporter.h"
 #include "test/lrr_test.h"
 
-static Lego_Object objects[2];
+static Lego_Object objects[3];
 
 extern "C" int __wrap_legoobject_run_through_lists_skip_upgrade_parts(
     int (*callback)(Lego_Object*, void*), void* data)
@@ -27,9 +27,9 @@ extern "C" int __wrap_camera_get_topdown_world_pos(void*, void*, float out[3])
     return 1;
 }
 
-extern "C" void __wrap_legoobject_transform_position_get(Lego_Object*, float* x, float* y)
+extern "C" void __wrap_legoobject_transform_position_get(Lego_Object* object, float* x, float* y)
 {
-    *x = 5.0f;
+    *x = object == &objects[2] ? 8.0f : 5.0f;
     *y = 7.0f;
 }
 
@@ -44,13 +44,16 @@ int main(void)
     raider.type = 2;
     vehicle.type = 1;
     raider.health = vehicle.health = 100.0f;
+    Lego_Object& farther = objects[2];
+    farther.type = 2;
+    farther.health = 100.0f;
     teleporterGlobs.ringSpeed = 2.0f;
     teleporter_start(TELEPORT_SERVICE_MINIFIGURE, TELEPORT_MODE_SERVICE, TELEPORT_FLAG_RING);
     Teleporter_Service* ring = teleporterGlobs.serviceList;
     if (!CHECK(ring != nullptr, "a ring service was allocated")) return lrr_test_result();
     CHECK_EQ(raider.teleporterService, ring);
     CHECK_EQ(raider.teleporterMode, static_cast<unsigned int>(TELEPORT_MODE_SERVICE));
-    CHECK_EQ(ring->teleportingCount, 1u);
+    CHECK_EQ(ring->teleportingCount, 2u);
     CHECK_EQ(vehicle.teleporterMode, 0u);
     CHECK_EQ(teleporter_service_all(TELEPORT_SERVICE_MINIFIGURE), 0);
     CHECK_EQ(teleporter_service_all(TELEPORT_SERVICE_VEHICLE), 1);
@@ -64,6 +67,12 @@ int main(void)
     CHECK_EQ(raider.teleporterMode, static_cast<unsigned int>(TELEPORT_MODE_DONE));
     CHECK_EQ(raider.teleporterService, nullptr);
     CHECK_EQ(raider.teleporterFlags, 0u);
+    CHECK_EQ(ring->teleportingCount, 1u);
+    CHECK_EQ(teleporterGlobs.teleportingCount, 1u);
+    CHECK_EQ(farther.health, 100.0f);
+    teleporter_update(1.0f);
+    CHECK_EQ(farther.health, -1.0f);
+    CHECK_EQ(farther.teleporterService, nullptr);
     CHECK_EQ(ring->teleportingCount, 0u);
     CHECK_EQ(teleporterGlobs.teleportingCount, 0u);
 
