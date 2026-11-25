@@ -4270,8 +4270,12 @@ void legoobject_simulation_queue_flush(Lego_Object* obj)
             }
         } else {
             if (target->numCarriedObjects == target->carryNullFrames) {
-                for (j = i; j < obj->numCarriedObjects; j++)
+                for (j = i; j < obj->numCarriedObjects; j++) {
                     obj->carriedObjects[j - i] = obj->carriedObjects[j];
+                    obj->carriedObjects[j - i]->carryingIndex = j - i;
+                }
+                for (j = obj->numCarriedObjects - i; j < obj->numCarriedObjects; j++)
+                    obj->carriedObjects[j] = NULL;
                 obj->numCarriedObjects -= i;
                 return;
             }
