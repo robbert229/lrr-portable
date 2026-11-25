@@ -8,6 +8,7 @@
 #include "game/panel_unit.h"
 #include "game/priorities.h"
 #include "game/lego_unit.h"
+#include "game/objective_unit.h"
 #include "test/lrr_test.h"
 #include "test/synthetic_initializer_fixture.h"
 #include "game/lego_globs.h"
@@ -129,7 +130,8 @@ int main()
 {
     if (!synthetic_fixture::initialise_full_game("priority_registry", "PriorityRegistry"))
         return lrr_test_result();
-    config();
+    objective_stop_showing_objective();
+    if (CHECK(lego_engine_tick(1), "initial rendered frame")) config();
     lego_engine_shutdown();
     CHECK_EQ(legoGlobs.currLevel, nullptr);
     directdraw_shutdown();
