@@ -13,7 +13,10 @@ A key is one row of the settings table, `kTable` in
 `src/platform/native/config.cpp`, with its `LRR_Setting` and a typed getter
 in `config.h` for the unit to read. The row gives the key's default, which
 the new `LegoRR.ini` is written with, and its kind, which sets the
-spellings it accepts. A test sets the key with `LRR_SetSetting`.
+spellings it accepts. A test sets the key with `LRR_SetSetting`. To show
+the key in RecompLauncher, add a setting to `packaging/recomplauncher.json`;
+`tools/tests/test_packaging.py` checks its keys, values and defaults against
+the table.
 
 Older ones carry a `PORT-ONLY:` comment instead.
 
