@@ -7003,7 +7003,7 @@ int legoobject_step_movement_vector_resolve(Lego_Object* obj, int nextBlock, int
 // FUNCTION: LEGORR 0x00444fb0
 void legoobject_turn_to_vector_activity_issue(Lego_Object* obj, float* dir)
 {
-    LegoObjJ_Vector3F v;
+    LegoObjJ_Vector3F v, facing;
     float angle;
     int activity;
 
@@ -7011,9 +7011,18 @@ void legoobject_turn_to_vector_activity_issue(Lego_Object* obj, float* dir)
         v.x = dir[0];
         v.y = dir[1];
         v.z = 0.0f;
-        legoobject_o_vector3_normalise((LegoObjJ_Vector3F*)obj->faceDirection);
-        legoobject_o_vector2_normalise((Point2F*)&v);
-        angle = (float)acos(legoobject_o_vector3_dot((LegoObjJ_Vector3F*)obj->faceDirection, &v));
+        /* Keep the vectors in their declared type. In particular, aliasing
+         * the three-component v through Point2F makes its cross product
+         * depend on the optimizer, even for ordinary cardinal directions. */
+        facing.x = obj->faceDirection[0];
+        facing.y = obj->faceDirection[1];
+        facing.z = obj->faceDirection[2];
+        legoobject_o_vector3_normalise(&facing);
+        obj->faceDirection[0] = facing.x;
+        obj->faceDirection[1] = facing.y;
+        obj->faceDirection[2] = facing.z;
+        legoobject_o_vector3_normalise(&v);
+        angle = (float)acos(legoobject_o_vector3_dot(&facing, &v));
         legoobject_action_sequence_reset(obj, 0);
         if (angle > 2.3561945f) {
             obj->faceDirection[0] = -obj->faceDirection[0];
@@ -7021,8 +7030,16 @@ void legoobject_turn_to_vector_activity_issue(Lego_Object* obj, float* dir)
             obj->flags1 |= 0x80;
             activity = 10;
         } else if (angle > 0.7853982f) {
-            legoobject_o_vector3_cross(&v, &v, (LegoObjJ_Vector3F*)obj->faceDirection);
-            d3drm_vector_rotate(obj->faceDirection, obj->faceDirection, &v.x, -1.5707964f);
+            float axis[3];
+            /* Reset may reverse the old facing, so reread it after reset. */
+            facing.x = obj->faceDirection[0];
+            facing.y = obj->faceDirection[1];
+            facing.z = obj->faceDirection[2];
+            legoobject_o_vector3_cross(&v, &v, &facing);
+            axis[0] = v.x;
+            axis[1] = v.y;
+            axis[2] = v.z;
+            d3drm_vector_rotate(obj->faceDirection, obj->faceDirection, axis, -1.5707964f);
             if (v.z < legoobject_zero) activity = 9;
             else activity = 10;
         } else {
