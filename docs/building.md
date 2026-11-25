@@ -485,6 +485,14 @@ miniwin (miniwin_dx6), on synthetic data only. Passing tests establishes the
 behavior covered by those tests; gameplay comparison against the original is
 a separate check.
 
+Each CTest test (including each variant of a shared executable) runs in
+its own `build/test-fixtures/<test-name>/` directory, or the corresponding
+directory under a custom build tree. Generated fixtures and scratch files
+stay there, not in the source tree. For a test that needs static checked-in
+synthetic data, keep it under `src/test/fixtures/`; do not commit generated
+fixture directories. Run file-writing tests with CTest, or from their
+build-tree working directory when invoking the executable directly.
+
 The miniwin rendering tests (`miniwin_immediate`, `_viewports`,
 `_textures`, `_lights` and `_fog`) draw with the software renderer. Their
 `_sdlgpu` twins run the same checks on the SDL GPU backend, and

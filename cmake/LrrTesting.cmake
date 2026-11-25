@@ -14,7 +14,8 @@
 #     [SKIP_RETURN_CODE <code>])
 #
 # It builds <name>_test from SOURCES and adds the ctest test <name>, which
-# runs it with ARGS. src/test is on the include path, for lrr_test.h.
+# runs it with ARGS in its own test-fixtures/<name> directory under the
+# build tree. src/test is on the include path, for lrr_test.h.
 #
 # WRAP needs GNU ld's --wrap, which neither Apple's linker nor the Windows
 # linkers have. Where the toolchain cannot wrap (not GCC or Clang, Apple, or
@@ -92,9 +93,12 @@ function(lrr_unit_test_variant name)
   _lrr_test_properties(${name})
 endfunction()
 
-# The LABELS, ENVIRONMENT and SKIP_RETURN_CODE of the caller's arg_ variables
-# on the test <name>.
+# The working directory, LABELS, ENVIRONMENT and SKIP_RETURN_CODE of the
+# caller's arg_ variables on the test <name>.
 macro(_lrr_test_properties name)
+  file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/test-fixtures/${name}")
+  set_tests_properties(${name} PROPERTIES
+    WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/test-fixtures/${name}")
   if(arg_LABELS)
     set_tests_properties(${name} PROPERTIES LABELS "${arg_LABELS}")
   endif()
