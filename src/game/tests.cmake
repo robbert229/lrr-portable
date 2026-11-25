@@ -369,3 +369,12 @@ lrr_unit_test(synthetic_lifecycle SOURCES ${GAME_DIR}/test_synthetic_lifecycle.c
   LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
 lrr_unit_test_variant(synthetic_missing_config OF synthetic_lifecycle
   ARGS missing-config LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Real setup and cleanup of individual subsystems in independent processes.
+lrr_unit_test(synthetic_startup_shutdown SOURCES ${GAME_DIR}/test_synthetic_startup_shutdown.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  ARGS reward LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+foreach(scenario IN ITEMS reward-missing-image interface scene)
+  lrr_unit_test_variant(synthetic_startup_${scenario} OF synthetic_startup_shutdown
+    ARGS ${scenario} LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+endforeach()
