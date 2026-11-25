@@ -43,11 +43,14 @@ Thank you, isledecomp. If you enjoy this project, go play
 
 ## Is it playable?
 
-**Not quite yet, but it's getting close.** Every part of the game has been
-rebuilt, and you can start missions, dig, build and explore. The port is
-still young, though, and **crashes are common**: you may not get to the end of
-a mission yet. Bugs are being fixed quickly, and the aim is a fully playable
-game by the end of November 2026.
+**Yes, on Windows, macOS and Linux.** Every part of the game has been
+rebuilt, and you can play it through on all three: the missions, digging,
+building, the Chief's briefings, the rewards screens, and saving and
+loading.
+
+The Android and Nintendo 3DS builds are early test builds. They start and
+run the game, but their controls are still basic and they haven't been
+played through yet.
 
 If you try it and something breaks, please
 [open an issue](https://github.com/robbert229/lrr-portable/issues) and say
