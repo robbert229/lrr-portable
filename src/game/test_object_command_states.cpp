@@ -29,6 +29,8 @@
 extern "C" {
 void legoobject_activity_grant(Lego_Object*, int);
 int terrain_cell_speed_class_current(const int*);
+int legoobject_pair_scalar_fields_set(Lego_Object*, float*, float);
+void legoobject_heading_step_move(Lego_Object*, float);
 }
 
 namespace {
@@ -376,12 +378,74 @@ void Drill()
     CHECK_EQ(Pending(8, nullptr), nullptr);
     CHECK_EQ(wall.flags1 & 0x8000000u, 0u);
 }
+void TurningAndSlide()
+{
+    auto* figure = Figure(2, 3);
+    if (!figure) return;
+    ClearJobs();
+    constexpr unsigned Turning = 4, HalfTurn = 0x80, Sliding = 0x4000;
+    float x, y;
+    terrain_map_block_to_world(Level()->map, 2, 3, &x, &y);
+    legoobject_world_position_set(figure, x, y, 0, 1);
+    CHECK_NEAR(figure->faceDirection[0], 0.0f, 1e-4);
+    CHECK_NEAR(figure->faceDirection[1], 1.0f, 1e-4);
+
+    float north[] = {0, 1};
+    legoobject_turn_to_vector_activity_issue(figure, north);
+    CHECK_EQ(figure->flags1 & Turning, 0u);
+    float east[] = {1, 0};
+    legoobject_turn_to_vector_activity_issue(figure, east);
+    CHECK_EQ(figure->flags1 & Turning, Turning);
+    CHECK_EQ(figure->flags1 & HalfTurn, 0u);
+    CHECK_NEAR(figure->faceDirection[0], 1.0f, 1e-4);
+    CHECK_NEAR(figure->faceDirection[1], 0.0f, 1e-4);
+    for (unsigned i = 0; i < 40 && (figure->flags1 & Turning); ++i) Tick(figure);
+    CHECK_EQ(figure->flags1 & Turning, 0u);
+    CheckCell(figure, 2, 3);
+
+    float west[] = {-1, 0};
+    legoobject_turn_to_vector_activity_issue(figure, west);
+    CHECK_EQ(figure->flags1 & (Turning | HalfTurn), Turning | HalfTurn);
+    CHECK_NEAR(figure->faceDirection[0], -1.0f, 1e-4);
+    for (unsigned i = 0; i < 80 && (figure->flags1 & Turning); ++i) Tick(figure);
+    CHECK_EQ(figure->flags1 & (Turning | HalfTurn), 0u);
+    CheckCell(figure, 2, 3);
+    legoobject_turn_to_vector_activity_issue(figure, north);
+    CHECK_EQ(figure->flags1 & Turning, Turning);
+    CHECK_NEAR(figure->faceDirection[0], 0.0f, 1e-4);
+    CHECK_NEAR(figure->faceDirection[1], 1.0f, 1e-4);
+    for (unsigned i = 0; i < 40 && (figure->flags1 & Turning); ++i) Tick(figure);
+    CHECK_EQ(figure->flags1 & Turning, 0u);
+
+    // The existing finite displacement takes a clear step on the current
+    // cell and reports remaining distance. Reinitialise on the cell
+    // centre before trying a direction across the abstract wall.
+    legoobject_world_position_set(figure, x, y, 0, 1);
+    float move[] = {-5, 0};
+    CHECK_EQ(legoobject_pair_scalar_fields_set(figure, move, 15), 1);
+    CHECK_EQ(figure->flags2 & Sliding, Sliding);
+    legoobject_heading_step_move(figure, 1);
+    float actualX, actualY;
+    legoobject_transform_position_get(figure, &actualX, &actualY);
+    CHECK_NEAR(actualX, x - 5, 1e-4);
+    CHECK_NEAR(actualY, y, 1e-4);
+    CHECK_NEAR(figure->field_3bc, 10.0f, 1e-4);
+    legoobject_world_position_set(figure, x, y, 0, 1);
+    float blocked[] = {Level()->blockSize, 0};
+    CHECK_EQ(legoobject_pair_scalar_fields_set(figure, blocked, Level()->blockSize), 1);
+    legoobject_heading_step_move(figure, 1);
+    CHECK_EQ(figure->flags2 & Sliding, 0u);
+    legoobject_transform_position_get(figure, &actualX, &actualY);
+    CHECK_NEAR(actualX, x, 1e-4);
+    CHECK_NEAR(actualY, y, 1e-4);
+    CheckCell(figure, 2, 3);
+}
 } // namespace
 
 int main(int argc, char** argv)
 {
     const std::string scenario = argc == 2 ? argv[1] : "training";
-    if (!CHECK(scenario == "training" || scenario == "repair-eat" || scenario == "follow-clear" || scenario == "drill", "known scenario"))
+    if (!CHECK(scenario == "training" || scenario == "repair-eat" || scenario == "follow-clear" || scenario == "drill" || scenario == "turn-slide", "known scenario"))
         return lrr_test_result();
     const std::string directory = "object_command_states_" + scenario;
     if (!CHECK(make_fixture(directory.c_str()), "generate fixture") ||
@@ -391,6 +455,7 @@ int main(int argc, char** argv)
     if (scenario == "training") Training();
     else if (scenario == "repair-eat") RepairAndEat();
     else if (scenario == "follow-clear") FollowAndClear();
-    else Drill();
+    else if (scenario == "drill") Drill();
+    else TurningAndSlide();
     return lrr_test_result("object_command_states");
 }
