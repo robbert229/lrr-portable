@@ -24,6 +24,47 @@ def cmake_variable(name):
     return match.group(1)
 
 
+def config_table():
+    """The game's settings, by RecompLauncher's key (section/key, the key
+    in lowercase, as iniparser writes it): the rows of kTable in
+    src/platform/native/config.cpp, each its kind, its default as the file
+    holds it, and a choice's names."""
+    native = ROOT / "src/platform/native"
+    header = (native / "config.h").read_text()
+    source = (native / "config.cpp").read_text()
+    defines = dict(re.findall(r'#define (LRR_CONFIG_\w+) "([^"]*)"', header))
+    enums = {name: int(value) for name, value in re.findall(r"\b(LRR_\w+) = (\d+),", header)}
+    names = {
+        name: re.findall(r'"([^"]*)"', values)
+        for name, values in re.findall(r"constexpr const char\* (k\w+Names)\[\] = \{([^}]*)\};", source)
+    }
+    body = re.search(r"constexpr Row kTable\[\] = \{(.*?)\n\};", source, re.S).group(1)
+    table = {}
+    for kind, args in re.findall(r"\b(Switch|Choice|Number|Text|Directory)\(LRR_SETTING_\w+, ([^)]*)\)", body):
+        key, *rest = [arg.strip() for arg in args.split(",")]
+        key = defines[key] if key in defines else key.strip('"')
+        section, name = key.split(":", 1)
+        row = {"kind": kind, "names": None}
+        if kind == "Switch":
+            row["default"] = rest[0]
+        elif kind == "Choice":
+            row["names"] = names[rest[0]]
+            row["default"] = row["names"][enums[rest[1]]]
+        elif kind == "Number":
+            row["default"] = rest[0]
+        else:
+            # A directory's NULL default is the save directory, which a
+            # launcher leaves to the game.
+            row["default"] = rest[0].strip('"') if rest[0].startswith('"') else None
+        table[section + "/" + name.lower()] = row
+    return table
+
+
+# The spellings a launcher writes for a switch: the canonical words the
+# game reads (config.h, LRR_Setting), not iniparser's first-letter fallback.
+SWITCH_WORDS = {"true", "on", "yes", "1", "false", "off", "no", "0", "original"}
+
+
 def configure(text):
     """Substitutes the @VAR@ placeholders the way configure_file does."""
     values = {
@@ -100,7 +141,7 @@ class RecompLauncherTests(unittest.TestCase):
 
     def setUp(self):
         self.manifest = json.loads((PACKAGING / "recomplauncher.json").read_text())
-        self.config_h = (ROOT / "src/platform/native/config.h").read_text()
+        self.table = config_table()
 
     def test_names_this_repository(self):
         url = cmake_variable("LRR_APP_URL")
@@ -124,21 +165,47 @@ class RecompLauncherTests(unittest.TestCase):
         for program in self.manifest["start"]["program"]:
             self.assertRegex(program, r"^(LegoRR\.exe|LegoRR\.app|bin/LegoRR|[\w.-]+\.AppImage)$")
 
-    def test_settings_write_keys_the_game_reads(self):
-        keys = {
-            section + "/" + key.lower()
-            for section, key in re.findall(r'#define LRR_CONFIG_\w+ "(\w+):([^"]+)"', self.config_h)
-        }
-        written = set()
+    def test_reads_the_settings_table(self):
+        # One row per LRR_Setting, so a row the parser misses fails here.
+        header = (ROOT / "src/platform/native/config.h").read_text()
+        enum = re.search(r"enum LRR_Setting \{(.*?)\};", header, re.S).group(1)
+        count = len(re.findall(r"^\s+LRR_SETTING_\w+,", enum, re.M))
+        self.assertEqual(len(self.table), count)
+        self.assertEqual(self.table["tweaks/training save"]["default"], "prompt")
+        self.assertEqual(self.table["legorr/3d device"]["default"], "")
+        self.assertEqual(self.table["cheats/unlimited_oxygen"], {"kind": "Switch", "names": None, "default": "false"})
+
+    def written(self):
+        """Each (key, value) the manifest writes, and where."""
         for setting in self.manifest["settings"]:
             self.assertEqual(setting.get("in", "main"), "main")
             for choice in setting["choices"]:
-                written.update(choice["set"])
-            written.update(setting["defaults"])
-        written.update(self.manifest["config"][0]["new"])
+                for key, value in choice["set"].items():
+                    yield setting["id"], key, value
+            for key, value in setting["defaults"].items():
+                yield setting["id"] + " defaults", key, value
+        for key, value in self.manifest["config"][0]["new"].items():
+            yield "new", key, value
+
+    def test_settings_write_keys_and_values_the_game_reads(self):
+        written = list(self.written())
         self.assertTrue(written)
-        for key in written:
-            self.assertIn(key, keys)
+        for where, key, value in written:
+            self.assertIn(key, self.table, where)
+            row = self.table[key]
+            if row["kind"] == "Switch":
+                self.assertIn(value.lower(), SWITCH_WORDS, f"{where}: {key}")
+            elif row["kind"] == "Choice":
+                self.assertIn(value.lower(), row["names"], f"{where}: {key}")
+            elif row["kind"] == "Number":
+                self.assertRegex(value, r"^-?\d+$", f"{where}: {key}")
+
+    def test_defaults_are_the_games(self):
+        # What the launcher shows for a missing key, and writes to a new
+        # file, is what the game reads for it.
+        for where, key, value in self.written():
+            if where == "new" or where.endswith(" defaults"):
+                self.assertEqual(value, self.table[key]["default"], f"{where}: {key}")
 
     def test_every_choice_of_a_setting_sets_the_same_keys(self):
         for setting in self.manifest["settings"]:
