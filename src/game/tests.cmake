@@ -623,3 +623,9 @@ lrr_unit_test(deferred_object_records SOURCES ${GAME_DIR}/test_deferred_object_r
   ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
   ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
   LABELS legoobject level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Generated asymmetric footprint admission, preview and actual zone commit.
+lrr_unit_test(placement_preview SOURCES ${GAME_DIR}/test_placement_preview.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS construction selectplace level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
