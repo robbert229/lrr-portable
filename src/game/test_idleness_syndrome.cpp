@@ -11,7 +11,7 @@
  * The test links with --wrap for the calls AITask.c makes into the units
  * that hold the map, the objects and the messages: units stand at fixed
  * cells, a route exists unless the unit is marked unreachable, and the
- * messages are recorded. */
+ * messages are recorded. The setting is set in-process (LRR_SetSetting). */
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -19,11 +19,10 @@
 #include "game/aitask_globs.h"
 #include "game/aitask_record.h"
 #include "game/legoobject_record.h"
+#include "platform/native/config.h"
 #include "test/lrr_test.h"
 
 namespace {
-
-bool s_fix = false;
 
 struct Unit {
     Lego_Object obj;
@@ -57,11 +56,6 @@ int s_map; // The map handle AITask.c passes back to the Map3D.c stubs.
 } // namespace
 
 extern "C" {
-
-bool __wrap__Z26LRR_GetFixIdlenessSyndromev(void)
-{
-    return s_fix;
-}
 
 void* __wrap_level_current_terrain_get(void)
 {
@@ -172,6 +166,12 @@ AITask ClearJob(int x, int y)
     return task;
 }
 
+/* tweaks:fix_idleness_syndrome, as LegoRR.ini would set it. */
+void SetFix(bool fix)
+{
+    LRR_SetSetting(LRR_SETTING_FIX_IDLENESS_SYNDROME, fix ? "true" : "false");
+}
+
 void Reset()
 {
     for (Unit& unit : s_units) unit = Unit{};
@@ -197,7 +197,7 @@ void SetCandidates(std::initializer_list<Unit*> units)
 void JobWithUnitOnItsWay(bool fix)
 {
     Reset();
-    s_fix = fix;
+    SetFix(fix);
     Unit& walker = s_units[0];
     Unit& idle = s_units[1];
     idle.cellX = 3;
@@ -234,7 +234,7 @@ void JobWithUnitOnItsWay(bool fix)
 void UnreachableUnitFirst(bool fix)
 {
     Reset();
-    s_fix = fix;
+    SetFix(fix);
     Unit& trapped = s_units[0];
     Unit& idle = s_units[1];
     trapped.cellX = 9;
@@ -265,7 +265,7 @@ void UnreachableUnitFirst(bool fix)
 void NoUnitCanReach(bool fix)
 {
     Reset();
-    s_fix = fix;
+    SetFix(fix);
     Unit& trapped = s_units[0];
     trapped.cellX = 9;
     trapped.cellY = 9;
@@ -286,7 +286,7 @@ void NoUnitCanReach(bool fix)
 void IdleUnitOnItsWay(bool fix)
 {
     Reset();
-    s_fix = fix;
+    SetFix(fix);
     Unit& walker = s_units[0];
     walker.cellX = 5;
     walker.cellY = 5;

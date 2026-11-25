@@ -18,9 +18,10 @@
  *
  * A launcher (RecompLauncher, a script, a Steam shortcut) can pass two more
  * options, which do not reach WinMain either: --game <folder> reads the game
- * data (the WADs and Data) from that folder in place of legorr:diskpath, and
- * --data <folder> keeps everything the port writes in that one folder
- * (config.h, LRR_SetLaunchOptions). Without them nothing changes.
+ * data (the WADs and Data) from that folder in place of legorr:diskpath, for
+ * the run only (config.h, LRR_SetSetting), and --data <folder> keeps
+ * everything the port writes in that one folder (config.h, LRR_LoadConfig).
+ * Without them nothing changes.
  *
  * --version prints the port's version (lrr_version.h, written by
  * tools/version.cmake; docs/releasing.md) and exits; every run also logs it
@@ -139,10 +140,13 @@ int main(int argc, char** argv)
         return 1;
     }
     SDL_Log("lrr-portable %s", LRR_VERSION);
-    LRR_SetLaunchOptions(gamePath, dataPath);
-    if (!LRR_LoadConfig(iniPath)) {
+    if (!LRR_LoadConfig(iniPath, dataPath)) {
         SDL_Quit();
         return 1;
+    }
+    if (gamePath != NULL && gamePath[0] != '\0') {
+        SDL_Log("Game folder \"%s\" (--game)", gamePath);
+        LRR_SetSetting(LRR_SETTING_DISKPATH, gamePath);
     }
 #ifdef __3DS__
     /* Sleep, the HOME menu and exit reach the game as its application
