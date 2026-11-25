@@ -11,9 +11,14 @@
 #include "gods98/lws.h"
 #include "gods98/files.h"
 #include "gods98/font_api.h"
+#include "gods98/images_link_names.h"
+#include "gods98/images_unit.h"
+#include "gods98/directdraw.h"
 #include "game/animation_object_record.h"
 #include "game/building_model_record.h"
 #include "game/lego_unit.h"
+#include "game/lego_level_record.h"
+#include "game/legoobject_unit.h"
 #include "game/loader.h"
 #include "game/upgrade_record.h"
 #include "game/vehicle_model_record.h"
@@ -24,21 +29,22 @@
 using namespace synthetic_fixture;
 
 extern "C" int lego_render_quality_config_apply(void);
+extern "C" int lego_keep_running(void);
 
-static bool prepare_catalog()
+static bool prepare_catalog(const char* root = "Fixture")
 {
     // An activity with one moving null; the only mesh is the existing triangle.
     return fixture_mkdir("Data/Primitive") &&
            write_null_scene("Data/Primitive/motion.lws") &&
            write_triangle("Data/Primitive/triangle.lwo") &&
            write_text("Data/Primitive/Primitive.ae",
-               "Fixture { Activities { Activity_Stand Motion } "
+               (std::string(root) + " { Activities { Activity_Stand Motion } "
                "Motion { FILE motion LWSFILE TRUE LOOPING TRUE } "
                "CameraNullName Anchor CameraNullFrames 2 CameraFlipDir TRUE "
                "CarryNullName Anchor CarryNullFrames 1 ToolNullName Anchor ToolNullFrames 1 "
                "WheelMesh triangle WheelNullName Anchor WheelRadius 2.5 "
                "PivotMaxZ 0.75 PivotMinZ -0.5 Shape 1,0:0,2 "
-               "PowerLevelScene motion Upgrades { Level0001 { Part Anchor,1 } } }");
+               "PowerLevelScene motion Upgrades { Level0001 { Part Anchor,1 } } }").c_str());
 }
 
 static constexpr char CATALOG[] =
@@ -128,12 +134,11 @@ static void check_missing()
     block_close(static_cast<BlockRec*>(legoGlobs.config));
 }
 
-static void check_misc_resources()
+// Reuse the same primitive or null scene for all slots of a given format.
+// The test inputs do not represent the named objects or their appearance.
+static std::string misc_resource_block()
 {
-    if (!CHECK(prepare_catalog(), "generate generic resource files")) return;
-    // Each slot refers to the same geometry or null scene according to its
-    // file format. There are no representations of the named game objects.
-    std::string config = "Fixture { MiscObjects { ";
+    std::string config = " MiscObjects { ";
     for (const char* key : {"Boulder", "Crystal", "Ore", "ProcessedOre", "ElectricFence", "LazerHit"})
         config += std::string(key) + " Primitive\\triangle ";
     for (const char* key : {"BoulderExplodeIce", "BoulderExplode", "SmashPath", "Explosion",
@@ -142,7 +147,14 @@ static void check_misc_resources()
         config += std::string(key) + " Primitive\\motion ";
     for (const char* key : {"Dynamite", "OohScary", "Barrier", "SpiderWeb", "IceCube"})
         config += std::string(key) + " Primitive ";
-    config += "} }";
+    config += "} ";
+    return config;
+}
+
+static void check_misc_resources()
+{
+    if (!CHECK(prepare_catalog(), "generate generic resource files")) return;
+    const std::string config = "Fixture {" + misc_resource_block() + "}";
     if (!set_config(config.c_str())) return;
     lego_misc_object_resources_load(static_cast<BlockRec*>(legoGlobs.config));
     for (void* record : {legoGlobs.contBoulder, legoGlobs.contCrystal, legoGlobs.contOresTable,
@@ -202,9 +214,92 @@ static void check_config_and_loader()
     CHECK_STREQ(result.c_str(), "Setup=12\n");
 }
 
+// This fixture is ephemeral and deliberately uses the same single geometric
+// primitive and grayscale images for each required input slot. It does not
+// represent or substitute for any shipped game asset or level.
+static bool check_initializer()
+{
+    if (!CHECK(make_transition_fixture("startup_initializer_fixture"), "generate abstract grid fixture") ||
+        !CHECK(prepare_catalog("Lego"), "generate primitive model fixture")) return false;
+    for (const char* dir : {"Data/Interface", "Data/Interface/Fonts", "Data/Interface/MessagePanel",
+                            "Data/Interface/MessageTabs", "Data/Interface/InfoPanel", "Data/Interface/Buttons"}) {
+        if (!CHECK(fixture_mkdir(dir), "create scratch image directory")) return false;
+    }
+    for (const char* name : {"FONT5_HI.bmp", "font5_HI.bmp", "ToolTipFont.bmp", "DeskTopFont.bmp",
+                             "MBriefFONT.bmp", "MBriefFONT2.bmp", "RSFont.bmp"}) {
+        const std::string path = std::string("Data/Interface/Fonts/") + name;
+        if (!CHECK(write_bmp(path.c_str(), 80, 190), "generate grayscale font input")) return false;
+    }
+    for (const char* path : {"Data/Interface/MessagePanel/MsgPanel.bmp",
+                             "Data/Interface/MessageTabs/infoOverFlow.bmp",
+                             "Data/Interface/InfoPanel/scrollInfo.bmp",
+                             "Data/Interface/Buttons/scrollInfoSld.bmp"}) {
+        if (!CHECK(write_bmp(path, 16, 16), "generate solid test image")) return false;
+    }
+    std::ifstream input("Data/transition.cfg");
+    if (!CHECK(input.good(), "open generated configuration")) return false;
+    std::string config(std::istreambuf_iterator<char>{input}, {});
+    input.close();
+    const auto mainPos = config.find("Main {");
+    if (!CHECK(mainPos != std::string::npos, "fixture has Main section")) return false;
+    config.insert(mainPos + 6, "\n FrontEnd FALSE DontPlayAvis TRUE startlevel GridA NoSound TRUE "
+        "LoadScreen L\\load.bmp ShutdownScreen L\\load.bmp ProgressBar L\\load.bmp ProgressWindow R:0,0,16,4\n");
+    std::string catalog = CATALOG;
+    config.insert(config.rfind('}'), catalog.substr(catalog.find('{') + 1, catalog.rfind('}') - catalog.find('{') - 1));
+    std::string resources = misc_resource_block() + "\n Buttons640x480 { ";
+    for (const char* key : {"Toggle", "TaggedObjectView", "ZoomIn", "ZoomOut"})
+        resources += std::string("Panel_Radar PanelButton_Radar_") + key + ",L\\panel.bmp,NULL,NULL,1,2,8,9,Unknown ";
+    for (const char* key : {"Options", "Priorities", "CallToArms"})
+        resources += std::string("Panel_TopPanel PanelButton_TopPanel_") + key + ",L\\panel.bmp,NULL,NULL,1,2,8,9,Unknown ";
+    resources += "}\n";
+    config.insert(config.rfind('}'), resources);
+    if (!CHECK(write_text("Data/Lego.cfg", config.c_str()), "write original fixture configuration") ||
+        !initialise_headless("SyntheticInitializer")) return false;
+    block_text_token_pool_init();
+    Image_Initialise();
+    lego_game_config_callback_registry_init("Lego");
+    if (!CHECK(lego_game_config_init(), "real initializer accepts synthetic inputs")) return false;
+    auto* grid = legoGlobs.currLevel;
+    if (!CHECK(grid != nullptr, "generated grid is installed")) return false;
+    CHECK_STREQ(grid->name, "GridA");
+    CHECK_EQ(grid->width, W);
+    CHECK_EQ(grid->height, H);
+    CHECK_EQ(grid->blockSize, 40.0f);
+    CHECK_EQ(legoGlobs.gameSpeed, 1.0f);
+    CHECK_EQ(s_catalog_counts[0], 2u);
+    for (unsigned i = 1; i < 5; ++i) CHECK_EQ(s_catalog_counts[i], 1u);
+    unsigned counts[2] = {};
+    legoobject_run_through_lists([](Lego_Object* object, void* data) {
+        auto* counts = static_cast<unsigned*>(data);
+        if (object->type == 6) ++counts[0];
+        if (object->type == 7) ++counts[1];
+        return 0;
+    }, counts, 0);
+    CHECK_EQ(counts[0], 1u);
+    CHECK_EQ(counts[1], 1u);
+    for (unsigned i = 0; i < 3; ++i) CHECK(lego_engine_tick(1.0f), "one engine tick");
+    CHECK_EQ(legoGlobs.currLevel, grid);
+    if (CHECK(lego_keep_running(), "real transition to the second generated grid") &&
+        CHECK(legoGlobs.currLevel != nullptr, "second grid installed")) {
+        CHECK_STREQ(legoGlobs.currLevel->name, "GridB");
+        CHECK_EQ(legoGlobs.currLevel->width, TransitionW);
+        CHECK_EQ(legoGlobs.currLevel->height, TransitionH);
+        CHECK_EQ(legoGlobs.currLevel->ore, 0);
+        CHECK_EQ(legoGlobs.currLevel->crystals, 0);
+        CHECK_EQ(legoGlobs.recordObjectCount, 1u);
+        CHECK(lego_engine_tick(1.0f), "second grid ticks");
+    }
+    lego_engine_shutdown();
+    CHECK(legoGlobs.currLevel == nullptr, "shutdown unloads grid");
+    // WinMain releases the DirectDraw device after the game shutdown.
+    directdraw_shutdown();
+    return true;
+}
+
 int main(int argc, char** argv)
 {
     const std::string scenario = argc == 2 ? argv[1] : "catalog";
+    if (scenario == "initializer") { check_initializer(); return lrr_test_result(); }
     if (!CHECK(scenario == "catalog" || scenario == "missing" || scenario == "misc" ||
                scenario == "setup", "known scenario")) return lrr_test_result();
     const std::string directory = "startup_positive_" + scenario;
