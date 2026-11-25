@@ -6,11 +6,15 @@
 // - screen rectangles as the framebuffer's;
 // - depth tests reversed to match;
 // - texture stage 0 as PICA texture combiners, colour keys as an alpha test;
-// - fog as a table indexed by depth.
+// - fog as a table indexed by depth;
+// - the read-back framebuffer turned upright, for any pixel size.
 #include "citro3dimmediate.h"
 
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
+
+#include <vector>
 
 static int failures;
 
@@ -202,6 +206,56 @@ static void test_fog()
     CHECK(Near(data[255], 1.0f - data[127]));
 }
 
+// Download turns the sideways framebuffer upright into a surface of the
+// game's format, which is RGB565 on a 3DS: 2 bytes a pixel, not the 4 of a
+// Uint32 copy, which wrote twice the surface and corrupted the heap. A guard
+// after the destination catches a write past it.
+static void test_rotate_framebuffer()
+{
+    const int widths[] = {5, 4};
+    for (int bpp = 1; bpp <= 4; ++bpp) {
+        const int width = widths[bpp & 1];
+        const int height = 3;
+        // Each source pixel names its (x, y) in its first bytes.
+        const int srcPitch = width * bpp + 3;
+        const int dstPitch = height * bpp + 2;
+        std::vector<unsigned char> src((size_t) srcPitch * height, 0xEE);
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                for (int b = 0; b < bpp; ++b) {
+                    src[(size_t) y * srcPitch + (size_t) x * bpp + b] = (unsigned char) (16 * (y + 1) + x + 4 * b);
+                }
+            }
+        }
+        const size_t dstSize = (size_t) dstPitch * width;
+        std::vector<unsigned char> dst(dstSize + 16, 0x55);
+        RotateFramebuffer(src.data(), srcPitch, width, height, dst.data(), dstPitch, bpp);
+
+        // (x, y) goes to (y, width - 1 - x).
+        bool right = true;
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                const unsigned char* out = &dst[(size_t) (width - 1 - x) * dstPitch + (size_t) y * bpp];
+                for (int b = 0; b < bpp; ++b) {
+                    right = right && out[b] == (unsigned char) (16 * (y + 1) + x + 4 * b);
+                }
+            }
+        }
+        CHECK(right);
+        // The pitch's padding and the guard past the surface are untouched.
+        bool untouched = true;
+        for (int row = 0; row < width; ++row) {
+            for (int i = height * bpp; i < dstPitch; ++i) {
+                untouched = untouched && dst[(size_t) row * dstPitch + i] == 0x55;
+            }
+        }
+        for (size_t i = dstSize; i < dst.size(); ++i) {
+            untouched = untouched && dst[i] == 0x55;
+        }
+        CHECK(untouched);
+    }
+}
+
 int main()
 {
     test_clip();
@@ -209,6 +263,7 @@ int main()
     test_depth_func();
     test_combiners();
     test_fog();
+    test_rotate_framebuffer();
     if (failures) {
         fprintf(stderr, "%d check(s) failed\n", failures);
         return 1;
