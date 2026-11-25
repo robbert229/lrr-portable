@@ -103,6 +103,10 @@ lrr_unit_test(camera_control SOURCES ${GAME_DIR}/test_camera_control.cpp LABELS 
 # Live object work eligibility and capacity of the teleport request queue.
 lrr_unit_test(legoobject_unit SOURCES ${GAME_DIR}/test_legoobject_unit.cpp LABELS legoobject_unit)
 
+# The [cheats] keys at their units' sites, set in-process (LRR_SetSetting):
+# Lego.c's air supply and LegoObject.c's oxygen check for a new raider.
+lrr_unit_test(cheats SOURCES ${GAME_DIR}/test_cheats.cpp LABELS cheats)
+
 # Spotlight dimmer transitions and movement limits relative to the light.
 lrr_unit_test(lighteffects SOURCES ${GAME_DIR}/test_lighteffects.cpp
   WRAP render_object_set_packed_rgba_from_float_channels ddiscene_object_position_get ddiscene_object_position_set
@@ -151,10 +155,10 @@ lrr_unit_test(flock_position SOURCES ${GAME_DIR}/test_flock_position.cpp
 # a job with a unit on its way keeps no idle unit from the next job, a
 # unit that cannot reach a job does not pause it for the others, and an
 # idle unit is no job's unit on its way. The unit's calls to the map,
-# object, message and config units reach the test's __wrap_ stubs.
+# object and message units reach the test's __wrap_ stubs; the setting
+# is set with LRR_SetSetting.
 lrr_unit_test(idleness_syndrome SOURCES ${GAME_DIR}/test_idleness_syndrome.cpp
   WRAP
-    _Z26LRR_GetFixIdlenessSyndromev
     level_current_terrain_get
     selection_contains_entity_active_target
     lego_entity_matches_current_selection_or_owner
@@ -660,3 +664,9 @@ lrr_unit_test(neutral_grid_render SOURCES ${GAME_DIR}/test_neutral_grid_render.c
   ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
   ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
   LABELS radarmap level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Real config-driven task priority ordering, hit-state, and reset.
+lrr_unit_test(priority_registry SOURCES ${GAME_DIR}/test_priority_registry.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS aitask level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")

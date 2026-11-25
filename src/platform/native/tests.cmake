@@ -29,10 +29,23 @@ lrr_unit_test(fps_counter
     ${PLATFORM_DIR}/native/fps_counter.cpp
   INCLUDES ${SRC_ROOT} ${SRC_ROOT}/test
   LABELS config)
+# The settings, set in-process: no file, so on every host.
+lrr_unit_test(config_settings SOURCES ${PLATFORM_DIR}/native/test_config_settings.cpp
+  LABELS config)
 # The 3D device Init.c chooses, from synthetic device lists with each
 # platform's default device.
 lrr_unit_test(device_choice SOURCES ${PLATFORM_DIR}/native/test_device_choice.cpp
   LABELS config)
+# The input latch and the touch gestures (issue #986), driven with
+# synthetic events: plain C++, no SDL calls (SDL3 only for its headers).
+lrr_unit_test(touch_input
+  SOURCES
+    ${PLATFORM_DIR}/native/test_touch_input.cpp
+    ${PLATFORM_DIR}/native/input_latch.cpp
+    ${PLATFORM_DIR}/native/touch_gestures.cpp
+  LINK SDL3::SDL3
+  INCLUDES ${SRC_ROOT}
+  LABELS input)
 
 # The DirectX 6 interface versions the units use, declared in miniwin
 # (ADR 0007, decision 3): reachable, and failing rather than crashing

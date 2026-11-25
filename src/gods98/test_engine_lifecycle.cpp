@@ -352,8 +352,8 @@ int main(int argc, char** argv)
         if (!CHECK(ini.good(), "write host preferences")) return lrr_test_result();
     }
     if (!CHECK(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS), SDL_GetError())) return lrr_test_result();
-    LRR_SetLaunchOptions(root.c_str(), prefs.c_str());
-    if (!CHECK(LRR_LoadConfig("fixture.ini"), "load isolated host preferences")) return lrr_test_result();
+    if (!CHECK(LRR_LoadConfig("fixture.ini", prefs.c_str()), "load isolated host preferences")) return lrr_test_result();
+    LRR_SetSetting(LRR_SETTING_DISKPATH, root.c_str()); /* as entry.cpp applies --game */
     char commandLine[] = "\"C:\\Scratch\\EngineHostTest.exe\"";
     seam_command_line = commandLine;
     char fixedArgs[] = "-nosound -window -fpslock 50";

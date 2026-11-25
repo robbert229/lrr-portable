@@ -28,134 +28,258 @@
 
 #include <cerrno>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <string>
 
 namespace {
 
-constexpr LRR_DisplayConfig kDefaultDisplay = {false, 640, 480, ""};
+/* How a setting's value is read and written (config.h, LRR_Setting). */
+enum class Kind {
+    Switch,    /* false or true, written "false" or "true" */
+    Choice,    /* one of its names, the original's first */
+    Number,    /* an int */
+    Text,      /* a string */
+    Directory, /* a string, applied to the file layer */
+};
 
-LRR_DisplayConfig g_display = kDefaultDisplay;
+/* One key of the file. */
+struct Row {
+    LRR_Setting setting;        /* its position in the table */
+    const char* key;            /* iniparser's "section:key" */
+    Kind kind;
+    int number;                 /* a switch's, choice's or number's default */
+    const char* text;           /* a text's or directory's default; NULL is
+                                 * the save directory */
+    const char* const* names;   /* a choice's names, NULL-terminated */
+    void (*apply)(const char*); /* where a directory is applied */
+};
 
-/* LRR_SetLaunchOptions: --game and --data, "" when not given. */
-std::string g_launchGame;
-std::string g_launchData;
-
-constexpr LRR_TrainingSave kDefaultTrainingSave = LRR_TRAINING_SAVE_PROMPT;
-
-LRR_TrainingSave g_trainingSave = kDefaultTrainingSave;
-
-const char* TrainingSaveName(LRR_TrainingSave value)
+constexpr Row Switch(LRR_Setting setting, const char* key, bool value)
 {
-    return value == LRR_TRAINING_SAVE_OFF ? "off" : "prompt";
+    return {setting, key, Kind::Switch, value ? 1 : 0, NULL, NULL, NULL};
 }
 
-/* "off" (or false/no/0) keeps the original; anything else prompts. */
-LRR_TrainingSave ParseTrainingSave(const char* value)
+constexpr Row Choice(LRR_Setting setting, const char* key, const char* const* names, int value)
 {
-    if (value != NULL &&
-        (SDL_strcasecmp(value, "off") == 0 || SDL_strcasecmp(value, "false") == 0 ||
-         SDL_strcasecmp(value, "no") == 0 || SDL_strcmp(value, "0") == 0)) {
-        return LRR_TRAINING_SAVE_OFF;
+    return {setting, key, Kind::Choice, value, NULL, names, NULL};
+}
+
+constexpr Row Number(LRR_Setting setting, const char* key, int value)
+{
+    return {setting, key, Kind::Number, value, NULL, NULL, NULL};
+}
+
+constexpr Row Text(LRR_Setting setting, const char* key, const char* value)
+{
+    return {setting, key, Kind::Text, 0, value, NULL, NULL};
+}
+
+constexpr Row Directory(LRR_Setting setting, const char* key, const char* value, void (*apply)(const char*))
+{
+    return {setting, key, Kind::Directory, 0, value, NULL, apply};
+}
+
+/* The save directory LRR_LoadConfig chose, as a directory's default. */
+constexpr const char* kSaveDirectory = NULL;
+
+constexpr const char* kTrainingSaveNames[] = {"off", "prompt", NULL};
+constexpr const char* kDisplayNames[] = {"original", "fit", NULL};
+constexpr const char* kControlsNames[] = {"original", "modern", NULL};
+constexpr const char* kLongPressNames[] = {"off", "hover", NULL};
+constexpr const char* kTwoFingerTapNames[] = {"off", "space", "right click", NULL};
+constexpr const char* kThreeFingerTapNames[] = {"off", "keyboard", NULL};
+constexpr const char* kTouchKeyboardNames[] = {"off", "auto", NULL};
+constexpr const char* kBackButtonNames[] = {"off", "escape", NULL};
+
+/* The touch controls are on by default where the screen is the only
+ * pointer (LRR_TouchConfig). */
+#if defined(ANDROID) || defined(IOS)
+constexpr bool kDefaultTouch = true;
+#else
+constexpr bool kDefaultTouch = false;
+#endif
+
+/* The settings, in the order they are written to a new file. A choice's
+ * names are indexed by its enum (config.h): the original's is 0. */
+constexpr Row kTable[] = {
+    /* The original found its saves in Data\Saves and its data in the
+     * working directory; a host overrides both (DefaultConfig). */
+    Directory(LRR_SETTING_SAVEPATH, LRR_CONFIG_SAVEPATH, kSaveDirectory, files_native_set_save_path),
+    Directory(LRR_SETTING_DISKPATH, LRR_CONFIG_DISKPATH, "", files_native_set_disk_path),
+    /* The Mode Selection dialog's choices. */
+    Switch(LRR_SETTING_FULLSCREEN, LRR_CONFIG_FULLSCREEN, false),
+    Number(LRR_SETTING_XRES, LRR_CONFIG_XRES, 640),
+    Number(LRR_SETTING_YRES, LRR_CONFIG_YRES, 480),
+    Text(LRR_SETTING_DEVICE, LRR_CONFIG_DEVICE, ""),
+    /* The divergences' switches (docs/divergences.md). */
+    Choice(LRR_SETTING_TRAINING_SAVE, "tweaks:Training Save", kTrainingSaveNames, LRR_TRAINING_SAVE_PROMPT),
+    Choice(LRR_SETTING_DISPLAY, "tweaks:display", kDisplayNames, LRR_DISPLAY_FIT),
+    Choice(LRR_SETTING_CONTROLS, "tweaks:controls", kControlsNames, LRR_CONTROLS_MODERN),
+    Switch(LRR_SETTING_FIX_IDLENESS_SYNDROME, "tweaks:fix_idleness_syndrome", true),
+    Switch(LRR_SETTING_FPS_OVERLAY, "tweaks:fps_overlay", false),
+    /* The touch controls (LRR_TouchConfig). */
+    Switch(LRR_SETTING_TOUCH, "tweaks:touch", kDefaultTouch),
+    Choice(LRR_SETTING_TOUCH_LONG_PRESS, "tweaks:touch_long_press", kLongPressNames, 1),
+    Switch(LRR_SETTING_TOUCH_SCROLL, "tweaks:touch_scroll", true),
+    Switch(LRR_SETTING_TOUCH_ZOOM, "tweaks:touch_zoom", true),
+    Switch(LRR_SETTING_TOUCH_ROTATE, "tweaks:touch_rotate", true),
+    Choice(LRR_SETTING_TOUCH_TWO_FINGER_TAP, "tweaks:touch_two_finger_tap", kTwoFingerTapNames,
+           LRR_TOUCH_TAP_SPACE),
+    Choice(LRR_SETTING_TOUCH_THREE_FINGER_TAP, "tweaks:touch_three_finger_tap", kThreeFingerTapNames, 1),
+    Choice(LRR_SETTING_TOUCH_KEYBOARD, "tweaks:touch_keyboard", kTouchKeyboardNames, 1),
+    Choice(LRR_SETTING_BACK_BUTTON, "tweaks:back_button", kBackButtonNames, 1),
+    /* The cheats, off by default. */
+    Switch(LRR_SETTING_UNLIMITED_RAIDERS, "cheats:unlimited_raiders", false),
+    Switch(LRR_SETTING_UNLIMITED_OXYGEN, "cheats:unlimited_oxygen", false),
+};
+
+constexpr bool TableInOrder()
+{
+    for (int i = 0; i < LRR_SETTING_COUNT; ++i) {
+        if (kTable[i].setting != i) {
+            return false;
+        }
     }
-    return LRR_TRAINING_SAVE_PROMPT;
+    return true;
 }
 
-constexpr LRR_DisplayScaling kDefaultDisplayScaling = LRR_DISPLAY_FIT;
+static_assert(sizeof(kTable) / sizeof(kTable[0]) == LRR_SETTING_COUNT, "one row per LRR_Setting");
+static_assert(TableInOrder(), "the rows in LRR_Setting's order");
 
-LRR_DisplayScaling g_displayScaling = kDefaultDisplayScaling;
+/* The spellings of false (and of a choice's original) and of true. */
+constexpr const char* kFalseWords[] = {"false", "off", "no", "0", "original", NULL};
+constexpr const char* kTrueWords[] = {"true", "on", "yes", "1", NULL};
 
-const char* DisplayScalingName(LRR_DisplayScaling value)
+/* The index of `value` in `words`, in any case, or -1. */
+int Find(const char* const* words, const char* value)
 {
-    return value == LRR_DISPLAY_ORIGINAL ? "original" : "fit";
-}
-
-/* "original" (or off/false/no/0) keeps the original; anything else fits. */
-LRR_DisplayScaling ParseDisplayScaling(const char* value)
-{
-    if (value != NULL &&
-        (SDL_strcasecmp(value, "original") == 0 || SDL_strcasecmp(value, "off") == 0 ||
-         SDL_strcasecmp(value, "false") == 0 || SDL_strcasecmp(value, "no") == 0 ||
-         SDL_strcmp(value, "0") == 0)) {
-        return LRR_DISPLAY_ORIGINAL;
+    for (int i = 0; words[i] != NULL; ++i) {
+        if (SDL_strcasecmp(value, words[i]) == 0) {
+            return i;
+        }
     }
-    return LRR_DISPLAY_FIT;
+    return -1;
 }
 
-constexpr LRR_Controls kDefaultControls = LRR_CONTROLS_MODERN;
-
-LRR_Controls g_controls = kDefaultControls;
-
-const char* ControlsName(LRR_Controls value)
+int ParseSwitch(const char* value, int fallback)
 {
-    return value == LRR_CONTROLS_ORIGINAL ? "original" : "modern";
-}
-
-/* "original" (or off/false/no/0) keeps the original's controls; anything
- * else adds the camera controls. */
-LRR_Controls ParseControls(const char* value)
-{
-    if (value != NULL &&
-        (SDL_strcasecmp(value, "original") == 0 || SDL_strcasecmp(value, "off") == 0 ||
-         SDL_strcasecmp(value, "false") == 0 || SDL_strcasecmp(value, "no") == 0 ||
-         SDL_strcmp(value, "0") == 0)) {
-        return LRR_CONTROLS_ORIGINAL;
+    if (Find(kTrueWords, value) >= 0) {
+        return 1;
     }
-    return LRR_CONTROLS_MODERN;
+    if (Find(kFalseWords, value) >= 0) {
+        return 0;
+    }
+    /* iniparser_getboolean's reading, which legorr:Full Screen had. */
+    switch (value[0]) {
+    case 'y': case 'Y': case 't': case 'T': case '1':
+        return 1;
+    case 'n': case 'N': case 'f': case 'F': case '0':
+        return 0;
+    default:
+        return fallback;
+    }
 }
 
-constexpr bool kDefaultFixIdlenessSyndrome = true;
-
-bool g_fixIdlenessSyndrome = kDefaultFixIdlenessSyndrome;
-
-const char* BoolName(bool value)
+int ParseChoice(const char* const* names, const char* value, int fallback)
 {
-    return value ? "true" : "false";
+    int index = Find(names, value);
+
+    if (index >= 0) {
+        return index;
+    }
+    if (Find(kFalseWords, value) >= 0) {
+        return 0;
+    }
+    if (names[0] != NULL && names[1] != NULL && names[2] == NULL && Find(kTrueWords, value) >= 0) {
+        return 1;
+    }
+    return fallback;
 }
 
-/* "false" (or off/no/0/original) keeps the original's behaviour; anything
- * else turns the fix on. */
-bool ParseFixIdlenessSyndrome(const char* value)
+/* A setting's value. */
+struct Value {
+    int number;
+    std::string text;
+};
+
+/* The save directory LRR_LoadConfig chose: legorr:savepath's default. */
+std::string g_saveDir;
+
+/* The values, each its default until it is read or set. */
+struct Values {
+    Value value[LRR_SETTING_COUNT];
+
+    Values()
+    {
+        for (const Row& row : kTable) {
+            value[row.setting].number = row.number;
+            value[row.setting].text = row.text != NULL ? row.text : "";
+        }
+    }
+};
+
+Value* GetValues()
 {
-    return !(value != NULL &&
-             (SDL_strcasecmp(value, "false") == 0 || SDL_strcasecmp(value, "off") == 0 ||
-              SDL_strcasecmp(value, "no") == 0 || SDL_strcasecmp(value, "original") == 0 ||
-              SDL_strcmp(value, "0") == 0));
+    static Values values;
+    return values.value;
 }
 
-constexpr bool kDefaultFpsOverlay = false;
-
-bool g_fpsOverlay = kDefaultFpsOverlay;
-
-constexpr bool kDefaultUnlimitedRaiders = false;
-
-bool g_unlimitedRaiders = kDefaultUnlimitedRaiders;
-
-constexpr bool kDefaultUnlimitedOxygen = false;
-
-bool g_unlimitedOxygen = kDefaultUnlimitedOxygen;
-
-/* "true" (or on/yes/1) turns the cheat on; anything else keeps the
- * original. */
-bool ParseCheatEnabled(const char* value)
+/* The text a row's default is written as. */
+std::string DefaultText(const Row& row)
 {
-    return value != NULL &&
-           (SDL_strcasecmp(value, "true") == 0 || SDL_strcasecmp(value, "on") == 0 ||
-            SDL_strcasecmp(value, "yes") == 0 || SDL_strcmp(value, "1") == 0);
+    switch (row.kind) {
+    case Kind::Switch:
+        return row.number != 0 ? "true" : "false";
+    case Kind::Choice:
+        return row.names[row.number];
+    case Kind::Number:
+        return std::to_string(row.number);
+    case Kind::Text:
+    case Kind::Directory:
+        return row.text != NULL ? row.text : g_saveDir;
+    }
+    return "";
 }
 
-/* The directory that holds the configuration file and, by default, the
- * saves; "" when the host has none. */
+/* Reads `text` (NULL: the key is missing) into the row's value, and applies
+ * it. */
+void Set(const Row& row, const char* text)
+{
+    Value& value = GetValues()[row.setting];
+
+    if (text == NULL) {
+        value.number = row.number;
+        if (row.kind == Kind::Text || row.kind == Kind::Directory) {
+            value.text = DefaultText(row);
+        }
+    }
+    else {
+        switch (row.kind) {
+        case Kind::Switch:
+            value.number = ParseSwitch(text, row.number);
+            break;
+        case Kind::Choice:
+            value.number = ParseChoice(row.names, text, row.number);
+            break;
+        case Kind::Number:
+            value.number = (int)strtol(text, NULL, 0);
+            break;
+        case Kind::Text:
+        case Kind::Directory:
+            value.text = text;
+            break;
+        }
+    }
+    if (row.apply != NULL) {
+        row.apply(value.text.c_str());
+    }
+}
+
+/* The host's directory for the configuration file and the saves; "" when
+ * the host has none. */
 std::string PreferencePath()
 {
-    /* --data: the launcher's one directory, made here as SDL_GetPrefPath
-     * makes the preference directory. */
-    if (!g_launchData.empty()) {
-        std::string path = g_launchData;
-        if (path.back() != '/' && path.back() != '\\') path += '/';
-        SDL_CreateDirectory(path.c_str());
-        return path;
-    }
 #ifdef IOS
     const char* documents = SDL_GetUserFolder(SDL_FOLDER_DOCUMENTS);
     return documents != NULL ? documents : "";
@@ -170,34 +294,36 @@ std::string PreferencePath()
 #endif
 }
 
-/* The save directory when the file names none: the preference directory,
- * or Saves inside the --data directory. */
-std::string DefaultSavePath(const std::string& prefPath)
+/* The data directory (config.h, LRR_LoadConfig): --data, made here as
+ * SDL_GetPrefPath makes the preference directory, or the preference
+ * directory. */
+std::string DataDirectory(const char* dataPath)
 {
-    return g_launchData.empty() ? prefPath : prefPath + "Saves/";
+    if (dataPath == NULL || dataPath[0] == '\0') {
+        return PreferencePath();
+    }
+    std::string path = dataPath;
+    if (path.back() != '/' && path.back() != '\\') {
+        path += '/';
+    }
+    SDL_CreateDirectory(path.c_str());
+    return path;
 }
 
 /* The defaults written to a new configuration file. */
-dictionary* DefaultConfig(const std::string& prefPath)
+dictionary* DefaultConfig()
 {
     dictionary* dict = dictionary_new(0);
-    iniparser_set(dict, LRR_CONFIG_SECTION, NULL);
-    iniparser_set(dict, LRR_CONFIG_SAVEPATH, DefaultSavePath(prefPath).c_str());
-    /* The working directory, as the original; a host overrides it below. */
-    iniparser_set(dict, LRR_CONFIG_DISKPATH, "");
-    iniparser_set(dict, LRR_CONFIG_FULLSCREEN, kDefaultDisplay.fullScreen ? "true" : "false");
-    iniparser_set(dict, LRR_CONFIG_XRES, std::to_string(kDefaultDisplay.width).c_str());
-    iniparser_set(dict, LRR_CONFIG_YRES, std::to_string(kDefaultDisplay.height).c_str());
-    iniparser_set(dict, LRR_CONFIG_DEVICE, kDefaultDisplay.device);
-    iniparser_set(dict, LRR_CONFIG_TWEAKS_SECTION, NULL);
-    iniparser_set(dict, LRR_CONFIG_TRAININGSAVE, TrainingSaveName(kDefaultTrainingSave));
-    iniparser_set(dict, LRR_CONFIG_DISPLAY, DisplayScalingName(kDefaultDisplayScaling));
-    iniparser_set(dict, LRR_CONFIG_CONTROLS, ControlsName(kDefaultControls));
-    iniparser_set(dict, LRR_CONFIG_FIXIDLENESS, BoolName(kDefaultFixIdlenessSyndrome));
-    iniparser_set(dict, LRR_CONFIG_FPSOVERLAY, BoolName(kDefaultFpsOverlay));
-    iniparser_set(dict, LRR_CONFIG_CHEATS_SECTION, NULL);
-    iniparser_set(dict, LRR_CONFIG_UNLIMITEDRAIDERS, BoolName(kDefaultUnlimitedRaiders));
-    iniparser_set(dict, LRR_CONFIG_UNLIMITEDOXYGEN, BoolName(kDefaultUnlimitedOxygen));
+    std::string section;
+
+    for (const Row& row : kTable) {
+        const char* colon = SDL_strchr(row.key, ':');
+        if (section.compare(0, std::string::npos, row.key, colon - row.key) != 0) {
+            section.assign(row.key, colon - row.key);
+            iniparser_set(dict, section.c_str(), NULL);
+        }
+        iniparser_set(dict, row.key, DefaultText(row).c_str());
+    }
 
 #ifdef __3DS__
     N3DS_SetupDefaultConfigOverrides(dict);
@@ -304,7 +430,7 @@ int LRR_ChooseDeviceAfterFailure(LRR_DeviceCandidate* devices, unsigned int coun
     }
     devices[failed].failed = true;
     SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "Cannot set the display up on 3D device \"%s\"", devices[failed].desc);
-    return LRR_ChooseDevice(devices, count, g_display.device, LRR_Default3DDevice());
+    return LRR_ChooseDevice(devices, count, LRR_GetDisplayConfig()->device, LRR_Default3DDevice());
 }
 
 const char* LRR_Default3DDevice()
@@ -330,27 +456,24 @@ bool LRR_UseOpenGLWindow(const char* configured, const char* platformDefault)
     return device != NULL && SDL_strstr(device, "OpenGL") != NULL;
 }
 
-void LRR_SetLaunchOptions(const char* gamePath, const char* dataPath)
-{
-    g_launchGame = gamePath != NULL ? gamePath : "";
-    g_launchData = dataPath != NULL ? dataPath : "";
-}
-
-bool LRR_LoadConfig(const char* iniPath)
+bool LRR_LoadConfig(const char* iniPath, const char* dataPath)
 {
 #ifdef __EMSCRIPTEN__
     if (iniPath && !Emscripten_SetupConfig(iniPath)) {
         iniPath = NULL;
     }
 #endif
-    const std::string prefPath = PreferencePath();
+    /* Where the files live, before what the file says. */
+    const std::string dataDir = DataDirectory(dataPath);
+    const bool launched = dataPath != NULL && dataPath[0] != '\0';
+    g_saveDir = launched ? dataDir + "Saves/" : dataDir;
 
     std::string iniConfig;
     if (iniPath) {
         iniConfig = iniPath;
     }
-    else if (!prefPath.empty()) {
-        iniConfig = prefPath + LRR_CONFIG_FILE;
+    else if (!dataDir.empty()) {
+        iniConfig = dataDir + LRR_CONFIG_FILE;
     }
     else {
         iniConfig = LRR_CONFIG_FILE;
@@ -369,7 +492,7 @@ bool LRR_LoadConfig(const char* iniPath)
 #ifdef __EMSCRIPTEN__
             SDL_Log("Invalid config path '%s', falling back to defaults", iniPath);
             iniPath = NULL;
-            iniConfig = !prefPath.empty() ? prefPath + LRR_CONFIG_FILE : LRR_CONFIG_FILE;
+            iniConfig = !dataDir.empty() ? dataDir + LRR_CONFIG_FILE : LRR_CONFIG_FILE;
 #else
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Invalid config path '%s'", iniPath);
             return false;
@@ -389,7 +512,7 @@ bool LRR_LoadConfig(const char* iniPath)
             return false;
         }
 
-        dict = DefaultConfig(prefPath);
+        dict = DefaultConfig();
         iniparser_dump_ini(dict, iniFP);
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "New config written at '%s'", iniConfig.c_str());
         fclose(iniFP);
@@ -405,38 +528,9 @@ bool LRR_LoadConfig(const char* iniPath)
     IOS_SetupDefaultConfigOverrides(dict);
 #endif
 
-    files_native_set_save_path(
-        iniparser_getstring(dict, LRR_CONFIG_SAVEPATH, DefaultSavePath(prefPath).c_str()));
-    if (!g_launchGame.empty()) {
-        SDL_Log("Game folder \"%s\" (--game)", g_launchGame.c_str());
-        files_native_set_disk_path(g_launchGame.c_str());
+    for (const Row& row : kTable) {
+        Set(row, iniparser_getstring(dict, row.key, NULL));
     }
-    else {
-        files_native_set_disk_path(iniparser_getstring(dict, LRR_CONFIG_DISKPATH, ""));
-    }
-
-    g_display = kDefaultDisplay;
-    g_display.fullScreen = iniparser_getboolean(dict, LRR_CONFIG_FULLSCREEN, g_display.fullScreen) != 0;
-    g_display.width = iniparser_getint(dict, LRR_CONFIG_XRES, g_display.width);
-    g_display.height = iniparser_getint(dict, LRR_CONFIG_YRES, g_display.height);
-    SDL_strlcpy(g_display.device, iniparser_getstring(dict, LRR_CONFIG_DEVICE, ""), sizeof(g_display.device));
-#ifdef __3DS__
-    /* A 3DS has no windows, and a windowed display takes the window's size,
-     * the screen's 320x240: the display is full screen, at the configured
-     * mode (640x480), which the Citro3D renderer fits onto the bottom
-     * screen. */
-    g_display.fullScreen = true;
-#endif
-    g_trainingSave = ParseTrainingSave(
-        iniparser_getstring(dict, LRR_CONFIG_TRAININGSAVE, TrainingSaveName(kDefaultTrainingSave)));
-    g_displayScaling = ParseDisplayScaling(
-        iniparser_getstring(dict, LRR_CONFIG_DISPLAY, DisplayScalingName(kDefaultDisplayScaling)));
-    g_controls = ParseControls(iniparser_getstring(dict, LRR_CONFIG_CONTROLS, ControlsName(kDefaultControls)));
-    g_fixIdlenessSyndrome = ParseFixIdlenessSyndrome(
-        iniparser_getstring(dict, LRR_CONFIG_FIXIDLENESS, BoolName(kDefaultFixIdlenessSyndrome)));
-    g_fpsOverlay = ParseCheatEnabled(iniparser_getstring(dict, LRR_CONFIG_FPSOVERLAY, NULL));
-    g_unlimitedRaiders = ParseCheatEnabled(iniparser_getstring(dict, LRR_CONFIG_UNLIMITEDRAIDERS, NULL));
-    g_unlimitedOxygen = ParseCheatEnabled(iniparser_getstring(dict, LRR_CONFIG_UNLIMITEDOXYGEN, NULL));
     iniparser_freedict(dict);
 
 #ifdef __EMSCRIPTEN__
@@ -445,42 +539,33 @@ bool LRR_LoadConfig(const char* iniPath)
     return true;
 }
 
+int LRR_GetSetting(LRR_Setting setting)
+{
+    return setting >= 0 && setting < LRR_SETTING_COUNT ? GetValues()[setting].number : 0;
+}
+
+void LRR_SetSetting(LRR_Setting setting, const char* value)
+{
+    if (setting >= 0 && setting < LRR_SETTING_COUNT) {
+        Set(kTable[setting], value);
+    }
+}
+
 const LRR_DisplayConfig* LRR_GetDisplayConfig()
 {
-    return &g_display;
-}
+    static LRR_DisplayConfig display;
+    const Value* values = GetValues();
 
-LRR_TrainingSave LRR_GetTrainingSave()
-{
-    return g_trainingSave;
-}
-
-LRR_DisplayScaling LRR_GetDisplayScaling()
-{
-    return g_displayScaling;
-}
-
-LRR_Controls LRR_GetControls()
-{
-    return g_controls;
-}
-
-bool LRR_GetFixIdlenessSyndrome()
-{
-    return g_fixIdlenessSyndrome;
-}
-
-bool LRR_GetFpsOverlay()
-{
-    return g_fpsOverlay;
-}
-
-bool LRR_GetUnlimitedRaiders()
-{
-    return g_unlimitedRaiders;
-}
-
-bool LRR_GetUnlimitedOxygen()
-{
-    return g_unlimitedOxygen;
+    display.fullScreen = values[LRR_SETTING_FULLSCREEN].number != 0;
+    display.width = values[LRR_SETTING_XRES].number;
+    display.height = values[LRR_SETTING_YRES].number;
+    SDL_strlcpy(display.device, values[LRR_SETTING_DEVICE].text.c_str(), sizeof(display.device));
+#ifdef __3DS__
+    /* A 3DS has no windows, and a windowed display takes the window's size,
+     * the screen's 320x240: the display is full screen, at the configured
+     * mode (640x480), which the Citro3D renderer fits onto the bottom
+     * screen. */
+    display.fullScreen = true;
+#endif
+    return &display;
 }

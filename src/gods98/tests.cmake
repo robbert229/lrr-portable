@@ -164,3 +164,8 @@ foreach(scenario IN ITEMS realtime events fullscreen reject no-loop no-state fit
   lrr_unit_test_variant(engine_lifecycle_${scenario} OF engine_lifecycle
     ARGS ${scenario} LABELS main ENVIRONMENT "SDL_VIDEO_DRIVER=dummy" "SDL_AUDIO_DRIVER=dummy")
 endforeach()
+
+# Generic animated hierarchy and local/shared mesh lifetime.
+lrr_unit_test(lws_resource_graph SOURCES ${ENGINE_DIR}/test_lws_resource_graph.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS lws mesh_unit ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")

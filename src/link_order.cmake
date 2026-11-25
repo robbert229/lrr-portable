@@ -110,15 +110,19 @@ lrr_link(unit   LATE-001 gods98        gods98/rnc.c)
 lrr_link(unit   LATE-002 gods98        gods98/init.c)
 
 # The native platform: the process entry, which calls the units' WinMain,
-# the seam's remaining stubs, the filesystem substitution and the
-# configuration file (ADR 0007). The hosts' own sources are added in
-# CMakeLists.txt.
+# the seam's remaining stubs, the filesystem substitution, the
+# configuration file and the input layer under the keyboard substitution,
+# with its latch and touch gestures (ADR 0007). The hosts' own sources are
+# added in CMakeLists.txt.
 lrr_link(platform -     platform      platform/native/entry.cpp)
 lrr_link(platform -     platform      platform/native/seam_stubs.cpp)
 lrr_link(platform -     platform      platform/native/files_native.cpp)
 lrr_link(platform -     platform      platform/native/config.cpp)
 lrr_link(platform -     platform      platform/native/lifecycle.cpp)
 lrr_link(platform -     platform      platform/native/fps_counter.cpp)
+lrr_link(platform -     platform      platform/native/input.cpp)
+lrr_link(platform -     platform      platform/native/input_latch.cpp)
+lrr_link(platform -     platform      platform/native/touch_gestures.cpp)
 
 # The libraries the units' substitutions call (ADR 0007).
 lrr_link(library  -     library       library/video_ffmpeg.cpp)

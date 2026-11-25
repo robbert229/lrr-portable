@@ -10,8 +10,10 @@
  * The keyboard is a library substitution (ADR 0007, `// [library:input]`),
  * as in isle-portable's input manager: SDL3's keyboard state fills the
  * DirectInput key map through an SDL scancode to DIK_* table
- * (input_sdl_keys.h). The mouse still comes from miniwin's window messages
- * and cursor calls.
+ * (input_sdl_keys.h). SDL's keyboard state comes through the port's input
+ * layer (platform/native/input.h), which adds the keys pressed and released
+ * since the last poll and those the touch gestures hold. The mouse still
+ * comes from miniwin's window messages and cursor calls.
  *
  * The state is the original's, in the commons: the previous and current
  * key maps, the DirectInput object, the keyboard device, its acquired flag,
@@ -31,6 +33,7 @@
 #include <SDL3/SDL_log.h>
 
 #include "input_sdl_keys.h"
+#include "platform/native/input.h" // [library:input] LRR_InputKeyboardState
 
 #ifdef __cplusplus
 extern "C" {
@@ -104,7 +107,7 @@ void input_state_poll_retail(void)
            sizeof(s_global_previous_keys));
     memset(s_global_current_keys, 0, sizeof(s_global_current_keys));
     SDL_PumpEvents(); // [library:input]
-    state = SDL_GetKeyboardState(&count); // [library:input]
+    state = LRR_InputKeyboardState(&count); // [library:input]
     for (i = 0; i < count; i++) {
         if (state[i] && (dik = input_sdl_scancode_dik((SDL_Scancode)i)) != 0)
             s_global_current_keys[dik] = INPUT_KEY_DOWN;

@@ -51,6 +51,7 @@
 #include "lego_unit_imports.h"
 #include "lego_globs.h"
 #include "platform/native/config.h" // [divergence:modern-controls] LRR_GetControls, [divergence:unlimited-oxygen] LRR_GetUnlimitedOxygen
+#include "platform/native/input.h" // [divergence:touch-keyboard] LRR_InputTextWanted
 
 /* ------------------------------------------------------------------ */
 /* State: the unit's .bss and legoGlobs.                               */
@@ -1450,6 +1451,9 @@ void lego_engine_pre_tick(float elapsed)
     unsigned int c;
 
     if (legoGlobs_renameInput != NULL) {
+        /* [divergence:touch-keyboard] The on-screen keyboard opens while a
+         * name is typed (docs/divergences.md, "Touch controls"). */
+        LRR_InputTextWanted();
         len = strlen(legoGlobs_renameInput);
         if (s_global_current_keys[0x0e] && (s_global_current_keys[0x0e] ^ s_lego_renamePrevKeyMap[0x0e])) {
             if (len) legoGlobs_renameInput[len - 1] = '\0';

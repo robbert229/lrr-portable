@@ -9,6 +9,15 @@ should, where they can:
   original (cheats, off by default, go in a `[cheats]` section instead);
 - mark their call site `// [divergence:<name>]`.
 
+A key is one row of the settings table, `kTable` in
+`src/platform/native/config.cpp`, with its `LRR_Setting` and a typed getter
+in `config.h` for the unit to read. The row gives the key's default, which
+the new `LegoRR.ini` is written with, and its kind, which sets the
+spellings it accepts. A test sets the key with `LRR_SetSetting`. To show
+the key in RecompLauncher, add a setting to `packaging/recomplauncher.json`;
+`tools/tests/test_packaging.py` checks its keys, values and defaults against
+the table.
+
 Older ones carry a `PORT-ONLY:` comment instead.
 
 The list has three parts:
@@ -235,6 +244,41 @@ reference.
   have it; add `fps_overlay = true` under `[tweaks]`.
 - **Where:** `main_fps_overlay_draw` in `src/gods98/main.c`
   (`[divergence:fps-overlay]`); `src/platform/native/fps_counter.cpp`.
+
+### Touch controls
+
+- **Original:** a mouse and a keyboard. SDL's own mapping makes a touch the
+  left button, held while the finger is down.
+- **Port:** where `touch` is on (by default on Android and iOS), touches
+  are mapped onto the mouse and keys:
+  - a tap clicks;
+  - a drag holds the left button;
+  - holding a finger still moves the pointer without clicking, so
+    tooltips show;
+  - a two-finger drag scrolls the map, a pinch zooms, and a two-finger twist
+    turns the view;
+  - a two-finger tap is Space;
+  - a three-finger tap opens or closes the on-screen keyboard.
+
+  On every host, the on-screen keyboard also opens while a unit's name is
+  typed, and Android's Back button is Escape. A tap, or a key typed on the
+  on-screen keyboard, that is shorter than a frame is held until the game
+  has read it, so it is never lost.
+- **Why:** a touch screen has no right button, no pointer that can rest
+  without pressing, and no keys. Rock Raiders uses the right button as the
+  left one unless it is started with `-dualmouse`, so no gesture is spent
+  on it by default.
+- **Configurable:** `[tweaks]` `touch = true` or `false`, which keeps
+  SDL's mapping. The other keys are `touch_long_press = hover`,
+  `touch_scroll`, `touch_zoom` and `touch_rotate = true`,
+  `touch_two_finger_tap = space` (or `right click`),
+  `touch_three_finger_tap = keyboard`, `touch_keyboard = auto` and
+  `back_button = escape`; `off` turns each one off. A desktop touch screen
+  works with `touch = true`, where the system lets SDL move the pointer.
+- **Where:** `src/platform/native/input.cpp`, `touch_gestures.cpp` and
+  `input_latch.cpp`; `src/gods98/input_unit.c` (`[library:input]`);
+  `src/game/lego_unit.c` and `src/game/frontend_unit.c`
+  (`[divergence:touch-keyboard]`); #986.
 
 ### Movies fill a larger screen mode
 
