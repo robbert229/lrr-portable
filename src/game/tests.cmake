@@ -543,3 +543,14 @@ lrr_unit_test_variant(effect_animation_lifecycle OF creature_effect_lifecycle
   ARGS effects LABELS effects level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
 lrr_unit_test_variant(scene_status_progression OF creature_effect_lifecycle
   ARGS geometry LABELS weapons legoobject level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Generated mesh transitions and configured mission outcomes.
+lrr_unit_test(terrain_objectives SOURCES ${GAME_DIR}/test_terrain_objectives.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS terrain_map level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+foreach(outcome IN ITEMS success failure object)
+  lrr_unit_test_variant(objective_timer_${outcome} OF terrain_objectives
+    ARGS ${outcome} LABELS objective level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+endforeach()
+lrr_unit_test_variant(terrain_fence_lifecycle OF terrain_objectives
+  ARGS fence LABELS terrain_map level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
