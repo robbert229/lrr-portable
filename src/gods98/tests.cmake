@@ -64,6 +64,9 @@ lrr_unit_test(mesh_unit SOURCES ${ENGINE_DIR}/test_mesh_unit.cpp LABELS mesh_uni
 
 # Decode disjoint palette packets and verify the RGB565 lookup entries.
 lrr_unit_test(flic_unit SOURCES ${ENGINE_DIR}/test_flic_unit.cpp LABELS flic_unit)
+lrr_unit_test(flic_media SOURCES ${ENGINE_DIR}/test_flic_media.cpp LABELS flic_unit)
+lrr_unit_test_variant(flic_media_playback OF flic_media
+  ARGS playback LABELS flic_unit ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
 
 # Exercise the text ring and timed overlay with a glyph sink in memory.
 lrr_unit_test(textwindow SOURCES ${ENGINE_DIR}/test_textwindow.cpp
