@@ -21,6 +21,7 @@
 
 #include <SDL3/SDL.h>
 
+#include "platform/native/test_fixture.h"
 #include "gods98/container_link_names.h"
 #include "gods98/config.h"
 #include "gods98/container_unit.h"
@@ -35,7 +36,6 @@
 #include "game/legoobject_unit.h"
 #include "game/terrain_map.h"
 #include "game/lego_unit.h"
-#include "platform/native/test_fixture.h"
 #include "test/lrr_test.h"
 /* Last: its macros name fields the other headers declare. */
 #include "game/lego_globs.h"

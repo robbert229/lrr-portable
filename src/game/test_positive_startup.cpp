@@ -4,6 +4,7 @@
 #include <iterator>
 #include <string>
 
+#include "platform/native/test_fixture.h"
 #include "gods98/config.h"
 #include "gods98/container_link_names.h"
 #include "gods98/container_unit.h"
@@ -16,7 +17,6 @@
 #include "game/loader.h"
 #include "game/upgrade_record.h"
 #include "game/vehicle_model_record.h"
-#include "platform/native/test_fixture.h"
 #include "test/lrr_test.h"
 #include "test/synthetic_level_fixture.h"
 #include "game/lego_globs.h"
