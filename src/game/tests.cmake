@@ -496,3 +496,8 @@ lrr_unit_test_variant(distinct_level_missing_ptl OF distinct_level_lifecycle
   ARGS missing-ptl LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
 lrr_unit_test_variant(distinct_level_missing_surface OF distinct_level_lifecycle
   ARGS missing-surface LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Capability-dependent terrain admission and loaded excavation/clearing.
+lrr_unit_test(terrain_transitions SOURCES ${GAME_DIR}/test_terrain_transitions.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS level_boot navigation ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
