@@ -427,3 +427,13 @@ lrr_unit_test(landslide_progress SOURCES ${GAME_DIR}/test_landslide_progress.cpp
     lego_cell_init_pass terrain_map_world_z_get scene_slot_pose_scale_register
     sound_submission_route_wrapper
   LABELS fallin)
+
+# Building footprint reservation, cancellation, and obstruction-delayed completion.
+lrr_unit_test(building_lifecycle SOURCES ${GAME_DIR}/test_building_lifecycle.cpp
+  WRAP terrain_map_shape_flatten terrain_map_block_texture_set terrain_cell_mutation_progress
+    cancel_action_for_matching_coordinates aitask_cmd_command_kind_record_issue
+    aitask_cmd_create_task aitask_cmd_cancel_by_coords legoobject_run_through_lists_skip_upgrade_parts
+    legoobject_position_to_terrain_cell legoobject_create_in_world legoobject_dispatch_event5_and_set_flag
+    info_send entity_stats_word_get entity_state_flags_get aitask_terrain_cell_refresh_dispatch_current
+    electric_fence_block_surfaces_update
+  LABELS construction)
