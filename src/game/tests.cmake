@@ -629,3 +629,9 @@ lrr_unit_test(placement_preview SOURCES ${GAME_DIR}/test_placement_preview.cpp
   ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
   ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
   LABELS construction selectplace level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Neutral cargo transfer, finite capacity and real attachment ownership.
+lrr_unit_test(transport_capacity SOURCES ${GAME_DIR}/test_transport_capacity.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS legoobject vehicle_model level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
