@@ -437,3 +437,8 @@ lrr_unit_test(building_lifecycle SOURCES ${GAME_DIR}/test_building_lifecycle.cpp
     info_send entity_stats_word_get entity_state_flags_get aitask_terrain_cell_refresh_dispatch_current
     electric_fence_block_surfaces_update
   LABELS construction)
+
+# Loaded synthetic caves: navigation and resource discovery through real ticks.
+lrr_unit_test(level_navigation_scenario SOURCES ${GAME_DIR}/test_level_navigation_scenario.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS level_boot navigation ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
