@@ -11,9 +11,9 @@
 
 #include <string>
 
+#include "platform/native/test_fixture.h"
 #include "gods98/files.h"
 #include "gods98/files_native.h"
-#include "platform/native/test_fixture.h"
 
 static const char* FIX = "diskpath_fixture";
 static int s_failures = 0;

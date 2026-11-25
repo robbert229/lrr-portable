@@ -447,3 +447,14 @@ lrr_unit_test(level_navigation_scenario SOURCES ${GAME_DIR}/test_level_navigatio
 lrr_unit_test(object_lifecycle_extra SOURCES ${GAME_DIR}/test_object_lifecycle_extra.cpp
   ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
   LABELS vehicle_model legoobject spiderweb level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Generated model catalogs and startup resource loading.
+lrr_unit_test(positive_startup SOURCES ${GAME_DIR}/test_positive_startup.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(startup_missing_catalog OF positive_startup
+  ARGS missing LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(startup_misc_resources OF positive_startup
+  ARGS misc LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(startup_config_loader OF positive_startup
+  ARGS setup LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")

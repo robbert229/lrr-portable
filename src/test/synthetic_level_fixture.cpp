@@ -7,6 +7,7 @@
 
 #include <SDL3/SDL.h>
 
+#include "platform/native/test_fixture.h"
 #include "gods98/container_link_names.h"
 #include "gods98/config.h"
 #include "gods98/container_unit.h"
@@ -21,7 +22,6 @@
 #include "game/legoobject_unit.h"
 #include "game/terrain_map.h"
 #include "game/lego_unit.h"
-#include "platform/native/test_fixture.h"
 #include "test/lrr_test.h"
 /* Last: its macros name fields the other headers declare. */
 #include "game/lego_globs.h"
@@ -161,6 +161,17 @@ bool write_triangle(const char* path)
     if (!f) return false;
     bool ok = std::fwrite(object, sizeof(object), 1, f) == 1;
     return std::fclose(f) == 0 && ok;
+}
+
+bool write_null_scene(const char* path)
+{
+    return write_text(path,
+        "LWSC\n1\n\nFirstFrame 0\nLastFrame 15\nFramesPerSecond 25\n\n"
+        "AddNullObject Anchor\nObjectMotion (unnamed)\n"
+        "  9\n  2\n"
+        "  0 0 0 0 0 0 1 1 1\n  0 0 0 0 0\n"
+        "  1 2 3 0 0 0 1 1 1\n  15 0 0 0 0\n"
+        "EndBehavior 1\nShadowOptions 7\n");
 }
 
 static bool border(unsigned x, unsigned y) { return x == 0 || y == 0 || x == W - 1 || y == H - 1; }
