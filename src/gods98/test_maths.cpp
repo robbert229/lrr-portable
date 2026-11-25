@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* maths.c — triangle projection and winding, intersections and matrix
  * layout and composition. Use a tolerance for operations involving trig. */
+#include <limits>
 #include "gods98/maths.h"
 #include "test/lrr_test.h"
 
@@ -18,6 +19,15 @@ static void check_triangles()
     CHECK_NEAR(surface_triangle_area_calculate(a, b, lifted, 0), 6.0f, 1e-5);
     CHECK_EQ(surface_triangle_area_calculate(a, b, c, 1), 0.0f);
     CHECK_NEAR(surface_triangle_area_calculate(a, c, b, 1), 6.0f, 1e-5);
+    const float nonfinite[] = {std::numeric_limits<float>::infinity(), 0, 0};
+    const float invalid[] = {std::numeric_limits<float>::quiet_NaN(), 0, 0};
+    const int culls[] = {0, 1};
+    for (int cull : culls) {
+        CHECK_EQ(surface_triangle_area_calculate(a, a, a, cull), 0.0f);
+        CHECK_EQ(surface_triangle_area_calculate(a, a, b, cull), 0.0f);
+        CHECK_EQ(surface_triangle_area_calculate(a, nonfinite, b, cull), 0.0f);
+        CHECK_EQ(surface_triangle_area_calculate(invalid, invalid, invalid, cull), 0.0f);
+    }
 }
 
 static void check_intersections()

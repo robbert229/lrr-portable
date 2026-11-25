@@ -257,7 +257,9 @@ void viewport_render(Viewport* vp, Container* root, float delta)
 
     vp->rendering = 1;
 
-    if (0.0f != vp->smoothFOV) {
+    /* Paused frames still render; preserve the pending adjustment until
+     * time advances rather than dividing by a zero delta. */
+    if (0.0f != vp->smoothFOV && delta > 0.0f) {
         float smooth, sum, fov; /* smooth first: rule A (finding 538) */
 
         fov = vp->lpVP->GetField();

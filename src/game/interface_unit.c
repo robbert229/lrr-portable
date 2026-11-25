@@ -1760,8 +1760,8 @@ int interface_is_item_available(int type)
         int barracksIndex;
 
         // STRING: LEGORR 0x004a354c
-        lego_object_type_for_name("Barracks", &barracksType, &barracksIndex, NULL);
-        if (!interface_object_type_present(2, 0) ||
+        if (!lego_object_type_for_name("Barracks", &barracksType, &barracksIndex, NULL) ||
+            !interface_object_type_present(2, 0) ||
             !ensure_cell_entries_loaded(2, 0, 0) ||
             !lego_object_pair_requirement_met(2, 0, barracksType, barracksIndex)) {
             return 0;
