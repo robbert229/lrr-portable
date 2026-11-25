@@ -602,6 +602,8 @@ lrr_unit_test(command_permissions SOURCES ${GAME_DIR}/test_command_permissions.c
   LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
 lrr_unit_test_variant(command_permissions_availability OF command_permissions
   ARGS permissions LABELS legoobject aitask level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(command_tool_acquisition OF command_permissions
+  ARGS acquisition LABELS legoobject aitask level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
 
 # Neutral task pool enumeration, queue aging and cancellation.
 lrr_unit_test(task_pool_queue SOURCES ${GAME_DIR}/test_task_pool_queue.cpp LABELS aitask)

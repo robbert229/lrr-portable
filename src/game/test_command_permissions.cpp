@@ -192,16 +192,69 @@ void Permissions()
     Available(57, true);
     message_clear_selected_units();
 }
+
+void Acquisition()
+{
+    int pos[] = {2, 3};
+    int entrance[] = {2, 3, 2, 3};
+    auto* station = static_cast<Lego_Object*>(construction_place_building(0, pos, 0, entrance, 2, 0));
+    if (!CHECK(station != nullptr, "tool facility created")) return;
+    legoobject_kind_four_post_create_resolve(station);
+    CHECK(legoobject_shared_eligibility_check(station, 0), "active facility");
+    auto* figure = Figure(1, 3);
+    if (!figure) return;
+    aitask_cmd_flush_all(0);
+    aitask_cmd_flush_all(1);
+    CHECK_EQ(legoobject_activity_scan(figure, 1), 0);
+    message_select_object2(figure, 1, 0);
+    Available(50, true);
+    CHECK_EQ(interface_do_action(50), 1);
+    message_update();
+    CHECK_EQ(message_get_num_selected_units(), 0u);
+    auto* job = aiTaskGlobs.globalHead;
+    if (!CHECK(job && job->type == 0x13, "real tool job queued")) return;
+    CHECK_EQ(reinterpret_cast<uintptr_t>(job->field_38), uintptr_t(1));
+    CHECK_EQ(job->count, 1u);
+    CHECK_EQ(static_cast<Lego_Object**>(job->buffer)[0], figure);
+    CHECK_EQ(aitask_place_command_eligibility_check(job, figure, nullptr, nullptr, nullptr, 1, 1), 1);
+    float elapsed = 1;
+    aiTaskGlobs.assignCandidates[0] = figure;
+    aiTaskGlobs.assignCandidateCount = 1;
+    aitask_pending_command_entity_assignment_tick();
+    CHECK_EQ(figure->aiTask, job);
+    CHECK_EQ(legoobject_activity_scan(figure, 1), 0);
+    aitask_cmd_entity_command_chain_tick(figure, &elapsed);
+    if (CHECK(figure->routeBlocks != nullptr && figure->routeBlocksTotal > 0,
+              "approach to actual generic tool attachment")) {
+        const auto* route = static_cast<const LegoObjG_RouteBlock*>(figure->routeBlocks);
+        CHECK_EQ(route[figure->routeBlocksTotal - 1].actionFlags, 0xdu);
+    }
+    CHECK_EQ(figure->routeToObject, station);
+    for (unsigned i = 0; i < 100 && !legoobject_activity_scan(figure, 1); ++i)
+        legoobject_update_callback(figure, &elapsed);
+    CHECK_EQ(legoobject_activity_scan(figure, 1), 1);
+    CHECK_EQ(figure->numCarriedTools, 2u);
+    CHECK_EQ(aitask_entity_task_chain_contains_kind(figure, 0x13), 0);
+    CHECK_EQ(figure->flags2 & 0x40u, 0u);
+    int x = -1, y = -1;
+    CHECK_EQ(legoobject_position_to_terrain_cell(figure, &x, &y), 1);
+    CHECK_EQ(x, 2);
+    CHECK_EQ(y, 3);
+    message_select_object2(figure, 1, 0);
+    Available(50, false);
+    message_clear_selected_units();
+}
 }
 
 int main(int argc, char** argv)
 {
     const std::string mode = argc == 2 ? argv[1] : "resources";
-    if (!CHECK(mode == "resources" || mode == "permissions", "known scenario") ||
+    if (!CHECK(mode == "resources" || mode == "permissions" || mode == "acquisition", "known scenario") ||
         !synthetic_fixture::initialise_full_game(("command_permissions_" + mode).c_str(),
                                                  "CommandPermissions", Stats, Resources)) return lrr_test_result();
     if (mode == "resources") ResourcesLoaded();
-    else Permissions();
+    else if (mode == "permissions") Permissions();
+    else Acquisition();
     lego_engine_shutdown();
     CHECK_EQ(legoGlobs.currLevel, nullptr);
     directdraw_shutdown();
