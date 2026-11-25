@@ -1168,3 +1168,48 @@ artwork is reproduced. It also releases the loaded menu items through
 the real cleanup routine; the item array must remain live until those
 items have been released. The fixture is process-isolated and does not
 establish comprehensive cache or frontend teardown accounting.
+
+#### Synthetic audio resource lifecycle
+
+The four `audio_resource*` processes use SDL's dummy audio driver and an
+isolated Data directory. Each generates two 100 ms mono PCM RIFF files
+with explicit little-endian fields: 8-bit silence and a low-amplitude
+16-bit square wave. A zero-entry archive enables the real file mount;
+there are no shipped media files or game callbacks.
+
+- `audio_resource`: real buffered loading, missing-file rejection,
+  sample length and volume, single/multiple voices, round-robin handles,
+  position and listener updates on generic retained-mode frames,
+  stop/refresh/release and slot reuse.
+- `audio_resource_streams`: actual streamed bank entries, independent
+  one-shot and looping channels, replacement of a playing stream,
+  repeated stop, release of file ownership, missing-file playback
+  rejection and recovery. The duration assertion pins the existing
+  stream-bank whole-file-size calculation, not PCM-only duration.
+- `audio_resource_aliases`: invented config labels with plain, multi
+  (`*`) and streamed (`@`) properties, missing resource rejection,
+  case-insensitive alias lookup, volume control, global cooldown,
+  deferred positional dispatch and stop-all. A real reserve sample
+  occupies slot zero because the current SFX playback wrappers treat
+  zero as a sentinel even though the bank accepts it.
+- `audio_resource_capacity`: fill all 600 bank entries using stream
+  metadata, reject another load, release and reuse a middle slot with
+  a buffered sample, then release and reuse the first slot.
+
+All cases explicitly release their bank entries before shutting down
+the device. They do not verify audible output (the existing disk-driver
+mix tests cover that), exhaustively account for allocations, or assert
+multi-entry comma-separated alias chains and the `#volume#` marker.
+The current SFX parser's chain insertion and volume-string termination
+need independent correctness verification before those contracts can
+be pinned. No production behavior is changed by this layer.
+
+Matched local coverage from `18fcd601` (GCC Debug, gcovr 8.8, same
+production source filters): 24,463/43,178 to 24,587/43,178 lines
+(56.7% to 56.9%), 2,136 to 2,143 of 3,115 functions, and 15,715 to
+15,844 of 43,752 branches. The 124 additional lines include 97 in
+`sound3d.c`, 21 in `sfx.c` and six in `audio_sdl.cpp`.
+The full 226-case suite had 214 passing, 12 existing renderer skips,
+and zero failures. All four new cases also passed in a local MinGW64
+cross-build (GCC 14, SDL3 3.4.18) under Wine; native Windows CI remains
+separate verification.
