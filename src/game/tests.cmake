@@ -407,3 +407,23 @@ lrr_unit_test(vehicle_creature_progress SOURCES ${GAME_DIR}/test_vehicle_creatur
   WRAP scene_object_resource_get ddiscene_object_position_get entity_capability_flags_get
     entity_state_flags_get flagged_object_timer_registry_insert
   LABELS vehicle_model legoobject)
+
+# A floor cell progresses through erosion stages until it becomes lava.
+lrr_unit_test(erosion_progress SOURCES ${GAME_DIR}/test_erosion_progress.cpp
+  WRAP map_cell_tracking_flags_clear_and_refresh_current lego_cell_init_pass
+    terrain_map_block_to_world terrain_map_world_z_get lava_effect_select_and_place
+  LABELS erode)
+
+# Opening and resealing an outlet changes water height over successive ticks.
+lrr_unit_test(flood_progress SOURCES ${GAME_DIR}/test_flood_progress.cpp
+  WRAP scene_render_lock_toggle render_object_set_packed_rgba_from_float_channels
+    lwo_layer_polygon_vertex_data_read container_mesh_set_vertices
+    terrain_map_block_vertices_get lego_terrain_cell_edge_flag_set_and_update
+  LABELS water)
+
+# A valid rock face triggers a landslide and reserves the affected cell.
+lrr_unit_test(landslide_progress SOURCES ${GAME_DIR}/test_landslide_progress.cpp
+  WRAP terrain_cell_state_update_current terrain_cell_work_flag_clear_current
+    lego_cell_init_pass terrain_map_world_z_get scene_slot_pose_scale_register
+    sound_submission_route_wrapper
+  LABELS fallin)
