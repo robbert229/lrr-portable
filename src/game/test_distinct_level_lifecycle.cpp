@@ -8,6 +8,7 @@
 #include "game/interface_unit.h"
 #include "game/lego_unit.h"
 #include "game/lego_level_record.h"
+#include "game/legoobject_globs.h"
 #include "game/legoobject_record.h"
 #include "game/legoobject_unit.h"
 #include "game/panel_unit.h"
@@ -178,8 +179,13 @@ int main(int argc, char** argv)
             return lrr_test_result();
     }
     for (unsigned frame = 0; frame < 3; ++frame) lego_engine_tick(1.0f);
+    CHECK(objectGlobs.listCount > 0, "object pool allocated before shutdown");
     lego_engine_shutdown();
-    check_empty();
+    for (void* chunk : objectGlobs.listSet) CHECK_EQ(chunk, nullptr);
+    CHECK_EQ(objectGlobs.freeList, nullptr);
+    // The census walks the pool metadata, so don't dereference freed chunks
+    // if a regression leaves the count nonzero after shutdown.
+    if (CHECK_EQ(objectGlobs.listCount, 0u)) check_empty();
     directdraw_shutdown();
     return lrr_test_result();
 }

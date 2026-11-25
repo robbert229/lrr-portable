@@ -393,10 +393,14 @@ void legoobject_shutdown(void)
     legoobject_remove_all();
     for (i = 0; i < 32; i++) {
         if (s_pool_chunks[i] != NULL) free(s_pool_chunks[i]);
+        s_pool_chunks[i] = NULL;
     }
+    s_pool_chunk_count = 0;
     s_pool_record_head = NULL;
     s_entity_state_flags = 0;
     if (s_terrain_neighbor_path_cost != NULL) free(s_terrain_neighbor_path_cost);
+    s_terrain_neighbor_path_cost = NULL;
+    s_terrain_path_depth_count = 0;
     s_entity_state_flags &= ~1;
 }
 
