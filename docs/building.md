@@ -1213,3 +1213,36 @@ The full 226-case suite had 214 passing, 12 existing renderer skips,
 and zero failures. All four new cases also passed in a local MinGW64
 cross-build (GCC 14, SDL3 3.4.18) under Wine; native Windows CI remains
 separate verification.
+
+#### Standalone generated FLIC media
+
+The `flic_media` and `flic_media_playback` tests use only original 5x3
+pixel grids, with explicitly encoded little-endian FLIC headers, frames,
+and chunks. They are independent of application or game initialization.
+
+- The decoder test uses a padded pixel buffer and checks each decoded
+  pixel and unchanged row padding. It covers a full indexed palette,
+  byte-run and 16-bit word-run packets (both repeated and literal runs),
+  indexed and word deltas, skipped rows, and the odd final indexed
+  pixel. The word decoder is checked in RGB565 and RGB555 output.
+- Playback writes two generated files into an isolated directory and
+  uses real offscreen DirectDraw surfaces on SDL's dummy video driver.
+  Each file has two frames and a ring frame; both streaming and memory
+  playback are exercised with and without looping. Assertions check
+  the actual decoded surface, destination pixels, transparent paused
+  blits, frame counters, end-of-playback and loop resumption. The real
+  close routine releases the file/decode state, then the test releases
+  its owned surface and record.
+
+Only ordinary supported media chunks are generated; unsupported or
+malformed formats, real-time playback, and comprehensive leak
+accounting are outside these tests. No production behavior changes.
+
+Matched local coverage from `ed5832c1` (GCC Debug, gcovr 8.8, same
+production source filters): 25,589/43,195 to 25,822/43,195 lines
+(59.2% to 59.8%), functions +6 and branches +121. All 233 additional
+lines are in `flic_unit.c`, whose line coverage rises from 171/531
+(32.2%) to 404/531 (76.1%). Full CTest: 225 passed, 12 existing
+renderer skips, zero failures. Both new cases also passed focused
+ASan/UBSan (leak detection disabled) and a MinGW64 GCC 14/SDL3 3.4.18
+cross-build under Wine, separately from native Windows CI.
