@@ -8,6 +8,172 @@ GitHub. [docs/releasing.md](docs/releasing.md) explains how a release is
 made. The section for the version `main` is working towards is dated
 `unreleased` until its release.
 
+## [1.0.0-beta2] - 2026-11-24
+
+The second beta of lrr-portable: LEGO Rock Raiders (1999), rebuilt to run
+natively on Windows, macOS and Linux, with early test builds for Android and
+the Nintendo 3DS. This beta fixes the Flatpak, adds keyboard and mouse
+camera controls, fixes the raiders' "idleness syndrome", adds two cheats,
+and lets you tap through the 3DS build's menus.
+
+**You need your own copy of LEGO Rock Raiders for PC.** No download
+contains any game data. lrr-portable uses `LegoRR0.wad`, `LegoRR1.wad` and the
+`Data` folder from your installed game; the
+[README](https://github.com/robbert229/lrr-portable#getting-the-game-running)
+explains how to point it at them.
+
+**This is a beta, a pre-release of 1.0.0.** Every part of the game has been
+rebuilt, and you can start missions, dig, build and explore, but crashes
+are still common and you may not reach the end of a mission. Please
+[report what breaks](https://github.com/robbert229/lrr-portable/issues).
+The [1.0.0-beta1 notes](https://github.com/robbert229/lrr-portable/releases/tag/v1.0.0-beta1)
+describe everything that already worked.
+
+### Downloads
+
+| System | File |
+| --- | --- |
+| Windows 10 and 11, 64-bit | `lrr-portable-1.0.0-beta2-Windows-x64.zip` |
+| Windows on Arm | `lrr-portable-1.0.0-beta2-Windows-arm64.zip` |
+| Windows, 32-bit | `lrr-portable-1.0.0-beta2-Windows-x86.zip` |
+| macOS 12 or later, Apple silicon | `lrr-portable-1.0.0-beta2-Darwin-arm64.dmg` |
+| macOS 12 or later, Intel | `lrr-portable-1.0.0-beta2-Darwin-x86_64.dmg` |
+| Linux, x86_64 (glibc 2.39 or later, such as Ubuntu 24.04) | `lrr-portable-1.0.0-beta2-Linux-x86_64.AppImage` or `.tar.gz` |
+| Linux, Flatpak (x86_64 or aarch64) | `lrr-portable-1.0.0-beta2-Linux-x86_64.flatpak` or `-aarch64.flatpak` |
+| Android 5 or later, **test build** | `lrr-portable-1.0.0-beta2-Android-debug-test.apk` |
+| New Nintendo 3DS (homebrew), **test build** | `lrr-portable-1.0.0-beta2-3DS-homebrew-test.zip` (`LegoRR.3dsx` and `LegoRR.cia`) |
+
+`SHA256SUMS` lists every file's checksum. Each download carries the licence
+(`LICENSE`) and the notices for the libraries it includes
+(`THIRD-PARTY-NOTICES.txt`). On the desktop, `LegoRR --version` prints the
+version (on Windows, run `LegoRR.exe --version | more` to see it); every
+system also writes it to the log at start-up.
+
+The **Android and 3DS test builds** are for trying the port out, not for
+keeping:
+
+- The APK is signed with a throwaway debug key, so it can't install over
+  the 1.0.0-beta1 APK. You have to uninstall first, and uninstalling deletes
+  the app's folder, saves included. Copy your saves out first.
+- The 3DS build is homebrew: it runs from the Homebrew Launcher
+  (`LegoRR.3dsx`) or installs with a CIA installer (`LegoRR.cia`) on a
+  console with custom firmware.
+
+### What's new
+
+- **Keyboard and mouse camera controls.** In a level, `W`, `A`, `S` and `D`
+  pan the view, `Q` and `E` rotate it, the mouse wheel zooms, and dragging
+  with the middle button pans. Edge panning and the arrow keys still work.
+  They're on by default; set `controls = original` under `[tweaks]` in
+  `LegoRR.ini` for the original's controls alone.
+- **Raiders no longer stand idle while jobs wait.** The "idleness
+  syndrome", a bug in the original's job assignment that left raiders
+  standing around, worst with many raiders or on maps with parts they can't
+  reach, is fixed. It's on by default; set
+  `fix_idleness_syndrome = false` under `[tweaks]` for the original's
+  behaviour.
+- **Cheats.** A new `[cheats]` section in `LegoRR.ini`, off unless you turn
+  it on:
+  - `unlimited_raiders = true` lets you teleport in raiders past the limit
+    your Support Stations set;
+  - `unlimited_oxygen = true` keeps the air full, so a level can't be lost
+    to it.
+- **A frame rate counter.** Set `fps_overlay = true` under `[tweaks]` to
+  show the frames a second in the top right corner.
+- **[RecompLauncher](https://recomplauncher.com) support.** The launcher can
+  set lrr-portable up for you: it asks for your Rock Raiders folder, starts
+  the game, and shows its settings on the game's page. Two new command-line
+  options make this work, and change nothing unless you pass them:
+  `--game <folder>` reads the game from that folder for one run, and
+  `--data <folder>` keeps `LegoRR.ini` and your saves in that folder.
+- **Nintendo 3DS (test build):**
+  - touching the bottom screen clicks where you touch, so you can get
+    through the menus;
+  - the HOME menu and sleep mode pause the level, and closing the game from
+    the HOME menu saves your settings as quitting does;
+  - long sounds are read from the SD card as they play instead of loaded
+    whole; loading them whole ran the game out of memory at the main menu;
+  - a crash on the level-select screen is fixed.
+
+An existing `LegoRR.ini` isn't rewritten, so add the new keys by hand
+under their section headings.
+
+### Fixes
+
+- **The Flatpak starts again.** In 1.0.0-beta1, starting the Flatpak from
+  the menu or with `flatpak run` closed it straight away. The same happened
+  to any install started as `LegoRR` from the `PATH`.
+
+### Changes from the original
+
+New in this release; the full list, with the details, is in
+[docs/divergences.md](docs/divergences.md).
+
+- **The keyboard and mouse camera controls** above (`[tweaks]`
+  `controls`).
+- **The idleness syndrome fix** above (`[tweaks]`
+  `fix_idleness_syndrome`).
+- **The cheats** above (`[cheats]`), off by default.
+- **The frame rate counter** above (`[tweaks]` `fps_overlay`), off by
+  default.
+- **Suspending the 3DS pauses the level**, as losing focus does in the
+  original when `LoseFocusAndPause` is on in `Lego.cfg`.
+
+### Known issues
+
+- **Crashes are common.** Missions can crash before you finish them.
+- **The interface stays at the original's 640x480 layout**, scaled up.
+  Widescreen layouts are still to come.
+- **Some menu effects run too fast.** Front-end effects that haven't yet
+  been moved to elapsed time still count frames, so they can run faster than
+  in the original.
+- **The software renderer stays at 640x480** and is slow in a large window.
+  The game uses it only where graphics-card rendering isn't available.
+- **Movies need FFmpeg 7 or newer**, which no download includes. Without it
+  the game skips the movies. The Flatpak uses the
+  `org.freedesktop.Platform.ffmpeg-full` extension. Android and the 3DS
+  have no movies.
+- **The macOS app isn't notarized.** The first time, right-click
+  `LegoRR.app` and choose **Open**.
+- **The Windows program isn't signed.** Windows SmartScreen may warn the
+  first time; choose **More info**, then **Run anyway**.
+- **The AppImage needs glibc 2.39 or later** (Ubuntu 24.04, Fedora 40 or
+  newer) and an x86_64 processor. On older systems, use the Flatpak.
+- **The Flatpak reads your game files** only from your home folder,
+  `/media`, `/run/media` and `/mnt`.
+- **RecompLauncher on macOS:** the launcher installs a zipped app, and the
+  macOS download is a disk image, so the launcher can't set it up yet.
+- **The web build uses the software renderer**, and you have to host it
+  and your own game files yourself.
+- **Android:**
+  - a tap is a left click, and there are no touch controls yet for right
+    click, scrolling, zoom, keys or Back
+    ([#986](https://github.com/robbert229/lrr-portable/issues/986));
+  - you copy the game files onto the device with `adb push`
+    ([#909](https://github.com/robbert229/lrr-portable/issues/909) will add
+    a folder picker); [docs/building.md](docs/building.md#android) shows how.
+- **Nintendo 3DS:**
+  - it needs a **New** 3DS or New 2DS: the level needs more memory than an
+    original 3DS gives a program;
+  - it runs at about 15 frames a second in a level in an emulator, and has
+    barely been tried on a console. Pausing on the HOME menu and sleep, and
+    the fixes above, haven't been confirmed on one yet;
+  - a touch is a left click and nothing more: there's no right click,
+    scrolling or zoom, and the buttons and circle pad do nothing;
+  - the top screen shows a text console;
+  - a software 3D device chosen in `LegoRR.ini` draws its picture unscaled
+    on the top screen.
+
+### Coming next
+
+These are in progress and not in 1.0.0-beta2:
+
+- Widescreen interface layouts
+  ([#915](https://github.com/robbert229/lrr-portable/issues/915)).
+- Touch controls and a folder picker on Android
+  ([#986](https://github.com/robbert229/lrr-portable/issues/986),
+  [#909](https://github.com/robbert229/lrr-portable/issues/909)).
+
 ## [1.0.0-beta1] - 2026-11-22
 
 The first release of lrr-portable: LEGO Rock Raiders (1999), rebuilt to run
@@ -175,4 +341,5 @@ These are in progress and not in 1.0.0-beta1:
 - Pause, resume and exit on the 3DS's HOME button
   ([#910](https://github.com/robbert229/lrr-portable/issues/910)).
 
+[1.0.0-beta2]: https://github.com/robbert229/lrr-portable/releases/tag/v1.0.0-beta2
 [1.0.0-beta1]: https://github.com/robbert229/lrr-portable/releases/tag/v1.0.0-beta1
