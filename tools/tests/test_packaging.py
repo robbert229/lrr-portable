@@ -49,7 +49,9 @@ def config_table():
             row["default"] = rest[0]
         elif kind == "Choice":
             row["names"] = names[rest[0]]
-            row["default"] = row["names"][enums[rest[1]]]
+            # The default is an enum (config.h) or a plain index.
+            index = enums[rest[1]] if rest[1] in enums else int(rest[1])
+            row["default"] = row["names"][index]
         elif kind == "Number":
             row["default"] = rest[0]
         else:
