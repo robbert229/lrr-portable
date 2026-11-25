@@ -664,3 +664,9 @@ lrr_unit_test(neutral_grid_render SOURCES ${GAME_DIR}/test_neutral_grid_render.c
   ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
   ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
   LABELS radarmap level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Real config-driven task priority ordering, hit-state, and reset.
+lrr_unit_test(priority_registry SOURCES ${GAME_DIR}/test_priority_registry.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS aitask level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
