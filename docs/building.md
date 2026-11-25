@@ -759,3 +759,30 @@ the seam stubs.
 `main` has no matching build, Reccmp gate or Windows reference backend
 (ADR 0007). They live on the `decomp` branch, where the decomp tag will be
 cut; see `decomp`'s `docs/building.md`.
+
+### Synthetic headless level fixtures
+
+Tests can add `${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp`
+to their `lrr_unit_test(... SOURCES ...)` and include
+`test/synthetic_level_fixture.h`. The helpers are test-only:
+
+- `make_fixture("unique_test_fixture")` replaces the named scratch
+  directory beneath the test working directory, enters it, and writes
+  artificial files under Data/L. Use a different directory for each
+  concurrently running test.
+- `write_text`, `write_map`, `write_bmp`, and `write_triangle` also
+  work independently with caller-supplied paths (parent directories must
+  exist). Maps take dimensions and a cell-value callback; BMPs are
+  grayscale, and the LWOB is a single triangle.
+- `initialise_headless("UniqueTestName")` initializes files, SDL and the
+  software device. Register the test with
+  `ENVIRONMENT "SDL_VIDEO_DRIVER=dummy"`.
+- `boot_game()` initializes the minimal subsystems needed by the existing
+  synthetic level loader. It is not the complete startup routine.
+  After it succeeds, call `lego_level_load("Level01")` and inspect the
+  resulting state. Run each scenario in a separate process: the helpers
+  do not reset all global state or perform shutdown.
+
+No installed game data is needed. All input files are generated in the
+scratch directory; the fixture is an artificial two-cave grid, not a
+shipped level.

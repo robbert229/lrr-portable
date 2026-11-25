@@ -360,4 +360,5 @@ lrr_unit_test(weapons SOURCES ${GAME_DIR}/test_weapons.cpp
 # device, then the simulation for a while: the path a game session takes
 # through lego_level_load and the main simulation step.
 lrr_unit_test(level_boot SOURCES ${GAME_DIR}/test_level_boot.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
   LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
