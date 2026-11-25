@@ -6,6 +6,10 @@
  * written, so this runs on every host; test_config covers the file. */
 #include <string.h>
 
+/* Before files_native.h, whose macros would rename the declarations a
+ * Windows C library's <io.h> makes (as test_config.cpp orders them). */
+#include <string>
+
 #include "gods98/files_native.h"
 #include "platform/native/config.h"
 #include "test/lrr_test.h"
