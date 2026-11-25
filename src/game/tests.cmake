@@ -442,3 +442,8 @@ lrr_unit_test(building_lifecycle SOURCES ${GAME_DIR}/test_building_lifecycle.cpp
 lrr_unit_test(level_navigation_scenario SOURCES ${GAME_DIR}/test_level_navigation_scenario.cpp
   ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
   LABELS level_boot navigation ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Real vehicle movement, creature pool lifecycle and geometry-based web trapping.
+lrr_unit_test(object_lifecycle_extra SOURCES ${GAME_DIR}/test_object_lifecycle_extra.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS vehicle_model legoobject spiderweb level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
