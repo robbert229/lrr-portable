@@ -601,3 +601,11 @@ lrr_unit_test_variant(command_permissions_availability OF command_permissions
 
 # Neutral task pool enumeration, queue aging and cancellation.
 lrr_unit_test(task_pool_queue SOURCES ${GAME_DIR}/test_task_pool_queue.cpp LABELS aitask)
+
+# Real sample and SFX loaders over generated PCM, on the dummy audio device.
+lrr_unit_test(audio_resource SOURCES ${GAME_DIR}/test_audio_resource.cpp
+  LABELS audio sound3d sfx ENVIRONMENT "SDL_AUDIO_DRIVER=dummy")
+foreach(scenario IN ITEMS streams aliases capacity)
+  lrr_unit_test_variant(audio_resource_${scenario} OF audio_resource
+    ARGS ${scenario} LABELS audio sound3d sfx ENVIRONMENT "SDL_AUDIO_DRIVER=dummy")
+endforeach()
