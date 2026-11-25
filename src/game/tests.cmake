@@ -609,3 +609,11 @@ foreach(scenario IN ITEMS streams aliases capacity)
   lrr_unit_test_variant(audio_resource_${scenario} OF audio_resource
     ARGS ${scenario} LABELS audio sound3d sfx ENVIRONMENT "SDL_AUDIO_DRIVER=dummy")
 endforeach()
+
+# Fixed simulation timing, air accounting and camera attachment ownership.
+lrr_unit_test(simulation_modes SOURCES ${GAME_DIR}/test_simulation_modes.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(simulation_view_ownership OF simulation_modes
+  ARGS view LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
