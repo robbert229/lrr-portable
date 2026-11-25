@@ -842,7 +842,10 @@ void smoke_group_show(Smoke* smoke, unsigned int groupID)
     scale = (-smoke->speed) / vec.z;
     sfx_vector3d_scale(&vec, &vec, scale);
 
-    smoke->flags = SMOKE_FLAG_GROUPS;
+    // [divergence:smoke-owned-container] Keep just the ownership bit so
+    // removal releases the frame. Reset the other flags as in the original,
+    // including the sound retry latch and one-shot/ending bits.
+    smoke->flags = SMOKE_FLAG_GROUPS | (smoke->flags & SMOKE_FLAG_OWNCONTAINER);
     ddiscene_object_position_get(smoke->cont, NULL, (float*)&pos);
     group->position = pos;
     group->time = 0.0f;
