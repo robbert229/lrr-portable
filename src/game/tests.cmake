@@ -568,3 +568,13 @@ lrr_unit_test(selection_commands SOURCES ${GAME_DIR}/test_selection_commands.cpp
   ARGS selection LABELS selection aitask level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
 lrr_unit_test_variant(selection_commands_pointer OF selection_commands
   ARGS pointer LABELS selection aitask level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Full initializer: projected terrain and bounded transient mesh ownership.
+lrr_unit_test(environment_runtime SOURCES ${GAME_DIR}/test_environment_runtime.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS terrain_map level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(environment_texture_lifetime OF environment_runtime
+  ARGS transitions LABELS terrain_map level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(environment_mission_balance OF environment_runtime
+  ARGS mission LABELS objective level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
