@@ -10,6 +10,7 @@
 #include "gods98/draw.h"
 #include "game/lego_unit.h"
 #include "game/legoobject_unit.h"
+#include "game/objective_unit.h"
 #include "game/radarmap_link_names.h"
 #include "game/radarmap.h"
 #include "game/terrain_map.h"
@@ -96,7 +97,10 @@ bool pixel_region_changed(int x, int y, int width, int height)
     const auto rgb = desc.ddpfPixelFormat.dwRBitMask | desc.ddpfPixelFormat.dwGBitMask |
                      desc.ddpfPixelFormat.dwBBitMask;
     bool changed = false;
-    if (CHECK(bytes >= 2 && bytes <= 4 && rgb != 0, "supported software pixel layout")) {
+    if (CHECK(desc.lpSurface && bytes >= 2 && bytes <= 4 && rgb != 0 &&
+              desc.lPitch >= static_cast<LONG>((x + width) * bytes) &&
+              y + height <= static_cast<int>(desc.dwHeight),
+              "supported software pixel layout")) {
         const auto* pixels = static_cast<const uint8_t*>(desc.lpSurface);
         for (int row = y; row < y + height; ++row)
             for (int col = x; col < x + width; ++col) {
@@ -111,6 +115,10 @@ bool pixel_region_changed(int x, int y, int width, int height)
 
 void draw()
 {
+    // The software renderer's pixel-format state is established by its
+    // first BeginFrame, not simply by DirectDraw device creation.
+    objective_stop_showing_objective();
+    if (!CHECK(lego_engine_tick(1), "initial rendered frame")) return;
     auto* level = legoGlobs.currLevel;
     Point2F centre{};
     terrain_map_block_to_world(level->map, 2, 3, &centre.x, &centre.y);

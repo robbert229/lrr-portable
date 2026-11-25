@@ -351,7 +351,7 @@ void surface_bresenham_line_walk_clipped(int32_t x1, int32_t y1, int32_t x2,
         numpixels = deltax + 1;
         d = (2 * deltay) - deltax;
         dinc1 = deltay << 1;
-        dinc2 = (deltay - deltax) << 1;
+        dinc2 = (deltay - deltax) * 2;
         xinc1 = 1;
         xinc2 = 1;
         yinc1 = 0;
@@ -360,7 +360,7 @@ void surface_bresenham_line_walk_clipped(int32_t x1, int32_t y1, int32_t x2,
         numpixels = deltay + 1;
         d = (2 * deltax) - deltay;
         dinc1 = deltax << 1;
-        dinc2 = (deltax - deltay) << 1;
+        dinc2 = (deltax - deltay) * 2;
         xinc1 = 0;
         xinc2 = 1;
         yinc1 = 1;
@@ -433,8 +433,11 @@ static void Draw_Pixel16HalfTrans(int32_t x, int32_t y, uint32_t value)
 // FUNCTION: LEGORR 0x004869a0
 static void Draw_Pixel24(int32_t x, int32_t y, uint32_t value)
 {
-    uint32_t* addr = (uint32_t*)((uint8_t*)drawGlobs.buffer + (y * drawGlobs.pitch) + (x * 3));
-    *addr = (value << 8) | (*addr & 0xff);
+    uint8_t* addr = (uint8_t*)drawGlobs.buffer + (y * drawGlobs.pitch) + (x * 3);
+    uint32_t old;
+    memcpy(&old, addr, sizeof(old));
+    value = (value << 8) | (old & 0xff);
+    memcpy(addr, &value, sizeof(value));
 }
 
 // FUNCTION: LEGORR 0x004869d0
