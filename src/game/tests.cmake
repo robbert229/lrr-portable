@@ -381,3 +381,15 @@ endforeach()
 # Synthetic resource classification and carrier admission.
 lrr_unit_test(mining_logistics SOURCES ${GAME_DIR}/test_mining_logistics.cpp
   LABELS mining_logistics)
+
+# Real route search across an obstructed synthetic map.
+lrr_unit_test(navigation_synthetic SOURCES ${GAME_DIR}/test_navigation_synthetic.cpp
+  LABELS navigation)
+
+# Health changes and tool capacity/replacement on a synthetic raider.
+lrr_unit_test(raider_synthetic SOURCES ${GAME_DIR}/test_raider_synthetic.cpp
+  LABELS raider)
+
+# Pending task reassignment and pool-copy ownership.
+lrr_unit_test(task_lifecycle SOURCES ${GAME_DIR}/test_task_lifecycle.cpp
+  LABELS aitask)
