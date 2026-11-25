@@ -65,7 +65,7 @@ static Stats_Globs statsGlobs;
 /* Config.h's lookups as the original expands them: the path is built
  * again for each lookup, and a missing item reads as "". */
 #define STATS_ID(name) \
-    string_path_join(gameName, STATS_KEY, item->key, (name), NULL)
+    string_path_join(gameName, STATS_KEY, item->key, (name), (const char*)NULL)
 #define STATS_STR(name) \
     (block_get_strptr(config, STATS_ID(name)) ? \
      block_get_strptr(config, STATS_ID(name)) : "")
@@ -136,7 +136,7 @@ int stats_initialise(BlockRec* config, const char* gameName)
 
     // STRING: LEGORR 0x004aa448
 #define STATS_KEY "Stats"
-    for (item = block_subgroup(config, string_path_join(gameName, STATS_KEY, NULL));
+    for (item = block_subgroup(config, string_path_join(gameName, STATS_KEY, (const char*)NULL));
          item != NULL; item = block_next_equal_key(item)) {
         flags3 = 0;
         flags2 = 0;

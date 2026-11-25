@@ -81,7 +81,7 @@ int objinfo_load_health_bar(struct BlockRec* config, const char* gameName)
             // STRING: LEGORR 0x004a830c
             "ObjInfo",
             // STRING: LEGORR 0x004a8314
-            "HealthBarPosition", NULL)))) {
+            "HealthBarPosition", (const char*)NULL)))) {
         if (sound_variant_split(str, argv, ":") == 2) {
             objInfoGlobs.HealthBarPosition.x = (float)atoi(argv[0]);
             objInfoGlobs.HealthBarPosition.y = (float)atoi(argv[1]);
@@ -89,7 +89,7 @@ int objinfo_load_health_bar(struct BlockRec* config, const char* gameName)
 
             if ((str = block_get_str_copy(config, string_path_join(gameName, "ObjInfo",
                     // STRING: LEGORR 0x004a82f4
-                    "HealthBarWidthHeight", NULL)))) {
+                    "HealthBarWidthHeight", (const char*)NULL)))) {
                 if (sound_variant_split(str, argv, ":") == 2) {
                     objInfoGlobs.HealthBarWidthHeight.x = (float)atoi(argv[0]);
                     objInfoGlobs.HealthBarWidthHeight.y = (float)atoi(argv[1]);
@@ -97,13 +97,13 @@ int objinfo_load_health_bar(struct BlockRec* config, const char* gameName)
 
                     objInfoGlobs.HealthBarBorderSize = atoi(block_get_strptr(config, string_path_join(gameName, "ObjInfo",
                             // STRING: LEGORR 0x004a82e0
-                            "HealthBarBorderSize", NULL)) ?
-                                                            block_get_strptr(config, string_path_join(gameName, "ObjInfo", "HealthBarBorderSize", NULL)) :
+                            "HealthBarBorderSize", (const char*)NULL)) ?
+                                                            block_get_strptr(config, string_path_join(gameName, "ObjInfo", "HealthBarBorderSize", (const char*)NULL)) :
                                                             "");
 
                     if (!config_rgb_vector_read(config, string_path_join(gameName, "ObjInfo",
                             // STRING: LEGORR 0x004a82cc
-                            "HealthBarBorderRGB", NULL),
+                            "HealthBarBorderRGB", (const char*)NULL),
                                                 &objInfoGlobs.HealthBarBorderRGB[0][OBJINFO_SHADE_NORMAL],
                                                 &objInfoGlobs.HealthBarBorderRGB[1][OBJINFO_SHADE_NORMAL],
                                                 &objInfoGlobs.HealthBarBorderRGB[2][OBJINFO_SHADE_NORMAL])) {
@@ -128,7 +128,7 @@ int objinfo_load_health_bar(struct BlockRec* config, const char* gameName)
 
                     if (!config_rgb_vector_read(config, string_path_join(gameName, "ObjInfo",
                             // STRING: LEGORR 0x004a82b4
-                            "HealthBarBackgroundRGB", NULL),
+                            "HealthBarBackgroundRGB", (const char*)NULL),
                                                 &objInfoGlobs.HealthBarBackgroundRGB.red,
                                                 &objInfoGlobs.HealthBarBackgroundRGB.green,
                                                 &objInfoGlobs.HealthBarBackgroundRGB.blue)) {
@@ -136,7 +136,7 @@ int objinfo_load_health_bar(struct BlockRec* config, const char* gameName)
                     }
                     if (!config_rgb_vector_read(config, string_path_join(gameName, "ObjInfo",
                             // STRING: LEGORR 0x004a82a4
-                            "HealthBarRGB", NULL),
+                            "HealthBarRGB", (const char*)NULL),
                                                 &objInfoGlobs.HealthBarRGB.red,
                                                 &objInfoGlobs.HealthBarRGB.green,
                                                 &objInfoGlobs.HealthBarRGB.blue)) {
@@ -145,7 +145,7 @@ int objinfo_load_health_bar(struct BlockRec* config, const char* gameName)
 
                     if (block_get_bool_path(config, string_path_join(gameName, "ObjInfo",
                             // STRING: LEGORR 0x004a8290
-                            "HealthBarVertical", NULL)) == 1) {
+                            "HealthBarVertical", (const char*)NULL)) == 1) {
                         objInfoGlobs.flags |= OBJINFO_GLOB_FLAG_HEALTHBAR_VERTICAL;
                     }
 
@@ -171,7 +171,7 @@ int objinfo_load_hunger(struct BlockRec* config, const char* gameName)
 
     if ((str = block_get_str_copy(config, string_path_join(gameName, "ObjInfo",
             // STRING: LEGORR 0x004a8328
-            "HungerImagesPosition", NULL)))) {
+            "HungerImagesPosition", (const char*)NULL)))) {
         if (sound_variant_split(str, argv, ":") == 2) {
             objInfoGlobs.HungerImagesPosition.x = (float)atoi(argv[0]);
             objInfoGlobs.HungerImagesPosition.y = (float)atoi(argv[1]);
@@ -195,7 +195,7 @@ void objinfo_load_hunger_images(struct BlockRec* config, const char* gameName)
         snprintf(name, sizeof(name), "HungerImage%i", loop);
         objInfoGlobs.HungerImages[loop] = image_load_bmp_scaled(block_get_strptr(config, string_path_join(gameName, "ObjInfo",
                 // STRING: LEGORR 0x004a8340
-                "HungerImages", name, NULL)), 0, 0);
+                "HungerImages", name, (const char*)NULL)), 0, 0);
         if (objInfoGlobs.HungerImages[loop]) {
             image_surface_blit_transformed((struct TextureSurface*)objInfoGlobs.HungerImages[loop], 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
         }
@@ -210,7 +210,7 @@ int objinfo_load_bubble(struct BlockRec* config, const char* gameName)
 
     if ((str = block_get_str_copy(config, string_path_join(gameName, "ObjInfo",
             // STRING: LEGORR 0x004a8360
-            "BubbleImagesPosition", NULL)))) {
+            "BubbleImagesPosition", (const char*)NULL)))) {
         if (sound_variant_split(str, argv, ":") == 2) {
             objInfoGlobs.BubbleImagesPosition.x = (float)atoi(argv[0]);
             objInfoGlobs.BubbleImagesPosition.y = (float)atoi(argv[1]);

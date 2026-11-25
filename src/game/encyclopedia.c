@@ -66,39 +66,39 @@ void encyclopedia_initialise(struct BlockRec* config, const char* gameName)
     for (loop = 0; loop < encyclopedia_typeCounts[0]; loop++) {
         fileName = block_get_strptr(config, string_path_join(gameName,
                                                              // STRING: LEGORR 0x004a1eb0
-                                                             "Encyclopedia", legoGlobs_vehicleName[loop], NULL));
+                                                             "Encyclopedia", legoGlobs_vehicleName[loop], (const char*)NULL));
         if (fileName) encyclopediaGlobs.vehicleFiles[loop] = file_open(fileName, "r");
     }
 
     encyclopediaGlobs.minifigureFiles = (File**)malloc(encyclopedia_typeCounts[1] * sizeof(File*));
     memset(encyclopediaGlobs.minifigureFiles, 0, encyclopedia_typeCounts[1] * sizeof(File*));
     for (loop = 0; loop < encyclopedia_typeCounts[1]; loop++) {
-        fileName = block_get_strptr(config, string_path_join(gameName, "Encyclopedia", legoGlobs_miniFigureName[loop], NULL));
+        fileName = block_get_strptr(config, string_path_join(gameName, "Encyclopedia", legoGlobs_miniFigureName[loop], (const char*)NULL));
         if (fileName) encyclopediaGlobs.minifigureFiles[loop] = file_open(fileName, "r");
     }
 
     encyclopediaGlobs.rockMonsterFiles = (File**)malloc(encyclopedia_typeCounts[2] * sizeof(File*));
     memset(encyclopediaGlobs.rockMonsterFiles, 0, encyclopedia_typeCounts[2] * sizeof(File*));
     for (loop = 0; loop < encyclopedia_typeCounts[2]; loop++) {
-        fileName = block_get_strptr(config, string_path_join(gameName, "Encyclopedia", legoGlobs_rockMonsterName[loop], NULL));
+        fileName = block_get_strptr(config, string_path_join(gameName, "Encyclopedia", legoGlobs_rockMonsterName[loop], (const char*)NULL));
         if (fileName) encyclopediaGlobs.rockMonsterFiles[loop] = file_open(fileName, "r");
     }
 
     encyclopediaGlobs.buildingFiles = (File**)malloc(encyclopedia_typeCounts[3] * sizeof(File*));
     memset(encyclopediaGlobs.buildingFiles, 0, encyclopedia_typeCounts[3] * sizeof(File*));
     for (loop = 0; loop < encyclopedia_typeCounts[3]; loop++) {
-        fileName = block_get_strptr(config, string_path_join(gameName, "Encyclopedia", legoGlobs_buildingName[loop], NULL));
+        fileName = block_get_strptr(config, string_path_join(gameName, "Encyclopedia", legoGlobs_buildingName[loop], (const char*)NULL));
         if (fileName) encyclopediaGlobs.buildingFiles[loop] = file_open(fileName, "r");
     }
 
     fileName = block_get_strptr(config, string_path_join(gameName, "Encyclopedia",
                                                          // STRING: LEGORR 0x004a1e9c
-                                                         "PowerCrystal", NULL));
+                                                         "PowerCrystal", (const char*)NULL));
     if (fileName) encyclopediaGlobs.powerCrystalFile = file_open(fileName, "r");
 
     fileName = block_get_strptr(config, string_path_join(gameName, "Encyclopedia",
                                                          // STRING: LEGORR 0x004a1e98
-                                                         "Ore", NULL));
+                                                         "Ore", (const char*)NULL));
     if (fileName) encyclopediaGlobs.oreFile = file_open(fileName, "r");
 }
 

@@ -125,11 +125,13 @@ int reward_initialise(void)
 // FUNCTION: LEGORR 0x0045f1f0
 void reward_load_item_sound(RewardLevelItem* item)
 {
+    // string_path_join reads a pointer sentinel; integer 0 leaves the
+    // upper half of a Win64 variadic stack slot uninitialised.
     item->soundName = block_get_str_copy(rewardGlobs.config,
         string_path_join(rewardGlobs.gameName, "Reward",
                          // STRING: LEGORR 0x004a9370
                          "Sounds",
-                         item->name, 0));
+                         item->name, (const char*)NULL));
 }
 
 // FUNCTION: LEGORR 0x0045f230
@@ -141,7 +143,7 @@ void reward_load_item_font(RewardLevelItem* item)
              string_path_join(rewardGlobs.gameName, "Reward",
                               // STRING: LEGORR 0x004a9378
                               "Fonts",
-                              item->name, 0))) != NULL) {
+                              item->name, (const char*)NULL))) != NULL) {
         if ((item->font = (struct TextureSurface*)font_atlas_record_create(fontName)) != NULL)
             return;
     }
@@ -163,14 +165,14 @@ void reward_load_item_box_image(RewardLevelItem* item)
              string_path_join(rewardGlobs.gameName, "Reward",
                               // STRING: LEGORR 0x004a9388
                               "BoxImages",
-                              item->name, 0))) == NULL) {
+                              item->name, (const char*)NULL))) == NULL) {
         if (!(s_engine_feature_word & 0x2000000)) {
             snprintf(altName, sizeof(altName), "!%s", item->name);
             str = block_get_str_copy(rewardGlobs.config,
                 string_path_join(rewardGlobs.gameName, "Reward",
                                  // STRING: LEGORR 0x004a9380
                                  "Images",
-                                 altName, 0));
+                                 altName, (const char*)NULL));
         }
         if (str == NULL) return;
     }
@@ -196,12 +198,12 @@ void reward_load_item_image(RewardLevelItem* item)
 
     if ((str = block_get_str_copy(rewardGlobs.config,
              string_path_join(rewardGlobs.gameName, "Reward", "Images",
-                              item->name, 0))) == NULL) {
+                              item->name, (const char*)NULL))) == NULL) {
         if (!(s_engine_feature_word & 0x2000000)) {
             snprintf(altName, sizeof(altName), "!%s", item->name);
             str = block_get_str_copy(rewardGlobs.config,
                 string_path_join(rewardGlobs.gameName, "Reward", "Images",
-                                 altName, 0));
+                                 altName, (const char*)NULL));
         }
         if (str == NULL) return;
     }
@@ -225,7 +227,7 @@ void reward_load_item_text(RewardLevelItem* item)
 
     if ((str = block_get_str_copy(rewardGlobs.config,
              string_path_join(rewardGlobs.gameName, "Reward", "Text",
-                              item->name, 0))) != NULL) {
+                              item->name, (const char*)NULL))) != NULL) {
         sound_variant_split(str, argv, "|");
         snprintf(item->text, sizeof(item->text), "%s", argv[0]);
         mission_replace_char(item->text, '_', ' ');
@@ -249,12 +251,12 @@ void reward_load_item_flic(RewardLevelItem* item)
              string_path_join(rewardGlobs.gameName, "Reward",
                               // STRING: LEGORR 0x004a9394
                               "Flics",
-                              item->name, 0))) == NULL) {
+                              item->name, (const char*)NULL))) == NULL) {
         if (!(s_engine_feature_word & 0x1000000)) {
             snprintf(altName, sizeof(altName), "!%s", item->name);
             str = block_get_str_copy(rewardGlobs.config,
                 string_path_join(rewardGlobs.gameName, "Reward", "Flics",
-                                 altName, 0));
+                                 altName, (const char*)NULL));
         }
         if (str == NULL) return;
     }
@@ -310,46 +312,46 @@ int reward_load_graphics(BlockFile* config, const char* gameName)
         string_path_join(gameName, "Reward",
                          // STRING: LEGORR 0x004a9418
                          "Wallpaper",
-                         0)), 0, 0);
+                         (const char*)NULL)), 0, 0);
     if ((rewardGlobs.display = block_get_bool_path(config,
              string_path_join(gameName, "Reward",
                               // STRING: LEGORR 0x004a9410
                               "Display",
-                              0))) == 2)
+                              (const char*)NULL))) == 2)
         rewardGlobs.display = 0;
     if ((rewardGlobs.centreText = block_get_bool_path(config,
              string_path_join(gameName, "Reward",
                               // STRING: LEGORR 0x004a9404
                               "CentreText",
-                              0))) == 2)
+                              (const char*)NULL))) == 2)
         rewardGlobs.centreText = 0;
     rewardGlobs.scrollSpeed = (float)atof(block_get_strptr(config,
         string_path_join(gameName, "Reward",
                          // STRING: LEGORR 0x004a93f8
                          "ScrollSpeed",
-                         0)) ?
-        block_get_strptr(config, string_path_join(gameName, "Reward", "ScrollSpeed", 0)) : "");
+                         (const char*)NULL)) ?
+        block_get_strptr(config, string_path_join(gameName, "Reward", "ScrollSpeed", (const char*)NULL)) : "");
     rewardGlobs.vertSpacing = (float)atof(block_get_strptr(config,
         string_path_join(gameName, "Reward",
                          // STRING: LEGORR 0x004a93ec
                          "VertSpacing",
-                         0)) ?
-        block_get_strptr(config, string_path_join(gameName, "Reward", "VertSpacing", 0)) : "");
+                         (const char*)NULL)) ?
+        block_get_strptr(config, string_path_join(gameName, "Reward", "VertSpacing", (const char*)NULL)) : "");
     rewardGlobs.fontName = block_get_str_copy(config,
         string_path_join(gameName, "Reward",
                          // STRING: LEGORR 0x004a93e4
                          "Font",
-                         0));
+                         (const char*)NULL));
     rewardGlobs.titleFontName = block_get_str_copy(config,
         string_path_join(gameName, "Reward",
                          // STRING: LEGORR 0x004a93d8
                          "TitleFont",
-                         0));
+                         (const char*)NULL));
     rewardGlobs.backFontName = block_get_str_copy(config,
         string_path_join(gameName, "Reward",
                          // STRING: LEGORR 0x004a93cc
                          "BackFont",
-                         0));
+                         (const char*)NULL));
     rewardGlobs.font = (struct TextureSurface*)font_atlas_record_create(rewardGlobs.fontName);
     rewardGlobs.titleFont = (struct TextureSurface*)font_atlas_record_create(rewardGlobs.titleFontName);
     rewardGlobs.backFont = (struct TextureSurface*)font_atlas_record_create(rewardGlobs.backFontName);
@@ -358,22 +360,22 @@ int reward_load_graphics(BlockFile* config, const char* gameName)
         string_path_join(gameName, "Reward",
                          // STRING: LEGORR 0x004a93bc
                          "CompleteText",
-                         0));
+                         (const char*)NULL));
     rewardGlobs.failedText = block_get_str_copy(config,
         string_path_join(gameName, "Reward",
                          // STRING: LEGORR 0x004a93b0
                          "FailedText",
-                         0));
+                         (const char*)NULL));
     rewardGlobs.quitText = block_get_str_copy(config,
         string_path_join(gameName, "Reward",
                          // STRING: LEGORR 0x004a93a4
                          "QuitText",
-                         0));
+                         (const char*)NULL));
     if ((str = block_get_str_copy(rewardGlobs.config,
              string_path_join(rewardGlobs.gameName, "Reward",
                               // STRING: LEGORR 0x004a939c
                               "TextPos",
-                              0))) != NULL) {
+                              (const char*)NULL))) != NULL) {
         sound_variant_split(str, argv, "|");
         rewardGlobs.textPosX = atoi(argv[0]);
         rewardGlobs.textPosY = atoi(argv[1]);
@@ -391,7 +393,7 @@ int reward_load_buttons(BlockFile* config, const char* gameName)
              string_path_join(gameName, "Reward",
                               // STRING: LEGORR 0x004a9434
                               "SaveButton",
-                              0))) != NULL) {
+                              (const char*)NULL))) != NULL) {
         sound_variant_split(str, argv, "|");
         if ((rewardGlobs.saveButton = image_load_bmp_scaled(argv[0], 0, 0)) != NULL) {
             rewardGlobs.saveButtonHi = image_load_bmp_scaled(argv[1], 0, 0);
@@ -411,7 +413,7 @@ int reward_load_buttons(BlockFile* config, const char* gameName)
              string_path_join(gameName, "Reward",
                               // STRING: LEGORR 0x004a9424
                               "AdvanceButton",
-                              0))) != NULL) {
+                              (const char*)NULL))) != NULL) {
         sound_variant_split(str, argv, "|");
         if ((rewardGlobs.advanceButton = image_load_bmp_scaled(argv[0], 0, 0)) != NULL) {
             rewardGlobs.advanceButtonHi = image_load_bmp_scaled(argv[1], 0, 0);
@@ -445,37 +447,37 @@ int reward_prepare_level(void)
              string_path_join(rewardGlobs.gameName, level->name, "Reward",
                               // STRING: LEGORR 0x004a9488
                               "Enable",
-                              0))) == 2)
+                              (const char*)NULL))) == 2)
         rewardGlobs.current->enabled = 0;
     rewardGlobs.current->modifier = atoi(block_get_strptr(rewardGlobs.config,
         string_path_join(rewardGlobs.gameName, level->name, "Reward",
                          // STRING: LEGORR 0x004a947c
                          "Modifier",
-                         0)) ?
+                         (const char*)NULL)) ?
         block_get_strptr(rewardGlobs.config,
-            string_path_join(rewardGlobs.gameName, level->name, "Reward", "Modifier", 0)) : "");
+            string_path_join(rewardGlobs.gameName, level->name, "Reward", "Modifier", (const char*)NULL)) : "");
     if (0.0f == (rewardGlobs.timer = (float)atof(block_get_strptr(rewardGlobs.config,
-        string_path_join(rewardGlobs.gameName, "Reward", "Timer", 0)) ?
+        string_path_join(rewardGlobs.gameName, "Reward", "Timer", (const char*)NULL)) ?
         block_get_strptr(rewardGlobs.config,
-            string_path_join(rewardGlobs.gameName, "Reward", "Timer", 0)) : "")))
+            string_path_join(rewardGlobs.gameName, "Reward", "Timer", (const char*)NULL)) : "")))
         rewardGlobs.timer = 76.9375f;
     if ((rewardGlobs.displayText = block_get_bool_path(rewardGlobs.config,
              string_path_join(rewardGlobs.gameName, "Reward",
                               // STRING: LEGORR 0x004a9470
                               "DisplayText",
-                              0))) == 2)
+                              (const char*)NULL))) == 2)
         rewardGlobs.displayText = 1;
     if ((rewardGlobs.displayImages = block_get_bool_path(rewardGlobs.config,
              string_path_join(rewardGlobs.gameName, "Reward",
                               // STRING: LEGORR 0x004a9460
                               "DisplayImages",
-                              0))) == 2)
+                              (const char*)NULL))) == 2)
         rewardGlobs.displayImages = 1;
     if ((rewardGlobs.displayFlics = block_get_bool_path(rewardGlobs.config,
              string_path_join(rewardGlobs.gameName, "Reward",
                               // STRING: LEGORR 0x004a9450
                               "DisplayFlics",
-                              0))) == 2)
+                              (const char*)NULL))) == 2)
         rewardGlobs.displayFlics = 1;
 
     rewardGlobs.current->items = rewardGlobs.current->itemsArray;
@@ -502,10 +504,10 @@ void reward_load_item_importance(RewardLevelItem* item)
             string_path_join(rewardGlobs.gameName, level->name, "Reward",
                              // STRING: LEGORR 0x004a9490
                              "Importance",
-                             item->name, 0)) ?
+                             item->name, (const char*)NULL)) ?
         block_get_strptr(rewardGlobs.config,
             string_path_join(rewardGlobs.gameName, level->name, "Reward",
-                             "Importance", item->name, 0)) :
+                             "Importance", item->name, (const char*)NULL)) :
         "");
 }
 
@@ -516,10 +518,10 @@ void reward_load_item_quota(RewardLevelItem* item)
 
     item->quota = atoi(block_get_strptr(rewardGlobs.config,
             string_path_join(rewardGlobs.gameName, level->name, "Reward",
-                             "Quota", item->name, 0)) ?
+                             "Quota", item->name, (const char*)NULL)) ?
         block_get_strptr(rewardGlobs.config,
             string_path_join(rewardGlobs.gameName, level->name, "Reward",
-                             "Quota", item->name, 0)) :
+                             "Quota", item->name, (const char*)NULL)) :
         "");
 }
 

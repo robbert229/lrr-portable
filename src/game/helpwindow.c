@@ -132,7 +132,7 @@ void help_window_initialise(BlockFile* config, const char* gameName)
         // STRING: LEGORR 0x004a27e8
         "HelpWindow",
         // STRING: LEGORR 0x004a27f4
-        "BackGroundImage", 0))) != NULL) {
+        "BackGroundImage", (const char*)NULL))) != NULL) {
         sound_variant_split(str, stringParts, ",");
         if ((helpwindowGlobs.windowImage = image_load_bmp_scaled(stringParts[0], 0, 0)) != NULL) {
             image_surface_blit_transformed((struct TextureSurface*)helpwindowGlobs.windowImage,
@@ -147,7 +147,7 @@ void help_window_initialise(BlockFile* config, const char* gameName)
 
     if ((str = block_get_str_copy(config, string_path_join(gameName, "HelpWindow",
         // STRING: LEGORR 0x004a27d8
-        "TextWindowArea", 0))) != NULL) {
+        "TextWindowArea", (const char*)NULL))) != NULL) {
         sound_variant_split(str, stringParts, ",");
         area.x = (float)atoi(stringParts[0]);
         area.y = (float)atoi(stringParts[1]);
@@ -163,21 +163,21 @@ void help_window_initialise(BlockFile* config, const char* gameName)
 
     if ((helpwindowGlobs.canBuildMessage = block_get_str_copy(config, string_path_join(gameName, "HelpWindow",
         // STRING: LEGORR 0x004a27c8
-        "CanBuildMessage", 0))) != NULL) {
+        "CanBuildMessage", (const char*)NULL))) != NULL) {
         for (s = helpwindowGlobs.canBuildMessage; (c = *s) != '\0'; s++) {
             if (c == '_') *s = ' ';
         }
     }
     if ((helpwindowGlobs.canTransportMessage = block_get_str_copy(config, string_path_join(gameName, "HelpWindow",
         // STRING: LEGORR 0x004a27b4
-        "CanTransportMessage", 0))) != NULL) {
+        "CanTransportMessage", (const char*)NULL))) != NULL) {
         for (s = helpwindowGlobs.canTransportMessage; (c = *s) != '\0'; s++) {
             if (c == '_') *s = ' ';
         }
     }
     if ((helpwindowGlobs.canBuildAndTransportMessage = block_get_str_copy(config, string_path_join(gameName, "HelpWindow",
         // STRING: LEGORR 0x004a2798
-        "CanBuildAndTransportMessage", 0))) != NULL) {
+        "CanBuildAndTransportMessage", (const char*)NULL))) != NULL) {
         for (s = helpwindowGlobs.canBuildAndTransportMessage; (c = *s) != '\0'; s++) {
             if (c == '_') *s = ' ';
         }
@@ -204,7 +204,7 @@ void help_window_load_infos(BlockFile* config, const char* gameName)
         for (j = 0; j < HELPWINDOW_MAXINFOLEVELS; j++) {
             // STRING: LEGORR 0x004a2804
             snprintf(buff, sizeof(buff), "HelpWindow::HelpWindowInfo::%sL%i", legoGlobs_vehicleName[i], j);
-            if ((s = helpwindowGlobs.vehicleInfo[i][j] = block_get_str_copy(config, string_path_join(gameName, buff, 0))) != NULL) {
+            if ((s = helpwindowGlobs.vehicleInfo[i][j] = block_get_str_copy(config, string_path_join(gameName, buff, (const char*)NULL))) != NULL) {
                 for (; *s != '\0'; s++) {
                     if (*s == '_') *s = ' ';
                 }
@@ -214,7 +214,7 @@ void help_window_load_infos(BlockFile* config, const char* gameName)
     for (i = 0; i < helpWindow_typeCounts[1]; i++) {
         for (j = 0; j < HELPWINDOW_MAXINFOLEVELS; j++) {
             snprintf(buff, sizeof(buff), "HelpWindow::HelpWindowInfo::%sL%i", legoGlobs_miniFigureName[i], j);
-            if ((s = helpwindowGlobs.miniFigureInfo[i][j] = block_get_str_copy(config, string_path_join(gameName, buff, 0))) != NULL) {
+            if ((s = helpwindowGlobs.miniFigureInfo[i][j] = block_get_str_copy(config, string_path_join(gameName, buff, (const char*)NULL))) != NULL) {
                 for (; *s != '\0'; s++) {
                     if (*s == '_') *s = ' ';
                 }
@@ -224,7 +224,7 @@ void help_window_load_infos(BlockFile* config, const char* gameName)
     for (i = 0; i < helpWindow_typeCounts[3]; i++) {
         for (j = 0; j < HELPWINDOW_MAXINFOLEVELS; j++) {
             snprintf(buff, sizeof(buff), "HelpWindow::HelpWindowInfo::%sL%i", legoGlobs_buildingName[i], j);
-            if ((s = helpwindowGlobs.buildingInfo[i][j] = block_get_str_copy(config, string_path_join(gameName, buff, 0))) != NULL) {
+            if ((s = helpwindowGlobs.buildingInfo[i][j] = block_get_str_copy(config, string_path_join(gameName, buff, (const char*)NULL))) != NULL) {
                 for (; *s != '\0'; s++) {
                     if (*s == '_') *s = ' ';
                 }
@@ -241,7 +241,7 @@ void help_window_load_buttons(BlockFile* config, const char* gameName)
 
     if ((str = block_get_str_copy(config, string_path_join(gameName, "HelpWindow",
         // STRING: LEGORR 0x004a283c
-        "ContinueButton", 0))) != NULL) {
+        "ContinueButton", (const char*)NULL))) != NULL) {
         sound_variant_split(str, stringParts, ",");
         helpwindowGlobs.buttons[0].area.x = (float)atoi(stringParts[0]) + helpwindowGlobs.windowPos.x;
         helpwindowGlobs.buttons[0].area.y = (float)atoi(stringParts[1]) + helpwindowGlobs.windowPos.y;
@@ -254,7 +254,7 @@ void help_window_load_buttons(BlockFile* config, const char* gameName)
     }
     if ((str = block_get_str_copy(config, string_path_join(gameName, "HelpWindow",
         // STRING: LEGORR 0x004a2828
-        "CancelFutureButton", 0))) != NULL) {
+        "CancelFutureButton", (const char*)NULL))) != NULL) {
         sound_variant_split(str, stringParts, ",");
         helpwindowGlobs.buttons[1].area.x = (float)atoi(stringParts[0]) + helpwindowGlobs.windowPos.x;
         helpwindowGlobs.buttons[1].area.y = (float)atoi(stringParts[1]) + helpwindowGlobs.windowPos.y;

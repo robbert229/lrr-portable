@@ -795,3 +795,46 @@ a level. These tests do not establish successful complete initialization
 or full engine shutdown: the successful load uses the partial setup above,
 which lacks the complete object and interface catalogs. Coverage of those
 paths remains outstanding.
+
+#### Startup and shutdown subsystem tests
+
+The four `synthetic_startup*` scenarios use separate working directories
+and the software device, with only the grayscale BMP inputs that each
+scenario needs. They exercise real functions without replacing the game
+units:
+
+- Reward initialization and shutdown: a generated image and font, a
+  short synthetic text record, and the allocation of the reward item table.
+- Reward initialization with a missing image: the item retains the text
+  and font, but has no image pointer or image-present flag; shutdown
+  still completes.
+- Interface initialization and shutdown: menu name registration,
+  allocation of the menu items and initial position.
+- Scene initialization and shutdown: a root container, a first-person
+  camera, two viewports, and release of the viewports, camera, container
+  pool and software DirectDraw device in that order.
+
+Full game startup and shutdown are **not** covered by these tests.
+In a local synthetic probe, `lego_engine_shutdown` after the partial
+boot originally failed in `reward_shutdown` because reward initialization
+was omitted. After real reward and interface initialization, it reached
+camera cleanup and crashed in `Direct3DRMFrameImpl::GetParent` while
+freeing a camera after root destruction. A separate probe of
+`lego_game_config_init` with a minimal on-disk config and generated
+font, message and loader BMPs reached the failure-path
+`ddiscene_object_pool_shutdown` and crashed in the same frame method.
+The first-person scene test deliberately releases its camera before the
+root; the overhead camera's cleanup also did not complete in a probe.
+These probes do not establish whether the crashes occur after a complete
+production startup. No production changes or stubbed scene cleanup
+were made to bypass them. The existing missing-config test still
+exercises the early startup rejection.
+
+Local coverage measurement (GCC Debug build, `LRR_COVERAGE=ON`,
+gcovr 8.8, repository's source filters excluding test code): with counters
+cleared, the 144 pre-existing CTest cases yielded 15,835/43,166 lines
+(36.7%), 1,540/3,115 functions (49.4%) and 9,107/43,738 branches (20.8%).
+Adding the four subsystem scenarios in the same instrumented build
+yielded 15,980 lines (37.0%), 1,558 functions (50.0%) and 9,186 branches
+(21.0%). These are local incremental results, not a comparison against
+a separate main CI run.

@@ -79,7 +79,7 @@ void priorities_load_images(BlockFile* config, const char* game_name)
     char line[512];
 
     for (item = block_subgroup(config,
-             string_path_join(game_name, "PriorityImages", NULL));
+             string_path_join(game_name, "PriorityImages", (const char*)NULL));
          item != NULL; item = block_next_equal_key(item)) {
         if (cmd_kind_by_name(item->key, &type)) {
             int count;
@@ -118,7 +118,7 @@ int priorities_load(BlockFile* config, const char* game_name,
 
     priorities.count = 0;
     for (item = block_subgroup(config,
-             string_path_join(game_name, level_name, "Priorities", NULL));
+             string_path_join(game_name, level_name, "Priorities", (const char*)NULL));
          item != NULL; item = block_next_equal_key(item)) {
         if (cmd_kind_by_name(item->key, &type)) {
             priorities.list[priorities.count] = type;
@@ -152,7 +152,7 @@ void priorities_load_positions(BlockFile* config, const char* game_name)
     for (i = 0; i < PRIORITY_TYPE_COUNT; i++) {
         itoa(i + 1, number, 10);
         value = block_get_strptr(config, string_path_join(game_name,
-            "PrioritiesImagePositions", number, NULL));
+            "PrioritiesImagePositions", number, (const char*)NULL));
         if (value != NULL) {
             /* The original tokenises the config's own value in place. */
             sound_variant_split((char*)value, parts, ",");
