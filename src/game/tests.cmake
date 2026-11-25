@@ -590,3 +590,11 @@ lrr_unit_test(reward_accounting SOURCES ${GAME_DIR}/test_reward_accounting.cpp
   LABELS reward level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
 lrr_unit_test_variant(reward_accounting_defaults OF reward_accounting
   ARGS defaults LABELS reward level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Generic resource-backed command catalog and real availability checks.
+lrr_unit_test(command_permissions SOURCES ${GAME_DIR}/test_command_permissions.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(command_permissions_availability OF command_permissions
+  ARGS permissions LABELS legoobject aitask level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")

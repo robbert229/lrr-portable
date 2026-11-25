@@ -7,8 +7,10 @@ namespace synthetic_fixture {
 extern const char CATALOG[];
 bool prepare_catalog(const char* root = "Fixture");
 std::string misc_resource_block();
-// Optional additional abstract object stats for tests creating live objects.
+// Optional additional abstract object stats and root config for tests of
+// resource loading or object admission.
 bool initialise_full_game(const char* directory, const char* programName,
-                          const char* extraStats = nullptr);
+                          const char* extraStats = nullptr,
+                          const char* extraRootConfig = nullptr);
 }
 #endif
