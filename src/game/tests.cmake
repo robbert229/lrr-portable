@@ -510,3 +510,14 @@ lrr_unit_test_variant(driver_recall_ownership OF upgrade_recall_progression
 lrr_unit_test(live_building_power SOURCES ${GAME_DIR}/test_live_building_power.cpp
   ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
   LABELS construction legoobject level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Independent startup resources and advisor lifecycle.
+lrr_unit_test(startup_resources SOURCES ${GAME_DIR}/test_startup_resources.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+lrr_unit_test(startup_advisor SOURCES ${GAME_DIR}/test_startup_advisor.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(startup_advisor_reduced OF startup_advisor
+  ARGS reduced LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
