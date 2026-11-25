@@ -3,6 +3,7 @@
  * and activity timing/cloning using neutral retained-mode frames. */
 #include <miniwin/d3drm.h>
 #include <fstream>
+#include <filesystem>
 
 #include "gods98/container_link_names.h"
 #include "gods98/container_unit.h"
@@ -153,6 +154,8 @@ void CheckActivity(Container* root)
     CHECK_EQ(Container_GetAnimationFrames(source), 10ul);
     CHECK_EQ(Container_GetTransCoef(source), 0.5f);
     CHECK_STREQ(Container_FormatPartName(source, "Marker", nullptr), "Marker_??");
+    const int ordinal = 1;
+    CHECK_STREQ(Container_FormatPartName(source, "Marker", &ordinal), "Marker_01");
     CHECK_EQ(Container_SetActivity(source, "Unknown"), 0);
     CHECK_EQ(Container_IsCurrentActivity(source, "Alpha"), 1);
     unsigned triggers = 0;
