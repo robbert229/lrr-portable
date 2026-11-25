@@ -152,18 +152,18 @@ int light_effects_load_blink(BlockFile* config, const char* gameName)
             // STRING: LEGORR 0x004a51b8
             "LightEffects",
             // STRING: LEGORR 0x004a51c8
-            "BlinkRGBMax", 0), &r, &g, &b)) {
+            "BlinkRGBMax", (const char*)NULL), &r, &g, &b)) {
         if (0.0f != (maxChange = (float)atof(block_get_strptr(config, string_path_join(gameName, "LightEffects",
                 // STRING: LEGORR 0x004a51a4
-                "MaxChangeAllowed", 0))
-                ? block_get_strptr(config, string_path_join(gameName, "LightEffects", "MaxChangeAllowed", 0))
+                "MaxChangeAllowed", (const char*)NULL))
+                ? block_get_strptr(config, string_path_join(gameName, "LightEffects", "MaxChangeAllowed", (const char*)NULL))
                 : ""))) {
             maxChange *= (1.0f / 255.0f);
         }
 
         if ((str = block_get_str_copy(config, string_path_join(gameName, "LightEffects",
                 // STRING: LEGORR 0x004a5184
-                "RandomRangeForTimeBetweenBlinks", 0)))) {
+                "RandomRangeForTimeBetweenBlinks", (const char*)NULL)))) {
             if (sound_variant_split(str, argv, ":") == 2) {
                 minTime = (float)atof(argv[0]) * 25.0f;
                 maxTime = (float)atof(argv[1]) * 25.0f;
@@ -201,27 +201,27 @@ int light_effects_load_fade(BlockFile* config, const char* gameName)
 
     if (config_rgb_vector_read(config, string_path_join(gameName, "LightEffects",
             // STRING: LEGORR 0x004a523c
-            "FadeRGBMin", 0), &minR, &minG, &minB)) {
+            "FadeRGBMin", (const char*)NULL), &minR, &minG, &minB)) {
         if (config_rgb_vector_read(config, string_path_join(gameName, "LightEffects",
                 // STRING: LEGORR 0x004a5230
-                "FadeRGBMax", 0), &maxR, &maxG, &maxB)) {
+                "FadeRGBMax", (const char*)NULL), &maxR, &maxG, &maxB)) {
             if ((str = block_get_str_copy(config, string_path_join(gameName, "LightEffects",
                     // STRING: LEGORR 0x004a5210
-                    "RandomRangeForTimeBetweenFades", 0)))) {
+                    "RandomRangeForTimeBetweenFades", (const char*)NULL)))) {
                 if (sound_variant_split(str, argv, ":") == 2) {
                     minWait = (float)atof(argv[0]) * 25.0f;
                     maxWait = (float)atof(argv[1]) * 25.0f;
                     free(str);
                     if ((str = block_get_str_copy(config, string_path_join(gameName, "LightEffects",
                             // STRING: LEGORR 0x004a51f4
-                            "RandomRangeForFadeTimeFade", 0))) == NULL) return 0;
+                            "RandomRangeForFadeTimeFade", (const char*)NULL))) == NULL) return 0;
                     if (sound_variant_split(str, argv, ":") == 2) {
                         minFade = (float)atof(argv[0]) * 25.0f;
                         maxFade = (float)atof(argv[1]) * 25.0f;
                         free(str);
                         if ((str = block_get_str_copy(config, string_path_join(gameName, "LightEffects",
                                 // STRING: LEGORR 0x004a51d4
-                                "RandomRangeForHoldTimeOfFade", 0))) == NULL) return 0;
+                                "RandomRangeForHoldTimeOfFade", (const char*)NULL))) == NULL) return 0;
                         if (sound_variant_split(str, argv, ":") == 2) {
                             minHold = (float)atof(argv[0]) * 25.0f;
                             maxHold = (float)atof(argv[1]) * 25.0f;
@@ -272,28 +272,28 @@ int light_effects_load_move(BlockFile* config, const char* gameName)
 
     if ((str = block_get_str_copy(config, string_path_join(gameName, "LightEffects",
             // STRING: LEGORR 0x004a528c
-            "RandomRangeForTimeBetweenMoves", 0)))) {
+            "RandomRangeForTimeBetweenMoves", (const char*)NULL)))) {
         if (sound_variant_split(str, argv, ":") == 2) {
             minWait = (float)atof(argv[0]) * 25.0f;
             maxWait = (float)atof(argv[1]) * 25.0f;
             free(str);
             if ((str = block_get_str_copy(config, string_path_join(gameName, "LightEffects",
                     // STRING: LEGORR 0x004a5270
-                    "RandomRangeForSpeedOfMove", 0))) == NULL) return 0;
+                    "RandomRangeForSpeedOfMove", (const char*)NULL))) == NULL) return 0;
             if (sound_variant_split(str, argv, ":") == 2) {
                 minSpeed = (float)atof(argv[0]) * 25.0f;
                 maxSpeed = (float)atof(argv[1]) * 25.0f;
                 free(str);
                 if ((str = block_get_str_copy(config, string_path_join(gameName, "LightEffects",
                         // STRING: LEGORR 0x004a5254
-                        "RandomRangeForDistOfMove", 0))) == NULL) return 0;
+                        "RandomRangeForDistOfMove", (const char*)NULL))) == NULL) return 0;
                 if (sound_variant_split(str, argv, ":") == 2) {
                     minDist = (float)atof(argv[0]);
                     maxDist = (float)atof(argv[1]);
                     free(str);
                     if ((str = block_get_str_copy(config, string_path_join(gameName, "LightEffects",
                             // STRING: LEGORR 0x004a5248
-                            "MoveLimit", 0))) == NULL) return 0;
+                            "MoveLimit", (const char*)NULL))) == NULL) return 0;
                     if (sound_variant_split(str, argv, ":") == 3) {
                         limitX = (float)atof(argv[0]);
                         limitY = (float)atof(argv[1]);

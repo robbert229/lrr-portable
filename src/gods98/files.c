@@ -798,12 +798,15 @@ char* file_get_wad_name(char* fName)
 char* file_get_line(char* buffer, int size, File* file)
 {
     char* res;
-    int len;
+    size_t len;
 
     res = file_gets(buffer, size, file);
-    len = strlen(buffer) - 1;
-    if (buffer[len] == '\n') buffer[len] = '\0';
-    if (len && buffer[len - 1] == '\r') buffer[len - 1] = '\0';
+    if (res == NULL) return NULL;
+    len = strlen(buffer);
+    if (len && buffer[len - 1] == '\n') {
+        buffer[--len] = '\0';
+        if (len && buffer[len - 1] == '\r') buffer[len - 1] = '\0';
+    }
     return res;
 }
 

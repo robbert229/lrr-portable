@@ -182,71 +182,71 @@ int vehicle_load(VehicleModel* vehicle, unsigned int objID, void* root,
 
         if ((config = block_open(aeFile))) {
             if ((vehicle->cameraNullName = block_get_str_copy(config,
-                    string_path_join(gameName, "CameraNullName", NULL)))) {
+                    string_path_join(gameName, "CameraNullName", (const char*)NULL)))) {
                 vehicle->cameraNullFrames = atoi(block_get_strptr(config,
-                        string_path_join(gameName, "CameraNullFrames", NULL))
+                        string_path_join(gameName, "CameraNullFrames", (const char*)NULL))
                     ? block_get_strptr(config,
-                          string_path_join(gameName, "CameraNullFrames", NULL))
+                          string_path_join(gameName, "CameraNullFrames", (const char*)NULL))
                     : "");
                 vehicle->cameraFlipDir = block_get_bool_path(config,
-                    string_path_join(gameName, "CameraFlipDir", NULL));
+                    string_path_join(gameName, "CameraFlipDir", (const char*)NULL));
             } else {
                 vehicle->cameraNullFrames = 0;
             }
 
             if ((vehicle->carryNullName = block_get_str_copy(config,
-                    string_path_join(gameName, "CarryNullName", NULL)))) {
+                    string_path_join(gameName, "CarryNullName", (const char*)NULL)))) {
                 vehicle->carryNullFrames = atoi(block_get_strptr(config,
                         string_path_join(gameName,
                             // STRING: LEGORR 0x004a1d4c
-                            "CarryNullFrames", NULL))
+                            "CarryNullFrames", (const char*)NULL))
                     ? block_get_strptr(config,
-                          string_path_join(gameName, "CarryNullFrames", NULL))
+                          string_path_join(gameName, "CarryNullFrames", (const char*)NULL))
                     : "");
             } else {
                 vehicle->carryNullFrames = 0;
             }
 
             vehicle->drillNullName = block_get_str_copy(config,
-                string_path_join(gameName, "DrillNullName", NULL));
+                string_path_join(gameName, "DrillNullName", (const char*)NULL));
             vehicle->depositNullName = block_get_str_copy(config,
-                string_path_join(gameName, "DepositNullName", NULL));
+                string_path_join(gameName, "DepositNullName", (const char*)NULL));
             vehicle->driverNullName = block_get_str_copy(config,
                 string_path_join(gameName,
                                  // STRING: LEGORR 0x004aaa2c
                                  "DriverNullName",
-                                 NULL));
+                                 (const char*)NULL));
             vehicle->fireNullName = block_get_str_copy(config,
                 string_path_join(gameName,
                     // STRING: LEGORR 0x004a1d1c
-                    "FireNullName", NULL));
+                    "FireNullName", (const char*)NULL));
             vehicle->yPivotNullName = block_get_str_copy(config,
                 string_path_join(gameName,
                     // STRING: LEGORR 0x004a1d00
-                    "yPivot", NULL));
+                    "yPivot", (const char*)NULL));
             vehicle->xPivotNullName = block_get_str_copy(config,
                 string_path_join(gameName,
                     // STRING: LEGORR 0x004a1cf8
-                    "xPivot", NULL));
+                    "xPivot", (const char*)NULL));
 
             if (block_get_strptr(config, string_path_join(gameName,
                 // STRING: LEGORR 0x004a1cec
-                "PivotMaxZ", NULL))) {
+                "PivotMaxZ", (const char*)NULL))) {
                 vehicle->weapons.pivotMaxZ = (float)atof(block_get_strptr(config,
-                        string_path_join(gameName, "PivotMaxZ", NULL))
+                        string_path_join(gameName, "PivotMaxZ", (const char*)NULL))
                     ? block_get_strptr(config,
-                          string_path_join(gameName, "PivotMaxZ", NULL))
+                          string_path_join(gameName, "PivotMaxZ", (const char*)NULL))
                     : "");
             } else {
                 vehicle->weapons.pivotMaxZ = 1.0f;
             }
             if (block_get_strptr(config, string_path_join(gameName,
                 // STRING: LEGORR 0x004a1ce0
-                "PivotMinZ", NULL))) {
+                "PivotMinZ", (const char*)NULL))) {
                 vehicle->weapons.pivotMinZ = (float)atof(block_get_strptr(config,
-                        string_path_join(gameName, "PivotMinZ", NULL))
+                        string_path_join(gameName, "PivotMinZ", (const char*)NULL))
                     ? block_get_strptr(config,
-                          string_path_join(gameName, "PivotMinZ", NULL))
+                          string_path_join(gameName, "PivotMinZ", (const char*)NULL))
                     : "");
             } else {
                 vehicle->weapons.pivotMinZ = -1.0f;
@@ -258,7 +258,7 @@ int vehicle_load(VehicleModel* vehicle, unsigned int objID, void* root,
                     string_path_join(gameName,
                                      // STRING: LEGORR 0x004aaa20
                                      "WheelMesh",
-                                     NULL)))) {
+                                     (const char*)NULL)))) {
                 snprintf(wheelFile, sizeof(wheelFile), "%s\\%s", baseDir, wheelMesh);
                 free(wheelMesh);
 
@@ -266,7 +266,7 @@ int vehicle_load(VehicleModel* vehicle, unsigned int objID, void* root,
                         string_path_join(gameName,
                                          // STRING: LEGORR 0x004aaa10
                                          "WheelNullName",
-                                         NULL)))) {
+                                         (const char*)NULL)))) {
                     memset(vehicle->contWheels, 0, sizeof(vehicle->contWheels));
                     vehicle->contWheels[0] = container_load(vehicle->contAct1, wheelFile, "LWO", 0);
                     vehicle->wheelNullsCount = 1;
@@ -276,9 +276,9 @@ int vehicle_load(VehicleModel* vehicle, unsigned int objID, void* root,
                                 string_path_join(gameName,
                                                  // STRING: LEGORR 0x004aaa04
                                                  "WheelRadius",
-                                                 NULL))
+                                                 (const char*)NULL))
                             ? block_get_strptr(config,
-                                  string_path_join(gameName, "WheelRadius", NULL))
+                                  string_path_join(gameName, "WheelRadius", (const char*)NULL))
                             : ""))) {
                             if (((Vehicle_Container*)vehicle->contWheels[0])->type == 1) {
                                 scene_object_bounds_union(vehicle->contWheels[0], box);
@@ -310,7 +310,7 @@ int vehicle_load(VehicleModel* vehicle, unsigned int objID, void* root,
                     if (block_get_bool_path(config, string_path_join(gameName,
                                                                      // STRING: LEGORR 0x004aa9f8
                                                                      "HoldMissing",
-                                                                     NULL)) == 1) {
+                                                                     (const char*)NULL)) == 1) {
                         vehicle->flags |= VEHICLE_FLAG_HOLDMISSING;
                     }
                     vehicle->lastUp.y = 0.0f;

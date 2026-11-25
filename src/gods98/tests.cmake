@@ -6,6 +6,7 @@
 # Files.c's SDL3 streams and path mapping, and the configuration file
 # ([library:filesystem], [library:config]).
 lrr_unit_test(files SOURCES ${ENGINE_DIR}/test_files.cpp LABELS files)
+lrr_unit_test(file_line_reader SOURCES ${ENGINE_DIR}/test_file_line_reader.cpp LABELS files)
 # Files.c's start-up with the data directory from the diskpath
 # ([library:config]).
 lrr_unit_test(diskpath SOURCES ${ENGINE_DIR}/test_diskpath.cpp LABELS files)
@@ -17,6 +18,8 @@ lrr_unit_test(movie_unit SOURCES ${ENGINE_DIR}/test_movie_unit.cpp
 
 # Parse container types and exercise a retained-mode parent and child.
 lrr_unit_test(container SOURCES ${ENGINE_DIR}/test_container.cpp LABELS container)
+lrr_unit_test(container_resource SOURCES ${ENGINE_DIR}/test_container_resource.cpp
+  LABELS container mesh_unit ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
 
 # Validate viewport sizing, camera, clipping and field on a dummy-driver device.
 lrr_unit_test(viewports SOURCES ${ENGINE_DIR}/test_viewports.cpp
@@ -63,6 +66,9 @@ lrr_unit_test(mesh_unit SOURCES ${ENGINE_DIR}/test_mesh_unit.cpp LABELS mesh_uni
 
 # Decode disjoint palette packets and verify the RGB565 lookup entries.
 lrr_unit_test(flic_unit SOURCES ${ENGINE_DIR}/test_flic_unit.cpp LABELS flic_unit)
+lrr_unit_test(flic_media SOURCES ${ENGINE_DIR}/test_flic_media.cpp LABELS flic_unit)
+lrr_unit_test_variant(flic_media_playback OF flic_media
+  ARGS playback LABELS flic_unit ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
 
 # Exercise the text ring and timed overlay with a glyph sink in memory.
 lrr_unit_test(textwindow SOURCES ${ENGINE_DIR}/test_textwindow.cpp
@@ -147,3 +153,14 @@ lrr_unit_test(input_keys SOURCES ${ENGINE_DIR}/test_input_keys.cpp
   INCLUDES ${ENGINE_DIR}
   LINK SDL3::SDL3
   LABELS input)
+
+# Compile the unchanged WinMain unit for the test executable with only its
+# application-registration call renamed. Unlike linker wrapping, this
+# test-only substitution also works with Windows and Apple's linkers.
+lrr_unit_test(engine_lifecycle SOURCES ${ENGINE_DIR}/test_engine_lifecycle.cpp ${ENGINE_DIR}/main.c
+  DEFINES lego_game_config_callback_registry_init=engine_lifecycle_register_test_callbacks
+  LABELS main ENVIRONMENT "SDL_VIDEO_DRIVER=dummy" "SDL_AUDIO_DRIVER=dummy")
+foreach(scenario IN ITEMS realtime events fullscreen reject no-loop no-state fit-config debug-config resource-reject)
+  lrr_unit_test_variant(engine_lifecycle_${scenario} OF engine_lifecycle
+    ARGS ${scenario} LABELS main ENVIRONMENT "SDL_VIDEO_DRIVER=dummy" "SDL_AUDIO_DRIVER=dummy")
+endforeach()

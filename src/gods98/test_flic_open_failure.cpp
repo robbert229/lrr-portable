@@ -15,11 +15,11 @@
 
 #include <vector>
 
+#include "platform/native/test_fixture.h"
 #include "gods98/files.h"
 /* Flic_Setup links under its port name (flic_link_names.h). */
 #define Flic_Setup flic_setup
 #include "gods98/flic_unit.h"
-#include "platform/native/test_fixture.h"
 
 static const char* FIX = "flic_open_failure_fixture";
 static int s_failures = 0;

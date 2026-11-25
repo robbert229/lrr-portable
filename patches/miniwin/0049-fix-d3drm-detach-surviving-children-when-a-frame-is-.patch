@@ -1,0 +1,31 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Wed, 25 Nov 2026 00:09:31 -0800
+Subject: [PATCH] fix(d3drm): detach surviving children when a frame is
+ destroyed
+
+
+diff --git a/miniwin/src/d3drm/d3drmframe.cpp b/miniwin/src/d3drm/d3drmframe.cpp
+index cbe4224..d568d86 100644
+--- a/miniwin/src/d3drm/d3drmframe.cpp
++++ b/miniwin/src/d3drm/d3drmframe.cpp
+@@ -33,6 +33,19 @@ Direct3DRMFrameImpl::Direct3DRMFrameImpl(Direct3DRMFrameImpl* parent)
+ 
+ Direct3DRMFrameImpl::~Direct3DRMFrameImpl()
+ {
++	// Children may outlive their parent (e.g. another owner holds a
++	// frame or the child array). Clear the non-owning back links before
++	// releasing the array's references.
++	for (DWORD i = 0; i < m_children->GetSize(); ++i) {
++		IDirect3DRMFrame* child = nullptr;
++		if (m_children->GetElement(i, &child) == DD_OK && child) {
++			auto* childImpl = static_cast<Direct3DRMFrameImpl*>(child);
++			if (childImpl->m_parent == this) {
++				childImpl->m_parent = nullptr;
++			}
++			child->Release();
++		}
++	}
+ 	m_children->Release();
+ 	m_lights->Release();
+ 	m_visuals->Release();

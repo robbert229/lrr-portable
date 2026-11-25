@@ -228,7 +228,7 @@ int weapons_initialise(struct BlockRec* config, const char* gameName)
     weaponGlobs.weaponCount = 0;
     arrayItem = block_subgroup(config,
         // STRING: LEGORR 0x004aaaa0
-        string_path_join(gameName, "WeaponTypes", NULL));
+        string_path_join(gameName, "WeaponTypes", (const char*)NULL));
     if (arrayItem != NULL) {
         do {
             weaponGlobs.weaponCount++;
@@ -260,12 +260,12 @@ int weapons_initialise(struct BlockRec* config, const char* gameName)
             if (weaponGlobs.weaponNameList != NULL) {
                 i = 0;
                 for (arrayItem = block_subgroup(config,
-                         string_path_join(gameName, "WeaponTypes", NULL));
+                         string_path_join(gameName, "WeaponTypes", (const char*)NULL));
                      arrayItem != NULL;
                      arrayItem = block_next_equal_key(arrayItem)) {
                     prop = block_subgroup(config,
                         string_path_join(gameName, "WeaponTypes",
-                                         arrayItem->key, NULL));
+                                         arrayItem->key, (const char*)NULL));
                     while (prop != NULL) {
                         // STRING: LEGORR 0x004aaa94
                         if (stricmp(prop->key, "SlowDeath") == 0) {
@@ -1231,7 +1231,7 @@ int weapons_see_through_walls_check(Weapons_Object* obj, Weapons_Object* target)
     if (block_get_bool_path(weaponGlobs.config,
             string_path_join(s_engine_config_root, WEAPONS_LEGO_GET_LEVEL()->name,
                              // STRING: LEGORR 0x004aaaac
-                             "SeeThroughWalls", NULL))) {
+                             "SeeThroughWalls", (const char*)NULL))) {
         return 0;
     }
     weapons_object_center_get(obj, &fromPos);

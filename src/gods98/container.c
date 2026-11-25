@@ -977,7 +977,7 @@ static char containerPartName[1024];
 
 // FUNCTION: LEGORR 0x00473c60
 char* Container_FormatPartName(Container* cont, const char* partname,
-                               unsigned long* instance)
+                               const int* instance)
 {
     LPDIRECT3DRMFRAME3 frame;
     char name[1024];

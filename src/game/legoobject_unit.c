@@ -393,10 +393,14 @@ void legoobject_shutdown(void)
     legoobject_remove_all();
     for (i = 0; i < 32; i++) {
         if (s_pool_chunks[i] != NULL) free(s_pool_chunks[i]);
+        s_pool_chunks[i] = NULL;
     }
+    s_pool_chunk_count = 0;
     s_pool_record_head = NULL;
     s_entity_state_flags = 0;
     if (s_terrain_neighbor_path_cost != NULL) free(s_terrain_neighbor_path_cost);
+    s_terrain_neighbor_path_cost = NULL;
+    s_terrain_path_depth_count = 0;
     s_entity_state_flags &= ~1;
 }
 
@@ -437,7 +441,7 @@ void legoobject_tool_tip_icons_load(void* config)
     unsigned int i;
 
     // STRING: LEGORR 0x004a5050
-    for (item = block_subgroup((struct BlockRec*)config, string_path_join(s_engine_config_root, "ToolTipIcons", NULL));
+    for (item = block_subgroup((struct BlockRec*)config, string_path_join(s_engine_config_root, "ToolTipIcons", (const char*)NULL));
          item != NULL; item = block_next_equal_key(item)) {
         for (i = 0; i < 11; i++) {
             if (s_tool_type_names[i] != NULL && stricmp(item->key, s_tool_type_names[i]) == 0) {
@@ -656,6 +660,7 @@ int legoobject_remove(Lego_Object* obj)
         free(obj->upgradePart);
     }
 
+    legoobject_rename(obj, NULL);
     obj->nextFree = (Lego_Object*)s_pool_record_head;
     s_pool_record_head = obj;
     return 0;
@@ -698,12 +703,15 @@ void legoobject_rename(Lego_Object* obj, const char* name)
 {
     if (name != NULL && *name != '\0') {
         if (obj->customName == NULL) {
-            obj->customName = (char*)malloc(11);
+            obj->customName = (char*)malloc(12); // 11 characters and the terminator.
+            if (obj->customName == NULL) return;
         }
         strncpy(obj->customName, name, 11);
         obj->customName[11] = '\0';
     } else {
         if (obj->customName != NULL) {
+            if (legoGlobs_renameInput == obj->customName)
+                legoGlobs_renameInput = NULL;
             free(obj->customName);
         }
         obj->customName = NULL;
@@ -724,7 +732,7 @@ void legoobject_grid_object_records_release(void)
         }
     }
     objectGlobs_recordObjsCount = 0;
-    memset(objectGlobs_recordObjs, 0, 200 * sizeof(int));
+    memset(objectGlobs_recordObjs, 0, sizeof(objectGlobs_recordObjs));
     global_counter_004ff990_reset();
 }
 
@@ -785,11 +793,14 @@ void legoobject_deferred_olist_create_and_link(int* blockPos)
                 names[count] = rec->name;
                 linkNames[count] = rec->linkName;
                 count++;
-                rec->name = NULL;
+            } else {
+                free(rec->name);
+                free(rec->linkName);
             }
 
             objectGlobs_recordObjsCount--;
             *rec = objectGlobs_recordObjs[objectGlobs_recordObjsCount];
+            memset(&objectGlobs_recordObjs[objectGlobs_recordObjsCount], 0, sizeof(*rec));
             i--;
         }
     }
@@ -797,7 +808,7 @@ void legoobject_deferred_olist_create_and_link(int* blockPos)
     for (i = 0; i < count; i++) {
         if (linkNames[i] != NULL) {
             for (j = 0; j < count; j++) {
-                if (i != j && stricmp(names[j], linkNames[i]) == 0) {
+                if (i != j && names[j] != NULL && stricmp(names[j], linkNames[i]) == 0) {
                     obj = objs[i];
                     target = objs[j];
                     obj->routeToObject = target;
@@ -832,8 +843,17 @@ void legoobject_deferred_olist_create_and_link(int* blockPos)
 void legoobject_deferred_olist_queue_add(void* model, int type, int id, float* worldPos, float heading, float health, const char* name, const char* linkName)
 {
     LegoObjGB_DeferredRecord* rec;
+    int blockPos[2];
 
+    if (objectGlobs_recordObjsCount >= sizeof(objectGlobs_recordObjs) / sizeof(objectGlobs_recordObjs[0]))
+        return;
+    if (!terrain_map_world_to_block((struct TerrainMap*)level_current_terrain_get(),
+                                   worldPos[0], worldPos[1], &blockPos[0], &blockPos[1]))
+        return;
     rec = &objectGlobs_recordObjs[objectGlobs_recordObjsCount++];
+    memset(rec, 0, sizeof(*rec));
+    rec->blockPos[0] = blockPos[0];
+    rec->blockPos[1] = blockPos[1];
     rec->worldPos[0] = worldPos[0];
     rec->worldPos[1] = worldPos[1];
     rec->heading = heading;
@@ -847,9 +867,6 @@ void legoobject_deferred_olist_queue_add(void* model, int type, int id, float* w
     if (linkName != NULL) {
         rec->linkName = string_duplicate(linkName);
     }
-    terrain_map_world_to_block((struct TerrainMap*)level_current_terrain_get(),
-                               worldPos[0], worldPos[1],
-                               &rec->blockPos[0], &rec->blockPos[1]);
 }
 
 // FUNCTION: LEGORR 0x00437cc0
@@ -1805,7 +1822,7 @@ void legoobject_tool_name_strings_load(void* config, const char* gameName)
         legoGlobs_langToolName[i] = block_get_str_copy(
             (struct BlockRec*)config,
             // STRING: LEGORR 0x004a5068
-            string_path_join(gameName, "ToolNames", legoGlobs_toolName[i], NULL));
+            string_path_join(gameName, "ToolNames", legoGlobs_toolName[i], (const char*)NULL));
     }
 }
 
@@ -4253,8 +4270,12 @@ void legoobject_simulation_queue_flush(Lego_Object* obj)
             }
         } else {
             if (target->numCarriedObjects == target->carryNullFrames) {
-                for (j = i; j < obj->numCarriedObjects; j++)
+                for (j = i; j < obj->numCarriedObjects; j++) {
                     obj->carriedObjects[j - i] = obj->carriedObjects[j];
+                    obj->carriedObjects[j - i]->carryingIndex = j - i;
+                }
+                for (j = obj->numCarriedObjects - i; j < obj->numCarriedObjects; j++)
+                    obj->carriedObjects[j] = NULL;
                 obj->numCarriedObjects -= i;
                 return;
             }
@@ -4811,6 +4832,9 @@ int legoobject_terrain_cell_to_world_position(Lego_Object* obj, int noUnloadCell
     ddiscene_object_position_get(cont, NULL, pos);
     if (!terrain_map_world_to_block(Lego_GetMap(), pos[0], pos[1], &blockPos[0], &blockPos[1]))
         return 0;
+    // Land and adjacent-cell exits keep the driver's facing. The dock
+    // branch below replaces it with the entrance's facing.
+    ddiscene_object_facing_pair_get(driverCont, NULL, dir, NULL);
     if ((entity_stats_word_get(LEGOOBJ_SLOT(obj)) & 0x2000000) &&
         terrain_cell_route_and_occupancy_check_current(LEGOOBJ_SLOT(driver), blockPos[0], blockPos[1], blockPos[0], blockPos[1], 1))
         goto getOut;
@@ -6979,7 +7003,7 @@ int legoobject_step_movement_vector_resolve(Lego_Object* obj, int nextBlock, int
 // FUNCTION: LEGORR 0x00444fb0
 void legoobject_turn_to_vector_activity_issue(Lego_Object* obj, float* dir)
 {
-    LegoObjJ_Vector3F v;
+    LegoObjJ_Vector3F v, facing;
     float angle;
     int activity;
 
@@ -6987,9 +7011,18 @@ void legoobject_turn_to_vector_activity_issue(Lego_Object* obj, float* dir)
         v.x = dir[0];
         v.y = dir[1];
         v.z = 0.0f;
-        legoobject_o_vector3_normalise((LegoObjJ_Vector3F*)obj->faceDirection);
-        legoobject_o_vector2_normalise((Point2F*)&v);
-        angle = (float)acos(legoobject_o_vector3_dot((LegoObjJ_Vector3F*)obj->faceDirection, &v));
+        /* Keep the vectors in their declared type. In particular, aliasing
+         * the three-component v through Point2F makes its cross product
+         * depend on the optimizer, even for ordinary cardinal directions. */
+        facing.x = obj->faceDirection[0];
+        facing.y = obj->faceDirection[1];
+        facing.z = obj->faceDirection[2];
+        legoobject_o_vector3_normalise(&facing);
+        obj->faceDirection[0] = facing.x;
+        obj->faceDirection[1] = facing.y;
+        obj->faceDirection[2] = facing.z;
+        legoobject_o_vector3_normalise(&v);
+        angle = (float)acos(legoobject_o_vector3_dot(&facing, &v));
         legoobject_action_sequence_reset(obj, 0);
         if (angle > 2.3561945f) {
             obj->faceDirection[0] = -obj->faceDirection[0];
@@ -6997,8 +7030,16 @@ void legoobject_turn_to_vector_activity_issue(Lego_Object* obj, float* dir)
             obj->flags1 |= 0x80;
             activity = 10;
         } else if (angle > 0.7853982f) {
-            legoobject_o_vector3_cross(&v, &v, (LegoObjJ_Vector3F*)obj->faceDirection);
-            d3drm_vector_rotate(obj->faceDirection, obj->faceDirection, &v.x, -1.5707964f);
+            float axis[3];
+            /* Reset may reverse the old facing, so reread it after reset. */
+            facing.x = obj->faceDirection[0];
+            facing.y = obj->faceDirection[1];
+            facing.z = obj->faceDirection[2];
+            legoobject_o_vector3_cross(&v, &v, &facing);
+            axis[0] = v.x;
+            axis[1] = v.y;
+            axis[2] = v.z;
+            d3drm_vector_rotate(obj->faceDirection, obj->faceDirection, axis, -1.5707964f);
             if (v.z < legoobject_zero) activity = 9;
             else activity = 10;
         } else {
@@ -9674,7 +9715,7 @@ void* legoobject_poly_variant_section_model_build(void* config, const char* game
         else if (polyKind == 1)
             // STRING: LEGORR 0x004a5128
             snprintf(buffer, sizeof(buffer), "MediumPoly");
-        for (item = block_subgroup((struct BlockRec*)config, string_path_join(gameName, buffer, NULL));
+        for (item = block_subgroup((struct BlockRec*)config, string_path_join(gameName, buffer, (const char*)NULL));
              item != NULL; item = block_next_equal_key(item)) {
             name = item->key;
             if (*name != '!' || !(s_engine_feature_word & 0x800000)) {
@@ -9798,7 +9839,7 @@ void legoobject_sfx_grid_config_load(void* config, const char* gameName)
         }
     }
     // STRING: LEGORR 0x004a5154
-    for (item = block_subgroup((struct BlockRec*)config, string_path_join(gameName, "ObjTtSFXs", NULL));
+    for (item = block_subgroup((struct BlockRec*)config, string_path_join(gameName, "ObjTtSFXs", (const char*)NULL));
          item != NULL; item = block_next_equal_key(item)) {
         if (entity_type_pair_lookup(item->key, &x, &y, NULL) &&
             sound_alias_lookup(item->value, &sfx)) {
