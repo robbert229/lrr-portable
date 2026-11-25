@@ -192,11 +192,13 @@ int init_initialise(int setup, int debug, int best, int window,
                     RECT desktop;
                     int x = 100, y = 100;
 
+                    /* The desktop is the primary display, which need not
+                     * start at (0, 0) under SDL. */
                     if (GetWindowRect(GetDesktopWindow(), &desktop)) {
-                        x = ((desktop.right - desktop.left) - config->width) / 2;
-                        y = ((desktop.bottom - desktop.top) - config->height) / 2;
-                        if (x < 0) x = 0;
-                        if (y < 0) y = 0;
+                        x = desktop.left + ((desktop.right - desktop.left) - config->width) / 2;
+                        y = desktop.top + ((desktop.bottom - desktop.top) - config->height) / 2;
+                        if (x < desktop.left) x = desktop.left;
+                        if (y < desktop.top) y = desktop.top;
                     }
                     if (config->width > 0 && config->height > 0)
                         SetWindowPos((HWND)mainGlobs.hWnd, NULL, x, y, config->width, config->height, SWP_NOZORDER);

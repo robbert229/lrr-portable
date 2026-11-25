@@ -1,0 +1,51 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Wed, 25 Nov 2026 14:06:57 -0800
+Subject: [PATCH] fix(miniwin): give the desktop window the primary display's
+ bounds
+
+GetWindowRect(GetDesktopWindow()) gave the primary display's size at
+(0, 0), as on Windows, where the primary monitor always starts there.
+Under SDL it need not: on a Linux desktop whose primary display is right
+of another, Main.c moved its fullscreen window onto the other display,
+and SDL took it fullscreen there. The rectangle is now the primary
+display's bounds.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/src/windows/windowmessages.cpp b/miniwin/src/windows/windowmessages.cpp
+index 10d1b4c..2c260d4 100644
+--- a/miniwin/src/windows/windowmessages.cpp
++++ b/miniwin/src/windows/windowmessages.cpp
+@@ -654,12 +654,17 @@ BOOL GetWindowRect(HWND hWnd, LPRECT lpRect)
+ 	int w = 0;
+ 	int h = 0;
+ 	if (hWnd == GetDesktopWindow()) {
+-		const SDL_DisplayMode* mode = SDL_GetDesktopDisplayMode(SDL_GetPrimaryDisplay());
+-		if (!mode) {
++		// The primary display, as on Windows. Windows always puts the primary
++		// monitor at (0, 0), but SDL may not: a window moved onto (0, 0) can
++		// be on another display, and would go fullscreen there.
++		SDL_Rect bounds;
++		if (!SDL_GetDisplayBounds(SDL_GetPrimaryDisplay(), &bounds)) {
+ 			return FALSE;
+ 		}
+-		w = mode->w;
+-		h = mode->h;
++		x = bounds.x;
++		y = bounds.y;
++		w = bounds.w;
++		h = bounds.h;
+ 	}
+ 	else {
+ 		SDL_Window* window = reinterpret_cast<SDL_Window*>(hWnd);
+@@ -684,7 +689,8 @@ BOOL GetClientRect(HWND hWnd, LPRECT lpRect)
+ 
+ HWND GetDesktopWindow()
+ {
+-	// Never an SDL_Window pointer: GetWindowRect reads the desktop's mode.
++	// Never an SDL_Window pointer: GetWindowRect reads the primary display's
++	// bounds.
+ 	return reinterpret_cast<HWND>(static_cast<uintptr_t>(1));
+ }
+ 
