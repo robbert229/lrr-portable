@@ -325,6 +325,11 @@ lrr_unit_test(selectplace SOURCES ${GAME_DIR}/test_selectplace.cpp LABELS select
 lrr_unit_test(sfx SOURCES ${GAME_DIR}/test_sfx.cpp
   WRAP sound_bank_entry_load s_play_seam sound_source_spatial_refresh_all LABELS sfx)
 
+# Continuous smoke ownership and sound retries, on real retained-mode frames.
+lrr_unit_test(smoke_ownership SOURCES ${GAME_DIR}/test_smoke_ownership.cpp
+  WRAP level_current_terrain_get terrain_map_world_z_get mesh_load_texture
+       sound_bank_entry_load s_play_seam LABELS sfx)
+
 # Spiderweb damage, teardown and restart, beyond the existing grid tests.
 lrr_unit_test(spiderweb SOURCES ${GAME_DIR}/test_spiderweb.cpp
   WRAP legoobject_position_to_terrain_cell object_type_name_index_find weapons_get_damage_for_object
