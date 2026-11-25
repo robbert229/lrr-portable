@@ -11,7 +11,14 @@ bool write_triangle(const char* path);
 // One animated null, two keyframes, no mesh or sound dependencies.
 bool write_null_scene(const char* path);
 bool make_fixture(const char* directory);
+// Two abstract maps: GridA (existing 8x8 grid), GridB (10x9 grid).
+// Writes Data/transition.cfg; pass "transition.cfg" to boot_game.
+constexpr unsigned TransitionW = 10, TransitionH = 9;
+bool make_transition_fixture(const char* directory);
+bool write_transition_surface(); // Restore GridB's surface file after a negative test.
+
 bool initialise_headless(const char* programName);
 bool boot_game();
+bool boot_game(const char* configPath);
 }
 #endif
