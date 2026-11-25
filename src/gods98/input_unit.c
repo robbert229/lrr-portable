@@ -47,6 +47,7 @@ extern "C" {
  * (main_globs.h, finding 679); the MinGW reference build keeps the port's
  * variables. */
 #include "main_globs.h"
+#include "directdraw.h" // [divergence:widescreen] directdraw_frame_x
 
 /* The unit's state, in the commons (tentative definitions). */
 #include "input_globs.h"
@@ -152,7 +153,10 @@ void input_cursor_position_update(void)
         GetCursorPos(&pos);
         x = pos.x - offset.x;
         y = pos.y - offset.y;
-        if (x >= s_display_w) x = s_display_w - 1;
+        /* [divergence:widescreen] In the 4:3 frame's coordinates while one
+         * is up (DirectDraw.c). */
+        x -= directdraw_frame_x();
+        if (x >= directdraw_frame_width()) x = directdraw_frame_width() - 1;
         if (y >= s_display_h) y = s_display_h - 1;
         if (x < 0) x = 0;
         if (y < 0) y = 0;
@@ -175,7 +179,7 @@ void input_cursor_client_position_set(int x, int y)
     s_renderer_word_b = y;
     s_cursor_delta_x = 0;
     s_cursor_delta_y = 0;
-    SetCursorPos(offset.x + x, offset.y + y);
+    SetCursorPos(offset.x + directdraw_frame_x() + x, offset.y + y); // [divergence:widescreen]
 }
 
 #ifdef __cplusplus

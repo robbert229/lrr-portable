@@ -17,4 +17,6 @@ void N3DS_SetupDefaultConfigOverrides(dictionary* p_dictionary)
     iniparser_set(p_dictionary, LRR_CONFIG_SAVEPATH, "sdmc:/3ds/LegoRR");
     // The game data (Data and the WADs) beside the saves.
     iniparser_set(p_dictionary, LRR_CONFIG_DISKPATH, "sdmc:/3ds/LegoRR");
+    // The 4:3 picture: a wider one draws more of the level each frame.
+    iniparser_set(p_dictionary, "tweaks:widescreen", "false");
 }

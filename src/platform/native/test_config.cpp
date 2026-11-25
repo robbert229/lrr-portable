@@ -151,6 +151,11 @@ int main(void)
 #else
     CHECK(!touch.enabled, "default: touch controls off, on a desktop");
 #endif
+    /* The key at the start of a line: a path above may hold the word. */
+    CHECK(text.find("\nwidescreen") > text.find("[" LRR_CONFIG_TWEAKS_SECTION "]") &&
+              text.find("true", text.find("\nwidescreen")) != std::string::npos,
+          "default: widescreen = true is written under [tweaks]");
+    CHECK(LRR_GetWidescreen(), "default: widescreen");
 
     /* A later run reads the file the user edited. */
     write_text(defaultIni, "[" LRR_CONFIG_SECTION "]\nsavepath = " + root + "/elsewhere/\n");

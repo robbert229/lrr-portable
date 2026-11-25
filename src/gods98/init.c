@@ -22,7 +22,13 @@
  * mode, 640x480, which miniwin fits into a resizable window that opens at
  * the file's resolution, any size, and draws the 3D view at the window's
  * resolution (miniwin/miniwinpresentation.h). With tweaks:display =
- * original, the file's resolution chooses the mode, as the dialog did. */
+ * original, the file's resolution chooses the mode, as the dialog did.
+ *
+ * A second divergence ([divergence:widescreen]) widens that mode. With
+ * tweaks:widescreen = true (the default) and a window wider than 4:3 (the
+ * desktop, in full screen), the mode keeps its height and takes the
+ * window's aspect, 853x480 for 16:9, and a viewport wider than 4:3 keeps
+ * the 4:3 view's vertical field of view and shows more at the sides. */
 #include "init.h"
 
 // GLOBAL: LEGORR 0x005580a0
@@ -71,10 +77,15 @@ int init_initialise(int setup, int debug, int best, int window,
 
     /* [divergence:display-fit] tweaks:display = fit draws the 3D view at the
      * window's resolution; = original at the mode's. Either way the 3D view
-     * keeps the mode's 4:3 frame (docs/divergences.md). */
+     * keeps the mode's frame, which tweaks:widescreen may widen below
+     * (docs/divergences.md). */
     Miniwin_SetRenderResolution(fitWindow ? MiniwinRenderResolution::Window
                                           : MiniwinRenderResolution::Virtual);
     Miniwin_SetViewportsFillWindow(false);
+    /* [divergence:widescreen] A viewport wider than 4:3 shows more at the
+     * sides, not less above and below. */
+    Miniwin_SetViewportFieldAspect(fitWindow && LRR_GetWidescreen() ? 4.0f / 3.0f : 0.0f);
+    directdraw_set_frame_width(0);
 
     initGlobs.selDriver = NULL;
     initGlobs.selDevice = NULL;
@@ -164,6 +175,41 @@ int init_initialise(int setup, int debug, int best, int window,
                             initGlobs.selMode = &initGlobs.modes[loop];
                             break;
                         }
+                    }
+                }
+
+                /* [divergence:widescreen] tweaks:widescreen widens the mode
+                 * to the window's aspect, the desktop's in full screen, at
+                 * the mode's height, at most 4:1: a mode of its own, after
+                 * the listed ones, and valid. A window no wider than the
+                 * mode keeps it. The 640x480 screens are drawn in a frame of
+                 * the first mode's width (DirectDraw.c). */
+                if (initGlobs.selMode != NULL && fitWindow && LRR_GetWidescreen() &&
+                    initGlobs.modeCount < INIT_MAX_MODES && initGlobs.validModeCount < INIT_MAX_VALID_MODES) {
+                    long aspectW = config->width, aspectH = config->height;
+                    RECT desktop;
+                    long wide = 0;
+                    DirectDraw_Mode* widened;
+
+                    if (initGlobs.selFullScreen && GetWindowRect(GetDesktopWindow(), &desktop)) {
+                        aspectW = desktop.right - desktop.left;
+                        aspectH = desktop.bottom - desktop.top;
+                    }
+                    if (aspectW > 0 && aspectH > 0) {
+                        wide = (long)initGlobs.selMode->height * aspectW / aspectH;
+                        if (wide > (long)initGlobs.selMode->height * 4) wide = (long)initGlobs.selMode->height * 4;
+                    }
+                    if (wide > (long)initGlobs.selMode->width) {
+                        widened = &initGlobs.modes[initGlobs.modeCount++];
+                        *widened = *initGlobs.selMode;
+                        widened->width = (unsigned int)wide;
+                        if (initGlobs.selFullScreen)
+                            snprintf(widened->desc, sizeof(widened->desc), "%ux%u (%u bit)", widened->width,
+                                     widened->height, widened->bitDepth);
+                        else snprintf(widened->desc, sizeof(widened->desc), "%ux%u", widened->width, widened->height);
+                        init_add_valid_mode(widened->width, widened->height, widened->bitDepth);
+                        directdraw_set_frame_width(initGlobs.selMode->width);
+                        initGlobs.selMode = widened;
                     }
                 }
 

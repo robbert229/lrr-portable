@@ -115,6 +115,7 @@ constexpr Row kTable[] = {
     /* The divergences' switches (docs/divergences.md). */
     Choice(LRR_SETTING_TRAINING_SAVE, "tweaks:Training Save", kTrainingSaveNames, LRR_TRAINING_SAVE_PROMPT),
     Choice(LRR_SETTING_DISPLAY, "tweaks:display", kDisplayNames, LRR_DISPLAY_FIT),
+    Switch(LRR_SETTING_WIDESCREEN, "tweaks:widescreen", true),
     Choice(LRR_SETTING_CONTROLS, "tweaks:controls", kControlsNames, LRR_CONTROLS_MODERN),
     Switch(LRR_SETTING_FIX_IDLENESS_SYNDROME, "tweaks:fix_idleness_syndrome", true),
     Switch(LRR_SETTING_FPS_OVERLAY, "tweaks:fps_overlay", false),

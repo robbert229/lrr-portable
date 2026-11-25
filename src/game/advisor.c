@@ -20,6 +20,7 @@
 #include <stdlib.h>
 
 #include "advisor.h"
+#include "gods98/directdraw.h" // [divergence:widescreen] directdraw_widescreen_margin
 #include "camera_control.h"
 #include "frontend.h"
 #include "gods98/font.h"
@@ -368,6 +369,18 @@ void advisor_position_config_load(BlockFile* config, const char* gameName,
                         pos[0] = (float)atof(argv[3]);
                         pos[1] = (float)atof(argv[4]);
                         if (stricmp("NULL", argv[5]) == 0 || ui_panel_name_table_lookup(argv[5], &panelType)) {
+                            /* [divergence:widescreen] A position in screen
+                             * coordinates follows what it points at in a mode
+                             * wider than 4:3: the briefing and the talking
+                             * advisor are centred, the top panel and the
+                             * camera control keep to the right edge. Panel
+                             * and icon positions follow their panel. */
+                            if (panelType == ADVISOR_PANEL_NONE) {
+                                if (advisorType <= 2 || advisorType == 20)
+                                    pos[0] += (float)(directdraw_widescreen_margin() / 2);
+                                else if (advisorType >= 13 && advisorType <= 19)
+                                    pos[0] += (float)directdraw_widescreen_margin();
+                            }
                             advisor_position_record_initialize(advisorType, animType, textType, sfxType, panelType, pos[0], pos[1]);
                         }
                     }

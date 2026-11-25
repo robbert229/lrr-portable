@@ -133,6 +133,7 @@ vertical resolution = 480
 [tweaks]
 training save = prompt
 display = fit
+widescreen = true
 ```
 
 | Setting | What it does |
@@ -142,7 +143,7 @@ display = fit
 | `diskpath` | Your Rock Raiders folder, so you can start the game from anywhere. Empty means "the folder I was started in". |
 | `savepath` | Where your saves go. Empty keeps them in the game's own `Data\Saves` folder, like the original. |
 | `3d device` | Leave empty to pick the best one automatically: your graphics card when it can, or a software renderer otherwise. `Miniwin driver (SDL3 GPU HAL)` forces the graphics card and `Miniwin driver (Miniwin Emulation)` forces the software renderer. |
-| `training save`, `display` | See [Improvements](#small-improvements-over-the-original) below. |
+| `training save`, `display`, `widescreen` | See [Improvements](#small-improvements-over-the-original) below. |
 
 Any `true`/`false` setting also takes `on`/`off`, `yes`/`no` or `1`/`0`, and
 any setting under `[tweaks]` takes `original` for the original game's
@@ -179,6 +180,12 @@ can switch them off.
   panels are scaled up: pixel-sharp at exact multiples such as 1280x960,
   smoothed at other sizes. Want the original's fixed 640x480 window? Set
   `display = original`.
+- **Widescreen.** On a screen or window wider than 4:3, missions fill it:
+  the 3D view shows more at the sides, and the panels keep to the screen's
+  edges. The menus, the rewards and the loading screens are 640x480
+  pictures, so they stay 4:3 in the middle of the screen, with black at the
+  sides. The game picks its shape when it starts. Prefer the 4:3 picture
+  with black bars? Set `widescreen = false`.
 - **Skip the LEGO logo movie** with a key or click, like the other intro
   movies.
 - **Closing the window quits** from menus, movies and loading screens,

@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "panel_unit.h"
+#include "gods98/directdraw.h" // [divergence:widescreen] directdraw_widescreen_margin
 #include "lego_level_record.h"
 #include "frontend.h"
 #include "interface.h"
@@ -1076,6 +1077,15 @@ void frontend_panel_rotation_control_config_load(BlockFile* config,
     } else {
         panelGlobs.rotationImages[1] = NULL;
     }
+    /* [divergence:widescreen] The rotation control is laid out in screen
+     * coordinates on the camera control panel, which keeps to the right
+     * edge of a mode wider than 4:3 (Lego_LoadPanels). */
+    {
+        int margin = directdraw_widescreen_margin();
+        int i;
+        panelGlobs.rotationCenterX += margin;
+        for (i = 0; i < 4; i++) panelGlobs.rotationImagePositions[i].x += (float)margin;
+    }
 }
 
 // FUNCTION: LEGORR 0x0045bcd0
@@ -1237,7 +1247,7 @@ void panel_crystals_draw(unsigned int crystals, unsigned int usedCrystals)
     panel_print_f(5, s_lego_crystal_count_font, 41, 469, 1, "%i", crystals);
 
     if (panelGlobs.crystalNoSmallImage != NULL) {
-        position.x = 624.0f;
+        position.x = 624.0f + (float)directdraw_widescreen_margin(); // [divergence:widescreen] the side bar's column
         position.y = 429.0f;
         n = panelGlobs.crystalQuota;
         while (n-- > 0) {
@@ -1251,7 +1261,7 @@ void panel_crystals_draw(unsigned int crystals, unsigned int usedCrystals)
         n = 0;
         if (crystals > panelGlobs.crystalQuota) crystals = panelGlobs.crystalQuota;
         if (usedCrystals > panelGlobs.crystalQuota) usedCrystals = panelGlobs.crystalQuota;
-        position.x = 624.0f;
+        position.x = 624.0f + (float)directdraw_widescreen_margin(); // [divergence:widescreen] the side bar's column
         position.y = 429.0f;
         if (panelGlobs.crystalUsedImage != NULL) {
             for (; n < usedCrystals; n++) {

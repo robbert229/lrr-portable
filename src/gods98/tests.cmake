@@ -160,7 +160,7 @@ lrr_unit_test(input_keys SOURCES ${ENGINE_DIR}/test_input_keys.cpp
 lrr_unit_test(engine_lifecycle SOURCES ${ENGINE_DIR}/test_engine_lifecycle.cpp ${ENGINE_DIR}/main.c
   DEFINES lego_game_config_callback_registry_init=engine_lifecycle_register_test_callbacks
   LABELS main ENVIRONMENT "SDL_VIDEO_DRIVER=dummy" "SDL_AUDIO_DRIVER=dummy")
-foreach(scenario IN ITEMS realtime events fullscreen reject no-loop no-state fit-config debug-config resource-reject)
+foreach(scenario IN ITEMS realtime events fullscreen reject no-loop no-state fit-config wide-config debug-config resource-reject)
   lrr_unit_test_variant(engine_lifecycle_${scenario} OF engine_lifecycle
     ARGS ${scenario} LABELS main ENVIRONMENT "SDL_VIDEO_DRIVER=dummy" "SDL_AUDIO_DRIVER=dummy")
 endforeach()

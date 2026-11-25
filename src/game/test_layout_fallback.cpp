@@ -5,6 +5,10 @@
  * docs/divergences.md), which crashed the original at 1024x768. A mode
  * with its own keys still reads them.
  *
+ * In a mode Init.c widened (tweaks:widescreen, [divergence:widescreen]), the
+ * panels at the right of the 640x480 layout move right by the extra width,
+ * so they keep to the screen's right edge, and the rest stay at the left.
+ *
  * Lego_LoadPanels and Lego_LoadPanelButtons read a synthetic Lego.cfg, and
  * the Panel.c calls they make reach the test's __wrap_ stubs. No game data. */
 #include <stdio.h>
@@ -15,6 +19,7 @@
 #include <vector>
 
 #include "gods98/config.h"
+#include "gods98/directdraw.h"
 #include "game/panel_unit.h"
 #include "game/lego_globs.h"
 
@@ -118,6 +123,31 @@ static const char* kBoth =
     "  }\n"
     "}\n";
 
+static const char* kRightAndLeft =
+    "Lego* {\n"
+    "  Panels640x480 {\n"
+    "    Panel_Radar           Interface\\Panels\\Radar.bmp,0,0,-167,0\n"
+    "    Panel_CrystalSideBar  Interface\\Panels\\Side.bmp,584,0,584,0\n"
+    "    Panel_PriorityList    Interface\\Panels\\Prio.bmp,398,50,640,50\n"
+    "    Panel_InfoDock        Interface\\Panels\\Dock.bmp,0,330,0,330\n"
+    "  }\n"
+    "}\n";
+
+static const PanelLoad* FindPanel(const char* image)
+{
+    for (const PanelLoad& load : s_panels) {
+        if (load.image == image) return &load;
+    }
+    return NULL;
+}
+
+static bool BoundsAre(const char* image, int xOut, int yOut, int xIn, int yIn)
+{
+    const PanelLoad* load = FindPanel(image);
+    return load != NULL && load->bounds[0] == xOut && load->bounds[1] == yOut && load->bounds[2] == xIn &&
+           load->bounds[3] == yIn;
+}
+
 int main(void)
 {
     block_text_token_pool_init();
@@ -153,6 +183,33 @@ int main(void)
     CHECK(s_panels.size() == 1 && s_panels[0].image == "Interface\\Panels\\Radar1024.bmp" &&
               s_panels[0].bounds[0] == 32,
           "1024x768 keeps Panels1024x768 when Lego.cfg has it");
+    block_close(config);
+
+    /* A 4:3 mode Init.c did not widen keeps every panel where the layout
+     * puts it. */
+    config = LoadConfig(kRightAndLeft);
+    directDrawGlobs.width = 640;
+    directDrawGlobs.height = 480;
+    s_panels.clear();
+    lego_panels_config_entry_apply(config, 640, 480);
+    CHECK(BoundsAre("Interface\\Panels\\Side.bmp", 584, 0, 584, 0), "640x480: the side bar at 584");
+    CHECK(BoundsAre("Interface\\Panels\\Prio.bmp", 398, 50, 640, 50), "640x480: the priority list at 398");
+
+    /* Widened to 853x480: the right-hand panels move right by 213, out of
+     * sight positions included; the left-hand ones stay. */
+    directDrawGlobs.width = 853;
+    directdraw_set_frame_width(640);
+    CHECK(directdraw_widescreen_margin() == 213, "853x480 widened from 640: 213 more");
+    s_panels.clear();
+    lego_panels_config_entry_apply(config, 853, 480);
+    CHECK(s_panels.size() == 4, "853x480 loads the four panels from Panels640x480");
+    CHECK(BoundsAre("Interface\\Panels\\Side.bmp", 797, 0, 797, 0), "853x480: the side bar at the right edge");
+    CHECK(BoundsAre("Interface\\Panels\\Prio.bmp", 611, 50, 853, 50),
+          "853x480: the priority list slides in from the right edge");
+    CHECK(BoundsAre("Interface\\Panels\\Radar.bmp", 0, 0, -167, 0), "853x480: the radar stays at the left");
+    CHECK(BoundsAre("Interface\\Panels\\Dock.bmp", 0, 330, 0, 330), "853x480: the info dock stays at the left");
+    directdraw_set_frame_width(0);
+    CHECK(directdraw_widescreen_margin() == 0, "a mode that was not widened: no margin");
     block_close(config);
 
     if (s_failures) {

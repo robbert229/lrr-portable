@@ -33,6 +33,7 @@ void Defaults()
     CHECK_STREQ(display->device, "");
     CHECK_EQ(LRR_GetTrainingSave(), LRR_TRAINING_SAVE_PROMPT);
     CHECK_EQ(LRR_GetDisplayScaling(), LRR_DISPLAY_FIT);
+    CHECK(LRR_GetWidescreen(), "default: widescreen");
     CHECK_EQ(LRR_GetControls(), LRR_CONTROLS_MODERN);
     CHECK(LRR_GetFixIdlenessSyndrome(), "default: the idleness syndrome is fixed");
     CHECK(!LRR_GetFpsOverlay(), "default: no frame rate overlay");
@@ -56,6 +57,7 @@ void Switches()
 {
     const LRR_Setting switches[] = {
         LRR_SETTING_FULLSCREEN,
+        LRR_SETTING_WIDESCREEN,
         LRR_SETTING_FIX_IDLENESS_SYNDROME,
         LRR_SETTING_FPS_OVERLAY,
         LRR_SETTING_TOUCH,

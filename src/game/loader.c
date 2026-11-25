@@ -20,6 +20,7 @@
 #include "crt/vc5names.h"
 #include "loader.h"
 #include "loader_imports.h"
+#include "gods98/directdraw.h" // [divergence:widescreen] directdraw_set_framed
 
 #define LOADER_MAXSECTIONS 50
 
@@ -240,6 +241,9 @@ void loader_file_load_callback(const char* filename, unsigned int fileSize, void
 // FUNCTION: LEGORR 0x0044e0a0
 void loader_display_shutdown(void)
 {
+    /* [divergence:widescreen] The shutdown screen is a 640x480 picture,
+     * centred in a mode wider than 4:3 (DirectDraw.c). */
+    directdraw_set_framed(TRUE);
     if (loaderGlobs.ShutdownScreen) {
         Image_DisplayScaled(loaderGlobs.ShutdownScreen, NULL, NULL, NULL);
         directdraw_flip();
