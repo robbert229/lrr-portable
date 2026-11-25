@@ -26,9 +26,13 @@
  * tools/version.cmake; docs/releasing.md) and exits; every run also logs it
  * at start-up. */
 #include <SDL3/SDL.h>
-#ifdef __ANDROID__
-/* SDL's activity calls the program's SDL_main: SDL_main.h renames main
- * and exports it from libLegoRR.so. */
+#if defined(__ANDROID__) || defined(__3DS__)
+/* SDL_main.h renames main to SDL_main. On Android, SDL's activity calls it
+ * from libLegoRR.so. On the 3DS, SDL supplies the process's main
+ * (SDL_RunApp), which calls osSetSpeedupEnable(true) before SDL_main: a
+ * New 3DS runs the game at 804 MHz with its L2 cache, not at 268 MHz
+ * without one. Keep it here; without it the game runs at a third of the
+ * CPU's speed. Other platforms keep this main as their entry. */
 #include <SDL3/SDL_main.h>
 #endif
 
