@@ -33,6 +33,27 @@ int main()
     CHECK_EQ(other->next, b);
     CHECK_EQ(b->next, a);
 
+    // Reprioritize the actual pending list, including a player-selected
+    // job whose ordinary priority would put it last.
+    a->priority = 4;
+    b->priority = 5;
+    other->priority = 6;
+    priority_entry_order_value_set(4, 75);
+    priority_entry_order_value_set(5, 25);
+    priority_entry_order_value_set(6, 50);
+    aitask_cmd_global_list_purge(&aiTaskGlobs.globalHead);
+    CHECK_EQ(aiTaskGlobs.globalHead, a);
+    CHECK_EQ(a->next, other);
+    CHECK_EQ(other->next, b);
+    CHECK_EQ(b->next, nullptr);
+    b->flags |= 0x100;
+    b->field_50 = 1;
+    aitask_cmd_global_list_purge(&aiTaskGlobs.globalHead);
+    CHECK_EQ(aiTaskGlobs.globalHead, b);
+    CHECK_EQ(b->next, a);
+    CHECK_EQ(a->next, other);
+    CHECK_EQ(other->next, nullptr);
+
     a->buffer = malloc(16);
     CHECK(a->buffer != nullptr, "pending task payload allocated");
     a->entityRef = &second;
@@ -56,7 +77,6 @@ int main()
     aiTaskGlobs.globalHead = nullptr;
     for (AITask* task : {a, b, other, reused})
         aitask_cmd_free(task, 1);
-    for (unsigned int i = 0; i < aiTaskGlobs.poolBlockCount; ++i)
-        free(aiTaskGlobs.poolBlocks[i]);
+    aitask_handle_array_release_and_reset();
     return lrr_test_result("task_lifecycle");
 }
