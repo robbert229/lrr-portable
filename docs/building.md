@@ -786,3 +786,12 @@ to their `lrr_unit_test(... SOURCES ...)` and include
 No installed game data is needed. All input files are generated in the
 scratch directory; the fixture is an artificial two-cave grid, not a
 shipped level.
+
+The separate `synthetic_lifecycle` test exercises two real load/tick/free
+cycles, including empty-level teardown. The `synthetic_missing_config`
+variant calls the complete startup entry point in a fresh process without
+a configuration file and checks that it rejects startup without installing
+a level. These tests do not establish successful complete initialization
+or full engine shutdown: the successful load uses the partial setup above,
+which lacks the complete object and interface catalogs. Coverage of those
+paths remains outstanding.

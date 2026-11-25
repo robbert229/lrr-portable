@@ -362,3 +362,10 @@ lrr_unit_test(weapons SOURCES ${GAME_DIR}/test_weapons.cpp
 lrr_unit_test(level_boot SOURCES ${GAME_DIR}/test_level_boot.cpp
   ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
   LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Existing lifecycle entry points on generated inputs in an isolated process.
+lrr_unit_test(synthetic_lifecycle SOURCES ${GAME_DIR}/test_synthetic_lifecycle.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(synthetic_missing_config OF synthetic_lifecycle
+  ARGS missing-config LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
