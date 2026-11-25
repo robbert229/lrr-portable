@@ -14,6 +14,10 @@
 #ifndef LEGORRR_GODS98_INPUT_GLOBS_H
 #define LEGORRR_GODS98_INPUT_GLOBS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct Input_Globs {
     struct IDirectInputA* lpdi;                  /* +0x00 */
     struct IDirectInputDeviceA* lpdiKeyboard;    /* +0x04 */
@@ -61,5 +65,9 @@ extern struct Input_Globs inputGlobs;
  * from the user. Lego.c reads them for tweaks:controls = modern. */
 extern int inputMiddleButton;
 extern int inputWheelDelta;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* LEGORRR_GODS98_INPUT_GLOBS_H */
