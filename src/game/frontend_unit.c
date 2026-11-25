@@ -875,12 +875,13 @@ void front_menu_free_menu(Front_Menu* menu)
             free(menu->fullName);
         }
         if (menu->items != NULL) {
-            free(menu->items);
-        }
-        for (i = 0; i < menu->itemCount; i++) {
-            if (menu->items[i] != NULL) {
-                front_menu_item_free_menu_item(menu->items[i]);
+            // The array owns the references used to release its items.
+            for (i = 0; i < menu->itemCount; i++) {
+                if (menu->items[i] != NULL) {
+                    front_menu_item_free_menu_item(menu->items[i]);
+                }
             }
+            free(menu->items);
         }
         if (menu->menuImage != NULL) {
             image_surface_release(menu->menuImage);
