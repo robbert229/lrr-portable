@@ -446,14 +446,35 @@ to the shell user and the app can no longer write it. Pull the file, edit
 it, and push it back, or delete it to get the defaults again. Uninstalling
 the app deletes the directory and everything in it, including the saves.
 
-**Touch.** SDL turns a touch into mouse events: a tap moves the pointer to
-the finger and presses and releases the left button, and miniwin passes
-those on as `WM_MOUSEMOVE` and `WM_LBUTTON*`. A press of a frame or more
-clicks, in the menus and in a level; a tap shorter than one game frame can
-be missed, because the game reads the button state once per frame. A mouse
-and keyboard work. #986 tracks what touch still lacks: a right click,
-scrolling and zooming the map, the keys the game asks for (Space, Escape,
-typing a save's name) and Android's Back button.
+**Touch.** The touch controls (#986; `src/platform/native/input.h`) make
+the mouse and keys from finger events, in place of SDL's own mapping:
+
+| Touch | Does |
+| --- | --- |
+| Tap | Left click |
+| Drag | Left button held: selects, drags |
+| Hold still, then move | Moves the pointer without pressing, so tooltips show; lifting clicks nothing |
+| Two-finger drag | Scrolls the map: the pointer waits on the picture's edge, opposite the drag |
+| Pinch | Zooms (holds `-` or `=`), in the top view |
+| Two-finger twist | Turns the view (holds an arrow key), in the top view |
+| Two-finger tap | Space: the units' status bubbles, closing a briefing |
+| Three-finger tap | Opens or closes the on-screen keyboard |
+| Back | Escape |
+
+The on-screen keyboard also opens by itself while the game takes typed
+text: a unit's name (Return on a selected, trained raider, where the
+level allows renaming) or a menu's text field. The shipped `Lego.cfg` has
+no text field, and saves have no names. A right click acts as a left click
+in Rock Raiders unless the game runs with `-dualmouse`, so no gesture
+makes one by default; `touch_two_finger_tap = right click` makes one.
+A tap, or an on-screen key, shorter than a frame is held until the game has
+read it. The `[tweaks]` `touch` keys in `LegoRR.ini` turn each gesture off
+(docs/divergences.md, "Touch controls"); `touch = false` gives SDL's mapping
+back, where a touch is the left button. `touch` is true by default on
+Android and iOS. A desktop touch screen can use it too, with `touch = true`;
+there the pointer follows a finger only where the system lets SDL move the
+pointer.
+A mouse and keyboard work as before.
 
 **Signing.** CI builds only the debug APK, signed with Android's debug key,
 so it installs for testing. `./gradlew assembleRelease` gives an unsigned,
