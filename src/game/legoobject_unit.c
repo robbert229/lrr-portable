@@ -732,7 +732,7 @@ void legoobject_grid_object_records_release(void)
         }
     }
     objectGlobs_recordObjsCount = 0;
-    memset(objectGlobs_recordObjs, 0, 200 * sizeof(int));
+    memset(objectGlobs_recordObjs, 0, sizeof(objectGlobs_recordObjs));
     global_counter_004ff990_reset();
 }
 
@@ -793,11 +793,14 @@ void legoobject_deferred_olist_create_and_link(int* blockPos)
                 names[count] = rec->name;
                 linkNames[count] = rec->linkName;
                 count++;
-                rec->name = NULL;
+            } else {
+                free(rec->name);
+                free(rec->linkName);
             }
 
             objectGlobs_recordObjsCount--;
             *rec = objectGlobs_recordObjs[objectGlobs_recordObjsCount];
+            memset(&objectGlobs_recordObjs[objectGlobs_recordObjsCount], 0, sizeof(*rec));
             i--;
         }
     }
@@ -805,7 +808,7 @@ void legoobject_deferred_olist_create_and_link(int* blockPos)
     for (i = 0; i < count; i++) {
         if (linkNames[i] != NULL) {
             for (j = 0; j < count; j++) {
-                if (i != j && stricmp(names[j], linkNames[i]) == 0) {
+                if (i != j && names[j] != NULL && stricmp(names[j], linkNames[i]) == 0) {
                     obj = objs[i];
                     target = objs[j];
                     obj->routeToObject = target;
@@ -840,8 +843,17 @@ void legoobject_deferred_olist_create_and_link(int* blockPos)
 void legoobject_deferred_olist_queue_add(void* model, int type, int id, float* worldPos, float heading, float health, const char* name, const char* linkName)
 {
     LegoObjGB_DeferredRecord* rec;
+    int blockPos[2];
 
+    if (objectGlobs_recordObjsCount >= sizeof(objectGlobs_recordObjs) / sizeof(objectGlobs_recordObjs[0]))
+        return;
+    if (!terrain_map_world_to_block((struct TerrainMap*)level_current_terrain_get(),
+                                   worldPos[0], worldPos[1], &blockPos[0], &blockPos[1]))
+        return;
     rec = &objectGlobs_recordObjs[objectGlobs_recordObjsCount++];
+    memset(rec, 0, sizeof(*rec));
+    rec->blockPos[0] = blockPos[0];
+    rec->blockPos[1] = blockPos[1];
     rec->worldPos[0] = worldPos[0];
     rec->worldPos[1] = worldPos[1];
     rec->heading = heading;
@@ -855,9 +867,6 @@ void legoobject_deferred_olist_queue_add(void* model, int type, int id, float* w
     if (linkName != NULL) {
         rec->linkName = string_duplicate(linkName);
     }
-    terrain_map_world_to_block((struct TerrainMap*)level_current_terrain_get(),
-                               worldPos[0], worldPos[1],
-                               &rec->blockPos[0], &rec->blockPos[1]);
 }
 
 // FUNCTION: LEGORR 0x00437cc0
