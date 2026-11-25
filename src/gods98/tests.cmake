@@ -147,3 +147,14 @@ lrr_unit_test(input_keys SOURCES ${ENGINE_DIR}/test_input_keys.cpp
   INCLUDES ${ENGINE_DIR}
   LINK SDL3::SDL3
   LABELS input)
+
+# Compile the unchanged WinMain unit for the test executable with only its
+# application-registration call renamed. Unlike linker wrapping, this
+# test-only substitution also works with Windows and Apple's linkers.
+lrr_unit_test(engine_lifecycle SOURCES ${ENGINE_DIR}/test_engine_lifecycle.cpp ${ENGINE_DIR}/main.c
+  DEFINES lego_game_config_callback_registry_init=engine_lifecycle_register_test_callbacks
+  LABELS main ENVIRONMENT "SDL_VIDEO_DRIVER=dummy" "SDL_AUDIO_DRIVER=dummy")
+foreach(scenario IN ITEMS realtime events fullscreen reject no-loop no-state)
+  lrr_unit_test_variant(engine_lifecycle_${scenario} OF engine_lifecycle
+    ARGS ${scenario} LABELS main ENVIRONMENT "SDL_VIDEO_DRIVER=dummy" "SDL_AUDIO_DRIVER=dummy")
+endforeach()
