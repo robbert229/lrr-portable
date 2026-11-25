@@ -55,22 +55,22 @@ int building_load(BuildingModel* building, unsigned int objID, void* root,
 
         if ((config = block_open(aeFile))) {
             if ((building->carryNullName = block_get_str_copy(config,
-                    string_path_join(gameName, "CarryNullName", NULL)))) {
+                    string_path_join(gameName, "CarryNullName", (const char*)NULL)))) {
                 building->carryNullFrames = atoi(block_get_strptr(config,
-                        string_path_join(gameName, "CarryNullFrames", NULL))
+                        string_path_join(gameName, "CarryNullFrames", (const char*)NULL))
                     ? block_get_strptr(config,
-                          string_path_join(gameName, "CarryNullFrames", NULL))
+                          string_path_join(gameName, "CarryNullFrames", (const char*)NULL))
                     : "");
             } else {
                 building->carryNullFrames = 0;
             }
 
             if ((building->cameraNullName = block_get_str_copy(config,
-                    string_path_join(gameName, "CameraNullName", NULL)))) {
+                    string_path_join(gameName, "CameraNullName", (const char*)NULL)))) {
                 building->cameraNullFrames = atoi(block_get_strptr(config,
-                        string_path_join(gameName, "CameraNullFrames", NULL))
+                        string_path_join(gameName, "CameraNullFrames", (const char*)NULL))
                     ? block_get_strptr(config,
-                          string_path_join(gameName, "CameraNullFrames", NULL))
+                          string_path_join(gameName, "CameraNullFrames", (const char*)NULL))
                     : "");
             } else {
                 building->cameraNullFrames = 0;
@@ -80,47 +80,47 @@ int building_load(BuildingModel* building, unsigned int objID, void* root,
                     string_path_join(gameName,
                                      // STRING: LEGORR 0x004a1d3c
                                      "ToolNullName",
-                                     NULL)))) {
+                                     (const char*)NULL)))) {
                 building->toolNullFrames = atoi(block_get_strptr(config,
                         string_path_join(gameName,
                                          // STRING: LEGORR 0x004a1d2c
                                          "ToolNullFrames",
-                                         NULL))
+                                         (const char*)NULL))
                     ? block_get_strptr(config,
-                          string_path_join(gameName, "ToolNullFrames", NULL))
+                          string_path_join(gameName, "ToolNullFrames", (const char*)NULL))
                     : "");
             } else {
                 building->toolNullFrames = 0;
             }
 
             building->depositNullName = block_get_str_copy(config,
-                string_path_join(gameName, "DepositNullName", NULL));
+                string_path_join(gameName, "DepositNullName", (const char*)NULL));
             building->fireNullName = block_get_str_copy(config,
-                string_path_join(gameName, "FireNullName", NULL));
+                string_path_join(gameName, "FireNullName", (const char*)NULL));
             building->entranceNullName = block_get_str_copy(config,
                 string_path_join(gameName,
                                  // STRING: LEGORR 0x004a1d08
                                  "EntranceNullName",
-                                 NULL));
+                                 (const char*)NULL));
             building->yPivotNullName = block_get_str_copy(config,
-                string_path_join(gameName, "yPivot", NULL));
+                string_path_join(gameName, "yPivot", (const char*)NULL));
             building->xPivotNullName = block_get_str_copy(config,
-                string_path_join(gameName, "xPivot", NULL));
+                string_path_join(gameName, "xPivot", (const char*)NULL));
 
-            if (block_get_strptr(config, string_path_join(gameName, "PivotMaxZ", NULL))) {
+            if (block_get_strptr(config, string_path_join(gameName, "PivotMaxZ", (const char*)NULL))) {
                 building->weapons.pivotMaxZ = (float)atof(block_get_strptr(config,
-                        string_path_join(gameName, "PivotMaxZ", NULL))
+                        string_path_join(gameName, "PivotMaxZ", (const char*)NULL))
                     ? block_get_strptr(config,
-                          string_path_join(gameName, "PivotMaxZ", NULL))
+                          string_path_join(gameName, "PivotMaxZ", (const char*)NULL))
                     : "");
             } else {
                 building->weapons.pivotMaxZ = 1.0f;
             }
-            if (block_get_strptr(config, string_path_join(gameName, "PivotMinZ", NULL))) {
+            if (block_get_strptr(config, string_path_join(gameName, "PivotMinZ", (const char*)NULL))) {
                 building->weapons.pivotMinZ = (float)atof(block_get_strptr(config,
-                        string_path_join(gameName, "PivotMinZ", NULL))
+                        string_path_join(gameName, "PivotMinZ", (const char*)NULL))
                     ? block_get_strptr(config,
-                          string_path_join(gameName, "PivotMinZ", NULL))
+                          string_path_join(gameName, "PivotMinZ", (const char*)NULL))
                     : "");
             } else {
                 building->weapons.pivotMinZ = -1.0f;
@@ -135,7 +135,7 @@ int building_load(BuildingModel* building, unsigned int objID, void* root,
                     string_path_join(gameName,
                                      // STRING: LEGORR 0x004a1cd8
                                      "Shape",
-                                     NULL)))) {
+                                     (const char*)NULL)))) {
                 numPoints = sound_variant_split(shape, argv,
                                                 // STRING: LEGORR 0x004a1cd4
                                                 ":");
@@ -150,7 +150,7 @@ int building_load(BuildingModel* building, unsigned int objID, void* root,
 
             if ((scene = block_get_strptr(config, string_path_join(gameName,
                     // STRING: LEGORR 0x004a1cc4
-                    "PowerLevelScene", NULL)))) {
+                    "PowerLevelScene", (const char*)NULL)))) {
                 snprintf(aeFile, sizeof(aeFile), "%s\\%s", baseDir, scene);
                 building->contPowerLevel = container_load(root, aeFile, "LWS", 1);
             }

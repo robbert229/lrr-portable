@@ -225,7 +225,7 @@ void objective_load_objective_text(struct BlockRec* config,
                                                      "Main",
                                                      // STRING: LEGORR 0x004a80b4
                                                      "MissionBriefingText",
-                                                     NULL));
+                                                     (const char*)NULL));
     if (str) {
         width = formatted_text_printf_width((const struct TextureSurface*)legoGlobs_fontBriefingLo, str);
         msgArea.x = (msgArea.width * 0.5f - (int)(width >> 1)) + msgArea.x;
@@ -246,7 +246,7 @@ void objective_load_objective_text(struct BlockRec* config,
                                                      "Main",
                                                      // STRING: LEGORR 0x004a809c
                                                      "MissionCompletedText",
-                                                     NULL));
+                                                     (const char*)NULL));
     if (str) {
         width = formatted_text_printf_width((const struct TextureSurface*)legoGlobs_fontBriefingLo, str);
         msgArea.x = (msgArea.width * 0.5f - (int)(width >> 1)) + msgArea.x;
@@ -267,7 +267,7 @@ void objective_load_objective_text(struct BlockRec* config,
                                                      "Main",
                                                      // STRING: LEGORR 0x004a8088
                                                      "MissionFailedText",
-                                                     NULL));
+                                                     (const char*)NULL));
     if (str) {
         width = formatted_text_printf_width((const struct TextureSurface*)legoGlobs_fontBriefingLo, str);
         msgArea.x = (msgArea.width * 0.5f - (int)(width >> 1)) + msgArea.x;
@@ -317,15 +317,15 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
 
     if (block_get_bool_path(config, string_path_join(gameName, levelName,
             // STRING: LEGORR 0x004a8234
-            "DontShowObjectiveAdvisor", NULL)) != 1)
+            "DontShowObjectiveAdvisor", (const char*)NULL)) != 1)
         objectiveGlobs.flags |= OBJECTIVE_FLAG_SHOWBRIEFINGADVISOR;
     if (block_get_bool_path(config, string_path_join(gameName, levelName,
             // STRING: LEGORR 0x004a8214
-            "DontShowObjectiveAcheiveAdvisor", NULL)) != 1)
+            "DontShowObjectiveAcheiveAdvisor", (const char*)NULL)) != 1)
         objectiveGlobs.flags |= OBJECTIVE_FLAG_SHOWACHIEVEADVISOR;
     if (block_get_bool_path(config, string_path_join(gameName, levelName,
             // STRING: LEGORR 0x004a81f4
-            "DontShowObjectiveFailedAdvisor", NULL)) != 1)
+            "DontShowObjectiveFailedAdvisor", (const char*)NULL)) != 1)
         objectiveGlobs.flags |= OBJECTIVE_FLAG_SHOWFAILEDADVISOR;
 
     snprintf(buff, sizeof(buff),
@@ -333,10 +333,10 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
             "ObjectiveImage%ix%i", screenWidth, screenHeight);
     /* [divergence:layout-fallback] Lego.cfg lays the interface out only for
      * 640x480; another mode reads that layout instead of finding none. */
-    if (block_get_strptr(config, string_path_join(gameName, levelName, buff, NULL)) == NULL)
+    if (block_get_strptr(config, string_path_join(gameName, levelName, buff, (const char*)NULL)) == NULL)
         snprintf(buff, sizeof(buff), "ObjectiveImage%ix%i", 640, 480);
     if ((str = block_get_strptr(config, string_path_join(gameName, levelName,
-                                                         buff, NULL)))) {
+                                                         buff, (const char*)NULL)))) {
         s = string_duplicate(str);
         argc = sound_variant_split(s, argv, ",");
         if (OBJECTIVE_DATA(level)->image) image_surface_release(OBJECTIVE_DATA(level)->image);
@@ -360,10 +360,10 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
             // STRING: LEGORR 0x004a81c4
             "ObjectiveAcheivedImage%ix%i", screenWidth, screenHeight);
     /* [divergence:layout-fallback] As ObjectiveImage. */
-    if (block_get_strptr(config, string_path_join(gameName, levelName, buff, NULL)) == NULL)
+    if (block_get_strptr(config, string_path_join(gameName, levelName, buff, (const char*)NULL)) == NULL)
         snprintf(buff, sizeof(buff), "ObjectiveAcheivedImage%ix%i", 640, 480);
     if ((str = block_get_strptr(config, string_path_join(gameName, levelName,
-                                                         buff, NULL)))) {
+                                                         buff, (const char*)NULL)))) {
         s = string_duplicate(str);
         argc = sound_variant_split(s, argv, ",");
         if (OBJECTIVE_DATA(level)->achievedImage) image_surface_release(OBJECTIVE_DATA(level)->achievedImage);
@@ -387,7 +387,7 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
     if ((s = block_get_str_copy(config, string_path_join(gameName, levelName,
                                                          // STRING: LEGORR 0x004a81ac
                                                          "ObjectiveAcheivedAVI",
-                                                         NULL)))) {
+                                                         (const char*)NULL)))) {
         argc = sound_variant_split(s, argv, ",");
         OBJECTIVE_DATA(level)->achievedVideoName = string_duplicate(argv[0]);
         if (argc == 3) {
@@ -404,10 +404,10 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
             // STRING: LEGORR 0x004a8190
             "ObjectiveFailedImage%ix%i", screenWidth, screenHeight);
     /* [divergence:layout-fallback] As ObjectiveImage. */
-    if (block_get_strptr(config, string_path_join(gameName, levelName, buff, NULL)) == NULL)
+    if (block_get_strptr(config, string_path_join(gameName, levelName, buff, (const char*)NULL)) == NULL)
         snprintf(buff, sizeof(buff), "ObjectiveFailedImage%ix%i", 640, 480);
     if ((str = block_get_strptr(config, string_path_join(gameName, levelName,
-                                                         buff, NULL)))) {
+                                                         buff, (const char*)NULL)))) {
         s = string_duplicate(str);
         sound_variant_split(s, argv, ",");
         if (OBJECTIVE_DATA(level)->failedImage) image_surface_release(OBJECTIVE_DATA(level)->failedImage);
@@ -422,22 +422,22 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
      * "CrystalObjective" use comes before "OreObjective" (finding 690). */
     crystals = atoi(block_get_strptr(config, string_path_join(gameName, levelName,
                         // STRING: LEGORR 0x004a817c
-                        "CrystalObjective", NULL))
+                        "CrystalObjective", (const char*)NULL))
                     ? block_get_strptr(config, string_path_join(gameName, levelName,
-                          "CrystalObjective", NULL))
+                          "CrystalObjective", (const char*)NULL))
                     : "");
     objective_set_cry_ore_objectives(level, crystals,
                atoi(block_get_strptr(config, string_path_join(gameName, levelName,
                    // STRING: LEGORR 0x004a816c
-                   "OreObjective", NULL))
+                   "OreObjective", (const char*)NULL))
                ? block_get_strptr(config, string_path_join(gameName, levelName,
-                     "OreObjective", NULL))
+                     "OreObjective", (const char*)NULL))
                : ""));
 
     if ((str = block_get_strptr(config, string_path_join(gameName, levelName,
                                                          // STRING: LEGORR 0x004a815c
                                                          "TimerObjective",
-                                                         NULL)))) {
+                                                         (const char*)NULL)))) {
         s = string_duplicate(str);
         sound_variant_split(s, argv, ":");
         timer = (float)atoi(argv[0]) * 25.0f;
@@ -450,7 +450,7 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
     if ((str = block_get_strptr(config, string_path_join(gameName, levelName,
                                                          // STRING: LEGORR 0x004a812c
                                                          "ConstructionObjective",
-                                                         NULL))) &&
+                                                         (const char*)NULL))) &&
         lego_entity_type_pair_lookup(str, &objType, &objID, NULL)) {
         objective_set_construction_objective(level, objType, (int)objID);
     }
@@ -458,7 +458,7 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
     if ((str = block_get_strptr(config, string_path_join(gameName, levelName,
                                                          // STRING: LEGORR 0x004a811c
                                                          "BlockObjective",
-                                                         NULL)))) {
+                                                         (const char*)NULL)))) {
         int blockPos[2];
         s = string_duplicate(str);
         sound_variant_split(s, argv, ",");
@@ -471,7 +471,7 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
     if ((str = block_get_strptr(config, string_path_join(gameName, levelName,
                                                          // STRING: LEGORR 0x004a810c
                                                          "ObjectiveText",
-                                                         NULL)))) {
+                                                         (const char*)NULL)))) {
         objective_load_objective_text(config, gameName, levelName, level, str);
     }
 

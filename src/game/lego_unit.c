@@ -51,6 +51,7 @@
 #include "lego_unit_imports.h"
 #include "lego_globs.h"
 #include "platform/native/config.h" // [divergence:modern-controls] LRR_GetControls, [divergence:unlimited-oxygen] LRR_GetUnlimitedOxygen
+#include "platform/native/input.h" // [divergence:touch-keyboard] LRR_InputTextWanted
 
 /* ------------------------------------------------------------------ */
 /* State: the unit's .bss and legoGlobs.                               */
@@ -667,28 +668,28 @@ int lego_game_config_init(void)
         if (cfgStr != NULL) {
             if (!config_rgb_vector_read(cfgStr, string_path_join(s_engine_config_root, "Main",
                 // STRING: LEGORR 0x004a3c2c
-                "ToolTipRGB", 0), &r, &gVal, &b)) {
+                "ToolTipRGB", (const char*)NULL), &r, &gVal, &b)) {
                 r = gVal = b = 0.3254902f;
             }
             tooltip_overlay_state_initialize(s_lego_crystal_count_font, 2, 1, 1.0f, display_width_get(), display_height_get(), 32, r, gVal, b);
 
             DAT_00556f50 = block_get_str_copy(cfgStr, string_path_join(s_engine_config_root, "Main",
                 // STRING: LEGORR 0x004a3c1c
-                "CreditsTextFile", 0));
+                "CreditsTextFile", (const char*)NULL));
             DAT_00556f54 = block_get_str_copy(cfgStr, string_path_join(s_engine_config_root, "Main",
                 // STRING: LEGORR 0x004a3c0c
-                "CreditsBackAVI", 0));
+                "CreditsBackAVI", (const char*)NULL));
 
             if ((legoGlobs_BuildingUpgradeCostOre = LEGO_A_CFG_INT(cfgStr, string_path_join(s_engine_config_root, "Main",
                 // STRING: LEGORR 0x004a3bf4
-                "BuildingUpgradeCostOre", 0))) == 0) legoGlobs_BuildingUpgradeCostOre = 5;
+                "BuildingUpgradeCostOre", (const char*)NULL))) == 0) legoGlobs_BuildingUpgradeCostOre = 5;
             if ((legoGlobs_BuildingUpgradeCostStuds = LEGO_A_CFG_INT(cfgStr, string_path_join(s_engine_config_root, "Main",
                 // STRING: LEGORR 0x004a3bd8
-                "BuildingUpgradeCostStuds", 0))) == 0) legoGlobs_BuildingUpgradeCostStuds = 1;
+                "BuildingUpgradeCostStuds", (const char*)NULL))) == 0) legoGlobs_BuildingUpgradeCostStuds = 1;
 
             if ((legoGlobs_RenameReplace = block_get_str_copy(cfgStr, string_path_join(s_engine_config_root, "Main",
                 // STRING: LEGORR 0x004a3bc8
-                "RenameReplace", 0))) != NULL) {
+                "RenameReplace", (const char*)NULL))) != NULL) {
                 for (s = (unsigned char*)legoGlobs_RenameReplace; *s != '\0'; s++) {
                     if (*s == '_') *s = ' ';
                 }
@@ -697,7 +698,7 @@ int lego_game_config_init(void)
             if (directdraw_get_avail_texture_mem(&totalMemValue, &availMemF)) {
                 if ((textureUsageE = LEGO_A_CFG_INT(cfgStr, string_path_join(s_engine_config_root, "Main",
                     // STRING: LEGORR 0x004a3bb8
-                    "TextureUsage", 0))) != 0) {
+                    "TextureUsage", (const char*)NULL))) != 0) {
                     directdraw_adjust_texture_usage(&textureUsageE);
                     if (textureUsageE <= availMemF) low_texture_flag_set();
                 }
@@ -716,7 +717,7 @@ int lego_game_config_init(void)
 
             textPauseTimeStr = (textPauseTimeStr = LEGO_A_CFG_FLOAT(cfgStr, string_path_join(s_engine_config_root, "Main",
                 // STRING: LEGORR 0x004a3ba8
-                "TextPauseTime", 0))) * 25.0f;
+                "TextPauseTime", (const char*)NULL))) * 25.0f;
             ui_message_strings_initialize(legoGlobs_textOnlyWindow, legoGlobs_textImageWindow, 316, 425, textPauseTimeStr);
 
             panelWindow.x = 55.0f;
@@ -733,8 +734,8 @@ int lego_game_config_init(void)
             if (s_engine_feature_word & 0x200000) {
                 startMessageI = block_get_str_copy(cfgStr, string_path_join(s_engine_config_root, "Main",
                     // STRING: LEGORR 0x004a3b74
-                    "StartMessage", 0));
-                versionName = block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main", "Version", 0));
+                    "StartMessage", (const char*)NULL));
+                versionName = block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main", "Version", (const char*)NULL));
                 if (startMessageI != NULL) {
                     startMessageI = mission_replace_char(startMessageI, '_', ' ');
                     if (versionName) {
@@ -775,19 +776,19 @@ int lego_game_config_init(void)
 
             barName = block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main",
                 // STRING: LEGORR 0x004a3b18
-                "ProgressBar", 0));
+                "ProgressBar", (const char*)NULL));
             loadScreen = block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main",
                 // STRING: LEGORR 0x004a3b0c
-                "LoadScreen", 0));
+                "LoadScreen", (const char*)NULL));
             shutdownScreenName = block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main",
                 // STRING: LEGORR 0x004a3afc
-                "ShutdownScreen", 0));
+                "ShutdownScreen", (const char*)NULL));
             progressWindowStr = (unsigned char*)block_get_str_copy(cfgStr, string_path_join(s_engine_config_root, "Main",
                 // STRING: LEGORR 0x004a3aec
-                "ProgressWindow", 0));
+                "ProgressWindow", (const char*)NULL));
             loadTextVal = block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main",
                 // STRING: LEGORR 0x004a3ae0
-                "LoadingText", 0));
+                "LoadingText", (const char*)NULL));
 
             if (progressWindowStr != NULL) {
                 progressWindowStr[0] = (unsigned char)toupper(progressWindowStr[0]);
@@ -828,23 +829,23 @@ int lego_game_config_init(void)
             {
                 if (block_get_bool_path(cfgStr, string_path_join(s_engine_config_root, "Main",
                     // STRING: LEGORR 0x004a3a90
-                    "StreamNERPSSpeach", 0)) == 1) legoGlobs_flags1 |= 0x4000000;
+                    "StreamNERPSSpeach", (const char*)NULL)) == 1) legoGlobs_flags1 |= 0x4000000;
                 if (block_get_bool_path(cfgStr, string_path_join(s_engine_config_root, "Main",
                     // STRING: LEGORR 0x004a3a7c
-                    "ShowDebugToolTips", 0)) == 1 || engine_app_mode_get()) s_panel_highlight_flags |= 0x8;
+                    "ShowDebugToolTips", (const char*)NULL)) == 1 || engine_app_mode_get()) s_panel_highlight_flags |= 0x8;
                 if (block_get_bool_path(cfgStr, string_path_join(s_engine_config_root, "Main",
                     // STRING: LEGORR 0x004a3a6c
-                    "AllowDebugKeys", 0)) == 1 || engine_app_mode_get()) s_panel_highlight_flags |= 0x10;
+                    "AllowDebugKeys", (const char*)NULL)) == 1 || engine_app_mode_get()) s_panel_highlight_flags |= 0x10;
                 if (block_get_bool_path(cfgStr, string_path_join(s_engine_config_root, "Main",
                     // STRING: LEGORR 0x004a3a5c
-                    "AllowEditMode", 0)) == 1 || engine_app_mode_get()) s_panel_highlight_flags |= 0x20;
+                    "AllowEditMode", (const char*)NULL)) == 1 || engine_app_mode_get()) s_panel_highlight_flags |= 0x20;
 
                 config_rgb_vector_read(cfgStr, string_path_join(s_engine_config_root, "Main",
                     // STRING: LEGORR 0x004a3a4c
-                    "PowerCrystalRGB", 0), &legoGlobs_PowerCrystalRGB[0], &legoGlobs_PowerCrystalRGB[1], &legoGlobs_PowerCrystalRGB[2]);
+                    "PowerCrystalRGB", (const char*)NULL), &legoGlobs_PowerCrystalRGB[0], &legoGlobs_PowerCrystalRGB[1], &legoGlobs_PowerCrystalRGB[2]);
                 config_rgb_vector_read(cfgStr, string_path_join(s_engine_config_root, "Main",
                     // STRING: LEGORR 0x004a3a38
-                    "UnpoweredCrystalRGB", 0), &legoGlobs_UnpoweredCrystalRGB[0], &legoGlobs_UnpoweredCrystalRGB[1], &legoGlobs_UnpoweredCrystalRGB[2]);
+                    "UnpoweredCrystalRGB", (const char*)NULL), &legoGlobs_UnpoweredCrystalRGB[0], &legoGlobs_UnpoweredCrystalRGB[1], &legoGlobs_UnpoweredCrystalRGB[2]);
 
                 sound_samples_config_load(cfgStr, !(s_engine_feature_word & 0x100000));
                 surface_type_descriptions_config_load(cfgStr, s_engine_config_root);
@@ -856,30 +857,30 @@ int lego_game_config_init(void)
 
                 sharedDir = block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main",
                     // STRING: LEGORR 0x004a3a28
-                    "SharedObjects", 0));
+                    "SharedObjects", (const char*)NULL));
                 lws_initialise(sharedDir, (LwsFindSFXIDFunc)sound_alias_lookup,
                                (LwsPlaySample3DFunc)sound_positional_sound_submit,
                                (LwsSoundEnabledFunc)sound_subsystem_enabled);
                 sharedDir = block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main",
                     // STRING: LEGORR 0x004a3a18
-                    "SharedTextures", 0));
+                    "SharedTextures", (const char*)NULL));
                 if (sharedDir != NULL) shared_texture_directory_set(sharedDir);
                 shared_texture_root_register(sharedDir);
 
                 // STRING: LEGORR 0x004a3a08
                 snprintf(buff, sizeof(buff), "NextButton%ix%i", display_width_get(), display_height_get());
                 /* [divergence:layout-fallback] As Panels: the 640x480 layout. */
-                if (block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main", buff, 0)) == NULL)
+                if (block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main", buff, (const char*)NULL)) == NULL)
                     snprintf(buff, sizeof(buff), "NextButton%ix%i", 640, 480);
-                imageNameStr = block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main", buff, 0));
+                imageNameStr = block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main", buff, (const char*)NULL));
                 if (imageNameStr != NULL && (legoGlobs_NextButtonImage = image_load_bmp_scaled(imageNameStr, 0, 0)) != NULL) {
                     image_setup_trans(legoGlobs_NextButtonImage, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
                     // STRING: LEGORR 0x004a39f4
                     snprintf(buff, sizeof(buff), "NextButtonPos%ix%i", display_width_get(), display_height_get());
                     /* [divergence:layout-fallback] As Panels: the 640x480 layout. */
-                    if (block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main", buff, 0)) == NULL)
+                    if (block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main", buff, (const char*)NULL)) == NULL)
                         snprintf(buff, sizeof(buff), "NextButtonPos%ix%i", 640, 480);
-                    if ((posString = block_get_str_copy(cfgStr, string_path_join(s_engine_config_root, "Main", buff, 0))) != NULL) {
+                    if ((posString = block_get_str_copy(cfgStr, string_path_join(s_engine_config_root, "Main", buff, (const char*)NULL))) != NULL) {
                         if (sound_variant_split(posString, posArgvStr, ",") == 2) {
                             legoGlobs_NextButtonPos[0] = (float)atof(posArgvStr[0]);
                             legoGlobs_NextButtonPos[1] = (float)atof(posArgvStr[1]);
@@ -890,17 +891,17 @@ int lego_game_config_init(void)
                 // STRING: LEGORR 0x004a39e4
                 snprintf(buff, sizeof(buff), "BackButton%ix%i", display_width_get(), display_height_get());
                 /* [divergence:layout-fallback] As Panels: the 640x480 layout. */
-                if (block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main", buff, 0)) == NULL)
+                if (block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main", buff, (const char*)NULL)) == NULL)
                     snprintf(buff, sizeof(buff), "BackButton%ix%i", 640, 480);
-                imageNameStr = block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main", buff, 0));
+                imageNameStr = block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main", buff, (const char*)NULL));
                 if (imageNameStr != NULL && (legoGlobs_BackButtonImage = image_load_bmp_scaled(imageNameStr, 0, 0)) != NULL) {
                     image_setup_trans(legoGlobs_BackButtonImage, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
                     // STRING: LEGORR 0x004a39d0
                     snprintf(buff, sizeof(buff), "BackButtonPos%ix%i", display_width_get(), display_height_get());
                     /* [divergence:layout-fallback] As Panels: the 640x480 layout. */
-                    if (block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main", buff, 0)) == NULL)
+                    if (block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main", buff, (const char*)NULL)) == NULL)
                         snprintf(buff, sizeof(buff), "BackButtonPos%ix%i", 640, 480);
-                    if ((posString = block_get_str_copy(cfgStr, string_path_join(s_engine_config_root, "Main", buff, 0))) != NULL) {
+                    if ((posString = block_get_str_copy(cfgStr, string_path_join(s_engine_config_root, "Main", buff, (const char*)NULL))) != NULL) {
                         if (sound_variant_split(posString, posArgvStr, ",") == 2) {
                             legoGlobs_BackButtonPos[0] = (float)atof(posArgvStr[0]);
                             legoGlobs_BackButtonPos[1] = (float)atof(posArgvStr[1]);
@@ -910,7 +911,7 @@ int lego_game_config_init(void)
                 }
                 imageNameStr = block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main",
                     // STRING: LEGORR 0x004a39c4
-                    "BackArrow", 0));
+                    "BackArrow", (const char*)NULL));
                 if (imageNameStr != NULL && (legoGlobs_BackArrowImage = image_load_bmp_scaled(imageNameStr, 0, 0)) != NULL) {
                     image_setup_trans(legoGlobs_BackArrowImage, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
                 }
@@ -924,46 +925,46 @@ int lego_game_config_init(void)
                 {
                     cameraSpeedD = LEGO_A_CFG_FLOAT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a39b8
-                        "CameraSpeed", 0));
+                        "CameraSpeed", (const char*)NULL));
                     camDropOff = LEGO_A_CFG_FLOAT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a39a8
-                        "CameraDropOff", 0));
+                        "CameraDropOff", (const char*)NULL));
                     cameraAcceleration = LEGO_A_CFG_FLOAT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a3994
-                        "CameraAcceleration", 0));
+                        "CameraAcceleration", (const char*)NULL));
                     indent = LEGO_A_CFG_INT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a3980
-                        "MouseScrollIndent", 0));
+                        "MouseScrollIndent", (const char*)NULL));
                     camera_view_context_set(cameraSpeedD, camDropOff, cameraAcceleration, indent);
 
                     if ((minDist3D = LEGO_A_CFG_FLOAT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a3964
-                        "MinDistFor3DSoundsOnTopView", 0))) != 0.0f) legoGlobs_MinDistFor3DSoundsOnTopView = minDist3D;
+                        "MinDistFor3DSoundsOnTopView", (const char*)NULL))) != 0.0f) legoGlobs_MinDistFor3DSoundsOnTopView = minDist3D;
                     else legoGlobs_MinDistFor3DSoundsOnTopView = 150.0f;
                     if ((maxDist3DName = LEGO_A_CFG_FLOAT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a3950
-                        "MaxDistFor3DSounds", 0))) != 0.0f) sound_tracked_buffers_set_max_distance(maxDist3DName);
+                        "MaxDistFor3DSounds", (const char*)NULL))) != 0.0f) sound_tracked_buffers_set_max_distance(maxDist3DName);
                     ledger_stub_0047c100_DirectSoundListenerRolloffSet(1.0f);
                     if ((rollOff3D = LEGO_A_CFG_FLOAT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a393c
-                        "RollOffFor3DSounds", 0))) != 0.0f) ledger_stub_0047c100_DirectSoundListenerRolloffSet(rollOff3D);
+                        "RollOffFor3DSounds", (const char*)NULL))) != 0.0f) ledger_stub_0047c100_DirectSoundListenerRolloffSet(rollOff3D);
 
                     s_refresh_record = select_place_create_adapter(legoGlobs_rootCont, 5.0f);
                     surface_visibility_set(s_refresh_record, 1);
 
                     if ((legoGlobs_MaxReturnedCrystals = LEGO_A_CFG_INT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a3928
-                        "MaxReturnedCrystals", 0))) == 0) legoGlobs_MaxReturnedCrystals = 10;
+                        "MaxReturnedCrystals", (const char*)NULL))) == 0) legoGlobs_MaxReturnedCrystals = 10;
                     if ((legoGlobs_MouseScrollBorder = LEGO_A_CFG_INT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a3914
-                        "MouseScrollBorder", 0))) == 0) legoGlobs_MouseScrollBorder = 5;
+                        "MouseScrollBorder", (const char*)NULL))) == 0) legoGlobs_MouseScrollBorder = 5;
 
                     lego_object_names_load(cfgStr);
                     lego_object_the_names_load(cfgStr);
 
                     if (block_get_bool_path(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a3904
-                        "HelpWindowOn", 0)) == 1) {
+                        "HelpWindowOn", (const char*)NULL)) == 1) {
                         selection_mode_state_set(legoGlobs_fontBriefingLo);
                         help_window_initialise_adapter(cfgStr, s_engine_config_root);
                     }
@@ -982,100 +983,100 @@ int lego_game_config_init(void)
 
                     mindist = LEGO_A_CFG_FLOAT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a38fc
-                        "mindist", 0));
+                        "mindist", (const char*)NULL));
                     maxdist = LEGO_A_CFG_FLOAT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a38f4
-                        "maxdist", 0));
+                        "maxdist", (const char*)NULL));
                     minTiltStr = config_angle_radians_get(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a38ec
-                        "mintilt", 0));
+                        "mintilt", (const char*)NULL));
                     tiltMax = config_angle_radians_get(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a38e4
-                        "maxtilt", 0));
+                        "maxtilt", (const char*)NULL));
                     camera_distance_bounds_set(s_zoom_step_context, mindist, maxdist);
                     camera_tilt_bounds_set(s_zoom_step_context, minTiltStr, tiltMax);
 
                     legoGlobs_TVClipDist = LEGO_A_CFG_FLOAT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a38d8
-                        "tvclipdist", 0));
+                        "tvclipdist", (const char*)NULL));
                     renderer_object_set_clip_distance(legoGlobs_viewMain, legoGlobs_TVClipDist);
                     renderer_object_set_clip_distance(legoGlobs_viewTrack, legoGlobs_TVClipDist);
 
                     legoGlobs_DynamiteDamageRadius = LEGO_A_CFG_FLOAT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a38c0
-                        "DynamiteDamageRadius", 0));
+                        "DynamiteDamageRadius", (const char*)NULL));
                     legoGlobs_DynamiteMaxDamage = LEGO_A_CFG_FLOAT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a38ac
-                        "DynamiteMaxDamage", 0));
+                        "DynamiteMaxDamage", (const char*)NULL));
                     legoGlobs_DynamiteWakeRadius = LEGO_A_CFG_FLOAT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a3898
-                        "DynamiteWakeRadius", 0));
+                        "DynamiteWakeRadius", (const char*)NULL));
                     legoGlobs_BirdScarerRadius = LEGO_A_CFG_FLOAT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a3884
-                        "BirdScarerRadius", 0));
+                        "BirdScarerRadius", (const char*)NULL));
 
                     if (block_get_bool_path(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a387c
-                        "MusicOn", 0)) == 1) s_panel_highlight_flags |= 0x800;
+                        "MusicOn", (const char*)NULL)) == 1) s_panel_highlight_flags |= 0x800;
                     if ((legoGlobs_CDStartTrack = LEGO_A_CFG_INT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a386c
-                        "CDStartTrack", 0))) == 0) legoGlobs_CDStartTrack = 2;
+                        "CDStartTrack", (const char*)NULL))) == 0) legoGlobs_CDStartTrack = 2;
                     if ((legoGlobs_CDTracks = LEGO_A_CFG_INT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a3860
-                        "CDTracks", 0))) == 0) {
+                        "CDTracks", (const char*)NULL))) == 0) {
                         s_panel_highlight_flags &= ~0x800;
                         legoGlobs_CDTracks = 1;
                     }
                     if (block_get_bool_path(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a3858
-                        "SoundOn", 0)) == 1) legoGlobs_flags1 |= 0x10;
+                        "SoundOn", (const char*)NULL)) == 1) legoGlobs_flags1 |= 0x10;
                     legoGlobs_flags1 |= 0x80c20;
                     if (block_get_bool_path(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a3850
-                        "Clear", 0)) == 0) legoGlobs_flags1 &= ~0x400;
+                        "Clear", (const char*)NULL)) == 0) legoGlobs_flags1 &= ~0x400;
                     if (block_get_bool_path(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a3848
-                        "Panels", 0)) == 0) legoGlobs_flags1 &= ~0x800;
+                        "Panels", (const char*)NULL)) == 0) legoGlobs_flags1 &= ~0x800;
                     if (block_get_bool_path(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a3838
-                        "WallProMeshes", 0)) == 0) legoGlobs_flags1 &= ~0x20;
+                        "WallProMeshes", (const char*)NULL)) == 0) legoGlobs_flags1 &= ~0x20;
                     if (block_get_bool_path(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a382c
-                        "DynamicPM", 0)) == 0) legoGlobs_flags1 &= ~0x80000;
+                        "DynamicPM", (const char*)NULL)) == 0) legoGlobs_flags1 &= ~0x80000;
                     legoGlobs_HPBlocks = LEGO_A_CFG_INT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a3820
-                        "HPBlocks", 0));
+                        "HPBlocks", (const char*)NULL));
                     if (block_get_bool_path(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a380c
-                        "OnlyBuildOnPaths", 0)) == 1) legoGlobs_flags1 |= 0x400000;
+                        "OnlyBuildOnPaths", (const char*)NULL)) == 1) legoGlobs_flags1 |= 0x400000;
                     if (block_get_bool_path(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a37fc
-                        "AlwaysRockFall", 0)) == 1) legoGlobs_flags1 |= 0x800000;
+                        "AlwaysRockFall", (const char*)NULL)) == 1) legoGlobs_flags1 |= 0x800000;
 
                     if ((legoGlobs_MiniFigureRunAway = LEGO_A_CFG_FLOAT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a37e8
-                        "MiniFigureRunAway", 0))) == 0.0f) legoGlobs_MiniFigureRunAway = 10.0f;
+                        "MiniFigureRunAway", (const char*)NULL))) == 0.0f) legoGlobs_MiniFigureRunAway = 10.0f;
                     if ((legoGlobs_DrainTime = LEGO_A_CFG_FLOAT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a37dc
-                        "DrainTime", 0))) == 0.0f) legoGlobs_DrainTime = 10.0f;
+                        "DrainTime", (const char*)NULL))) == 0.0f) legoGlobs_DrainTime = 10.0f;
                     legoGlobs_DrainTime *= 25.0f;
                     if ((legoGlobs_ReinforceHits = LEGO_A_CFG_INT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a37cc
-                        "ReinforceHits", 0))) == 0) legoGlobs_ReinforceHits = 4;
+                        "ReinforceHits", (const char*)NULL))) == 0) legoGlobs_ReinforceHits = 4;
                     legoGlobs_MedPolyRange = LEGO_A_CFG_FLOAT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a37bc
-                        "MedPolyRange", 0));
+                        "MedPolyRange", (const char*)NULL));
                     legoGlobs_HighPolyRange = LEGO_A_CFG_FLOAT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a37ac
-                        "HighPolyRange", 0));
+                        "HighPolyRange", (const char*)NULL));
                     legoGlobs_MinEnergyForEat = LEGO_A_CFG_FLOAT(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a379c
-                        "MinEnergyForEat", 0));
+                        "MinEnergyForEat", (const char*)NULL));
 
                     lego_misc_object_resources_load(cfgStr);
 
                     // STRING: LEGORR 0x004a3790
-                    pointerArrayB = block_subgroup(cfgStr, string_path_join(s_engine_config_root, "Pointers", 0));
+                    pointerArrayB = block_subgroup(cfgStr, string_path_join(s_engine_config_root, "Pointers", (const char*)NULL));
                     pointer_cursor_config_load_target(pointerArrayB);
                     media_pointer_cursor_select(0);
 
@@ -1103,7 +1104,7 @@ int lego_game_config_init(void)
                         // STRING: LEGORR 0x004a3744
                         "Dialog",
                         // STRING: LEGORR 0x004a374c
-                        "Image", 0));
+                        "Image", (const char*)NULL));
                     if (dialogStringC != NULL && (legoGlobs_DialogImage = image_load_bmp_scaled(dialogStringC, 0, 0)) != NULL) {
                         image_setup_trans(legoGlobs_DialogImage, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
                         dialogPosValue.x = (float)(display_width_get() / 2) - (float)(legoGlobs_DialogImage->width >> 1);
@@ -1111,7 +1112,7 @@ int lego_game_config_init(void)
                     }
                     dialogStringC = block_get_str_copy(cfgStr, string_path_join(s_engine_config_root, "Dialog",
                         // STRING: LEGORR 0x004a3738
-                        "TitleWindow", 0));
+                        "TitleWindow", (const char*)NULL));
                     if (dialogStringC != NULL && (numPartsC = sound_variant_split(dialogStringC, dialogTokens, "|")) == 4) {
                         dialogWindow.x = (float)atoi(dialogTokens[0]) + dialogPosValue.x;
                         dialogWindow.y = (float)atoi(dialogTokens[1]) + dialogPosValue.y;
@@ -1121,7 +1122,7 @@ int lego_game_config_init(void)
                     }
                     dialogStringC = block_get_str_copy(cfgStr, string_path_join(s_engine_config_root, "Dialog",
                         // STRING: LEGORR 0x004a372c
-                        "TextWindow", 0));
+                        "TextWindow", (const char*)NULL));
                     if (dialogStringC != NULL && (numPartsC = sound_variant_split(dialogStringC, dialogTokens, "|")) == 4) {
                         dialogWindow.x = (float)atoi(dialogTokens[0]) + dialogPosValue.x;
                         dialogWindow.y = (float)atoi(dialogTokens[1]) + dialogPosValue.y;
@@ -1131,7 +1132,7 @@ int lego_game_config_init(void)
                     }
                     dialogStringC = block_get_str_copy(cfgStr, string_path_join(s_engine_config_root, "Dialog",
                         // STRING: LEGORR 0x004a3720
-                        "OkWindow", 0));
+                        "OkWindow", (const char*)NULL));
                     if (dialogStringC != NULL && (numPartsC = sound_variant_split(dialogStringC, dialogTokens, "|")) == 4) {
                         dialogWindow.x = (float)atoi(dialogTokens[0]) + dialogPosValue.x;
                         dialogWindow.y = (float)atoi(dialogTokens[1]) + dialogPosValue.y;
@@ -1141,7 +1142,7 @@ int lego_game_config_init(void)
                     }
                     dialogStringC = block_get_str_copy(cfgStr, string_path_join(s_engine_config_root, "Dialog",
                         // STRING: LEGORR 0x004a3710
-                        "CancelWindow", 0));
+                        "CancelWindow", (const char*)NULL));
                     if (dialogStringC != NULL && (numPartsC = sound_variant_split(dialogStringC, dialogTokens, "|")) == 4) {
                         dialogWindow.x = (float)atoi(dialogTokens[0]) + dialogPosValue.x;
                         dialogWindow.y = (float)atoi(dialogTokens[1]) + dialogPosValue.y;
@@ -1151,7 +1152,7 @@ int lego_game_config_init(void)
                     }
                     dialogStringC = block_get_str_copy(cfgStr, string_path_join(s_engine_config_root, "Dialog",
                         // STRING: LEGORR 0x004a3700
-                        "ContrastOverlay", 0));
+                        "ContrastOverlay", (const char*)NULL));
                     if (dialogStringC != NULL && (s_position_handle = image_load_bmp_scaled(dialogStringC, 0, 0)) != NULL) {
                         image_setup_trans((Image*)s_position_handle, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
                     }
@@ -1212,13 +1213,13 @@ int lego_game_config_init(void)
                     advisor_config_slots_load_target(cfgStr, s_engine_config_root);
                     if (block_get_bool_path(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a3580
-                        "DisplayAdvisor", 0)) == 1) {
+                        "DisplayAdvisor", (const char*)NULL)) == 1) {
                         advisor_position_config_load(cfgStr, s_engine_config_root, display_width_get(), display_height_get());
                     }
 
                     if (legoGlobs_flags1 & 0x10) lego_audio_playback_toggle(1);
 
-                    if ((unsigned int)engine_app_mode_get() <= 2 && block_get_bool_path(cfgStr, string_path_join(s_engine_config_root, "Main", "FrontEnd", 0)) == 1) {
+                    if ((unsigned int)engine_app_mode_get() <= 2 && block_get_bool_path(cfgStr, string_path_join(s_engine_config_root, "Main", "FrontEnd", (const char*)NULL)) == 1) {
                         string_table_entry_set_current(NULL);
                         front_run_screen_menu_type_adapter(0);
                         if (quit_menu_probe()) return 0;
@@ -1227,7 +1228,7 @@ int lego_game_config_init(void)
                         if ((startLevel = main_get_start_level_adapter()) == NULL) {
                             startLevel = block_get_strptr(cfgStr, string_path_join(s_engine_config_root, "Main",
                                 // STRING: LEGORR 0x004a3574
-                                "startlevel", 0));
+                                "startlevel", (const char*)NULL));
                         }
                     }
 
@@ -1253,7 +1254,7 @@ void lego_misc_object_resources_load(struct BlockRec* config)
 {
     const char* fileName;
 
-    fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects", "Boulder", NULL));
+    fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects", "Boulder", (const char*)NULL));
     legoGlobs_contBoulder = container_load(legoGlobs_rootCont, fileName, "LWO", 1);
     if (legoGlobs_contBoulder == NULL)
         // STRING: LEGORR 0x004a4014
@@ -1262,114 +1263,114 @@ void lego_misc_object_resources_load(struct BlockRec* config)
 
     fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects",
         // STRING: LEGORR 0x004a4000
-        "BoulderExplodeIce", NULL));
+        "BoulderExplodeIce", (const char*)NULL));
     legoGlobs_contBoulderExplodeIce = container_load(legoGlobs_rootCont, fileName, "LWS", 1);
     scene_render_lock_toggle(legoGlobs_contBoulderExplodeIce, 1);
 
     fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects",
         // STRING: LEGORR 0x004a3ff0
-        "BoulderExplode", NULL));
+        "BoulderExplode", (const char*)NULL));
     legoGlobs_contBoulderExplode = container_load(legoGlobs_rootCont, fileName, "LWS", 1);
     scene_render_lock_toggle(legoGlobs_contBoulderExplode, 1);
 
     fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects",
         // STRING: LEGORR 0x004a3fe4
-        "SmashPath", NULL));
+        "SmashPath", (const char*)NULL));
     legoGlobs_contSmashPath = container_load(legoGlobs_rootCont, fileName, "LWS", 1);
     scene_render_lock_toggle(legoGlobs_contSmashPath, 1);
 
     fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects",
         // STRING: LEGORR 0x004a3fd8
-        "Explosion", NULL));
+        "Explosion", (const char*)NULL));
     global_resource_handle_load_and_enable_original(legoGlobs_rootCont, fileName);
 
     fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects",
         // STRING: LEGORR 0x004a3fd0
-        "Crystal", NULL));
+        "Crystal", (const char*)NULL));
     legoGlobs_contCrystal = container_load(legoGlobs_rootCont, fileName, "LWO", 1);
     if (legoGlobs_contCrystal == NULL)
         legoGlobs_contCrystal = container_load(legoGlobs_rootCont, fileName, "MESH", 1);
     scene_render_lock_toggle(legoGlobs_contCrystal, 1);
 
-    fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects", "Dynamite", NULL));
+    fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects", "Dynamite", (const char*)NULL));
     legoGlobs_contDynamite = container_load(legoGlobs_rootCont, fileName, "ACT", 1);
     scene_render_lock_toggle(legoGlobs_contDynamite, 1);
 
-    fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects", "OohScary", NULL));
+    fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects", "OohScary", (const char*)NULL));
     legoGlobs_contOohScary = container_load(legoGlobs_rootCont, fileName, "ACT", 1);
     scene_render_lock_toggle(legoGlobs_contOohScary, 1);
 
-    fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects", "Barrier", NULL));
+    fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects", "Barrier", (const char*)NULL));
     legoGlobs_contBarrier = container_load(legoGlobs_rootCont, fileName, "ACT", 1);
     scene_render_lock_toggle(legoGlobs_contBarrier, 1);
 
-    fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects", "Ore", NULL));
+    fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects", "Ore", (const char*)NULL));
     legoGlobs_contOresTable = container_load(legoGlobs_rootCont, fileName, "LWO", 1);
     if (legoGlobs_contOresTable == NULL)
         legoGlobs_contOresTable = container_load(legoGlobs_rootCont, fileName, "MESH", 1);
     scene_render_lock_toggle(legoGlobs_contOresTable, 1);
 
-    fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects", "ProcessedOre", NULL));
+    fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects", "ProcessedOre", (const char*)NULL));
     legoGlobs_contProcessedOre = container_load(legoGlobs_rootCont, fileName, "LWO", 1);
     if (legoGlobs_contProcessedOre == NULL)
         legoGlobs_contProcessedOre = container_load(legoGlobs_rootCont, fileName, "MESH", 1);
     scene_render_lock_toggle(legoGlobs_contProcessedOre, 1);
 
-    fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects", "ElectricFence", NULL));
+    fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects", "ElectricFence", (const char*)NULL));
     legoGlobs_contElectricFence = container_load(legoGlobs_rootCont, fileName, "LWO", 1);
     scene_render_lock_toggle(legoGlobs_contElectricFence, 1);
 
     fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects",
         // STRING: LEGORR 0x004a3f7c
-        "ElectricFenceStud", NULL));
+        "ElectricFenceStud", (const char*)NULL));
     legoGlobs_contElectricFenceStud = container_load(legoGlobs_rootCont, fileName, "LWS", 1);
     scene_render_lock_toggle(legoGlobs_contElectricFenceStud, 1);
 
     fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects",
         // STRING: LEGORR 0x004a3f64
-        "ShortElectricFenceBeam", NULL));
+        "ShortElectricFenceBeam", (const char*)NULL));
     indexed_resource_handle_set_create(legoGlobs_rootCont, fileName, 0);
 
     fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects",
         // STRING: LEGORR 0x004a3f4c
-        "LongElectricFenceBeam", NULL));
+        "LongElectricFenceBeam", (const char*)NULL));
     indexed_resource_handle_set_create(legoGlobs_rootCont, fileName, 1);
 
     fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects",
         // STRING: LEGORR 0x004a3f40
-        "SpiderWeb", NULL));
+        "SpiderWeb", (const char*)NULL));
     legoGlobs_contSpiderWeb = container_load(legoGlobs_rootCont, fileName, "ACT", 1);
     scene_render_lock_toggle(legoGlobs_contSpiderWeb, 1);
 
     fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects",
         // STRING: LEGORR 0x004a3f30
-        "RechargeSparkle", NULL));
+        "RechargeSparkle", (const char*)NULL));
     legoGlobs_contRechargeSparkle = container_load(legoGlobs_rootCont, fileName, "LWS", 1);
     scene_render_lock_toggle(legoGlobs_contRechargeSparkle, 1);
 
     fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects",
         // STRING: LEGORR 0x004a3f20
-        "MiniTeleportUp", NULL));
+        "MiniTeleportUp", (const char*)NULL));
     legoGlobs_contMiniTeleportUp = container_load(legoGlobs_rootCont, fileName, "LWS", 0);
     scene_render_lock_toggle(legoGlobs_contMiniTeleportUp, 1);
 
     fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects",
         // STRING: LEGORR 0x004a3f18
-        "IceCube", NULL));
+        "IceCube", (const char*)NULL));
     legoGlobs_contIceCube = container_load(legoGlobs_rootCont, fileName, "ACT", 1);
     scene_render_lock_toggle(legoGlobs_contIceCube, 1);
 
-    fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects", "Pusher", NULL));
+    fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects", "Pusher", (const char*)NULL));
     legoGlobs_contPusher = container_load(legoGlobs_rootCont, fileName, "LWS", 1);
     scene_render_lock_toggle(legoGlobs_contPusher, 1);
 
-    fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects", "Freezer", NULL));
+    fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects", "Freezer", (const char*)NULL));
     legoGlobs_contFreezer = container_load(legoGlobs_rootCont, fileName, "LWS", 1);
     scene_render_lock_toggle(legoGlobs_contFreezer, 1);
 
     fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects",
         // STRING: LEGORR 0x004a3efc
-        "LaserShot", NULL));
+        "LaserShot", (const char*)NULL));
     legoGlobs_contLaserShot = container_load(legoGlobs_rootCont, fileName, "LWS", 1);
     scene_render_lock_toggle(legoGlobs_contLaserShot, 1);
 
@@ -1450,6 +1451,9 @@ void lego_engine_pre_tick(float elapsed)
     unsigned int c;
 
     if (legoGlobs_renameInput != NULL) {
+        /* [divergence:touch-keyboard] The on-screen keyboard opens while a
+         * name is typed (docs/divergences.md, "Touch controls"). */
+        LRR_InputTextWanted();
         len = strlen(legoGlobs_renameInput);
         if (s_global_current_keys[0x0e] && (s_global_current_keys[0x0e] ^ s_lego_renamePrevKeyMap[0x0e])) {
             if (len) legoGlobs_renameInput[len - 1] = '\0';
@@ -2415,16 +2419,19 @@ int lego_main_sim_step(float elapsedGame, float elapsed, int* keyDownT,
         camera_project_point_to_screen((struct ViewProjectionAdapter*)legoGlobs_viewMain, sPos, wPos);
         if (sPos[0] >= 40.0f && sPos[1] >= 40.0f &&
             sPos[0] <= s_display_w - 40.0f && sPos[1] <= s_display_h - 80.0f) {
-            lego_transition_control(0, 1);
             if (liveObj->customName == NULL) {
                 lego_object_custom_name_set_adapter(liveObj,
                     // STRING: LEGORR 0x004a4128
                     "Object");
-                liveObj->customName[0] = '\0';
+                if (liveObj->customName != NULL)
+                    liveObj->customName[0] = '\0';
             }
-            legoGlobs_renameInput = liveObj->customName;
-            legoGlobs_renamePosition[0] = sPos[0];
-            legoGlobs_renamePosition[1] = sPos[1];
+            if (liveObj->customName != NULL) {
+                lego_transition_control(0, 1);
+                legoGlobs_renameInput = liveObj->customName;
+                legoGlobs_renamePosition[0] = sPos[0];
+                legoGlobs_renamePosition[1] = sPos[1];
+            }
         }
     }
 
@@ -2600,7 +2607,7 @@ int lego_main_sim_step(float elapsedGame, float elapsed, int* keyDownT,
                     string_path_join(s_engine_config_root, "Main",
                                      // STRING: LEGORR 0x004a40c0
                                      "LoseFocusAndPause",
-                                     NULL)) == 1 &&
+                                     (const char*)NULL)) == 1 &&
                 !(legoGlobs_flags1 & 0x8000000)) {
                 lego_transition_control(0, 1);
                 if (!(legoGlobs_flags1 & 0x2000000)) legoGlobs_flags1 |= 0x2000000;
@@ -3639,39 +3646,39 @@ void lego_tooltip_info_strings_load(struct BlockRec* config,
             // STRING: LEGORR 0x004a419c
             "ToolTipInfo",
             // STRING: LEGORR 0x004a41a8
-            "HealthText", NULL));
+            "HealthText", (const char*)NULL));
     legoGlobs_energyText = block_get_str_copy(config,
         string_path_join(s_engine_config_root, "ToolTipInfo",
             // STRING: LEGORR 0x004a4190
-            "EnergyText", NULL));
+            "EnergyText", (const char*)NULL));
     legoGlobs_crystalsText = block_get_str_copy(config,
         string_path_join(s_engine_config_root, "ToolTipInfo",
             // STRING: LEGORR 0x004a4180
-            "CrystalsText", NULL));
+            "CrystalsText", (const char*)NULL));
     legoGlobs_oreText = block_get_str_copy(config,
         string_path_join(s_engine_config_root, "ToolTipInfo",
             // STRING: LEGORR 0x004a4178
-            "OreText", NULL));
+            "OreText", (const char*)NULL));
     legoGlobs_studsText = block_get_str_copy(config,
         string_path_join(s_engine_config_root, "ToolTipInfo",
             // STRING: LEGORR 0x004a416c
-            "StudsText", NULL));
+            "StudsText", (const char*)NULL));
     legoGlobs_toolsText = block_get_str_copy(config,
         string_path_join(s_engine_config_root, "ToolTipInfo",
             // STRING: LEGORR 0x004a4160
-            "ToolsText", NULL));
+            "ToolsText", (const char*)NULL));
     legoGlobs_carryObjectText = block_get_str_copy(config,
         string_path_join(s_engine_config_root, "ToolTipInfo",
             // STRING: LEGORR 0x004a4150
-            "CarryObjectText", NULL));
+            "CarryObjectText", (const char*)NULL));
     legoGlobs_drivenByText = block_get_str_copy(config,
         string_path_join(s_engine_config_root, "ToolTipInfo",
             // STRING: LEGORR 0x004a4140
-            "DrivenByText", NULL));
+            "DrivenByText", (const char*)NULL));
     legoGlobs_oreRequiredText = block_get_str_copy(config,
         string_path_join(s_engine_config_root, "ToolTipInfo",
             // STRING: LEGORR 0x004a4130
-            "OreRequiredText", NULL));
+            "OreRequiredText", (const char*)NULL));
 }
 
 /* LevelUpgradeNameStringsLoad [group G] */
@@ -3684,7 +3691,7 @@ void lego_level_upgrade_name_strings_load(struct BlockRec* config)
 
     for (item = block_subgroup(config, string_path_join(s_engine_config_root,
              // STRING: LEGORR 0x004a41b4
-             "UpgradeNames", NULL));
+             "UpgradeNames", (const char*)NULL));
          item != NULL; item = block_next_equal_key(item)) {
         if (strnicmp(prefix, item->key,
                       strlen(prefix)) == 0) {
@@ -4429,7 +4436,7 @@ float engine_float_field260_get_current_target(void)
  * its maps, objectives and object list, and make it legoGlobs.currLevel.
  * The readers below are gods98 Config.h's macros; the value ones read the
  * value twice (once to test it). */
-#define LEGO_D_ID(key) string_path_join(s_engine_config_root, levelName, key, 0)
+#define LEGO_D_ID(key) string_path_join(s_engine_config_root, levelName, key, (const char*)NULL)
 #define LEGO_D_TEMP(key) block_get_strptr(config, LEGO_D_ID(key))
 #define LEGO_D_STR(key) (LEGO_D_TEMP(key) ? LEGO_D_TEMP(key) : "")
 #define LEGO_D_INT(key) atoi(LEGO_D_STR(key))
@@ -4682,12 +4689,12 @@ int lego_level_load(const char* levelName)
 
         if (config_rgb_vector_read(legoGlobs_config,
                                    // STRING: LEGORR 0x004a42b0
-                                   string_path_join(s_engine_config_root, levelName, "FogColourRGB", 0),
+                                   string_path_join(s_engine_config_root, levelName, "FogColourRGB", (const char*)NULL),
                                    &legoGlobs_fogColourRGB[0], &legoGlobs_fogColourRGB[1],
                                    &legoGlobs_fogColourRGB[2])) {
             if (config_rgb_vector_read(legoGlobs_config,
                                        // STRING: LEGORR 0x004a429c
-                                       string_path_join(s_engine_config_root, levelName, "HighFogColourRGB", 0),
+                                       string_path_join(s_engine_config_root, levelName, "HighFogColourRGB", (const char*)NULL),
                                        &legoGlobs_highFogColourRGB[0], &legoGlobs_highFogColourRGB[1],
                                        &legoGlobs_highFogColourRGB[2])) {
                 legoGlobs_flags1 |= 0x10000;
@@ -5061,24 +5068,24 @@ int lego_texture_set_config_load(Lego_Level* level, const char* textureSet)
     const char* roofTexture;
 
     // STRING: LEGORR 0x004a4620
-    if ((width = LEGO_A_CFG_INT(config, string_path_join(s_engine_config_root, textureSet, "surftextwidth", 0)))) {
+    if ((width = LEGO_A_CFG_INT(config, string_path_join(s_engine_config_root, textureSet, "surftextwidth", (const char*)NULL)))) {
         // STRING: LEGORR 0x004a4610
-        if ((height = LEGO_A_CFG_INT(config, string_path_join(s_engine_config_root, textureSet, "surftextheight", 0)))) {
+        if ((height = LEGO_A_CFG_INT(config, string_path_join(s_engine_config_root, textureSet, "surftextheight", (const char*)NULL)))) {
             level->f_074 = width;
             level->f_078 = height;
             lego_surface_text_character_map_initialize(level->map);
             terrain_map_vertex_normals_update_all(level->map);
 
             // STRING: LEGORR 0x004a4600
-            if ((meshBaseName = block_get_strptr(config, string_path_join(s_engine_config_root, textureSet, "meshbasename", 0)))) {
+            if ((meshBaseName = block_get_strptr(config, string_path_join(s_engine_config_root, textureSet, "meshbasename", (const char*)NULL)))) {
                 // STRING: LEGORR 0x004a45f0
-                if ((textureBaseName = block_get_strptr(config, string_path_join(s_engine_config_root, textureSet, "texturebasename", 0)))) {
+                if ((textureBaseName = block_get_strptr(config, string_path_join(s_engine_config_root, textureSet, "texturebasename", (const char*)NULL)))) {
                     if (((level->textureSet) = ((void*)terrain_cell_resource_grid_load(textureBaseName, level->f_074, level->f_078)))) {
                         terrain_map_texture_set_set(level->map,
                                                     level->textureSet);
                         if (lego_load_tile_meshes(level, meshBaseName)) {
                             // STRING: LEGORR 0x004a45e4
-                            if ((roofTexture = block_get_strptr(config, string_path_join(s_engine_config_root, textureSet, "rooftexture", 0)))) {
+                            if ((roofTexture = block_get_strptr(config, string_path_join(s_engine_config_root, textureSet, "rooftexture", (const char*)NULL)))) {
                                 if (animated_texture_replace(roofTexture)) ok = 1;
                             }
                         }
@@ -5572,14 +5579,14 @@ int lego_entity_vehicle_type_table_load(void)
     loop = 0;
     for (arrayItem = block_subgroup(legoGlobs_config, string_path_join(s_engine_config_root,
              // STRING: LEGORR 0x004a4630
-             "VehicleTypes", NULL));
+             "VehicleTypes", (const char*)NULL));
          arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
         legoGlobs_catalogCounts[0]++;
     }
     if (legoGlobs_catalogCounts[0] != 0) {
         if ((legoGlobs_vehicleData = (LegoVehicleModelE*)malloc(sizeof(LegoVehicleModelE) * legoGlobs_catalogCounts[0])) != NULL) {
             if ((legoGlobs_vehicleName = (char**)malloc(sizeof(char*) * legoGlobs_catalogCounts[0])) != NULL) {
-                arrayItem = block_subgroup(legoGlobs_config, string_path_join(s_engine_config_root, "VehicleTypes", NULL));
+                arrayItem = block_subgroup(legoGlobs_config, string_path_join(s_engine_config_root, "VehicleTypes", (const char*)NULL));
                 while (arrayItem != NULL) {
                     if (!lego_vehicle_load_adapter(&legoGlobs_vehicleData[loop], loop, legoGlobs_rootCont,
                                                    arrayItem->value, s_engine_config_root)) break;
@@ -5609,14 +5616,14 @@ int lego_entity_minifigure_type_table_load(void)
     loop = 0;
     for (arrayItem = block_subgroup(legoGlobs_config, string_path_join(s_engine_config_root,
              // STRING: LEGORR 0x004a4640
-             "MiniFigureTypes", NULL));
+             "MiniFigureTypes", (const char*)NULL));
          arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
         legoGlobs_catalogCounts[1]++;
     }
     if (legoGlobs_catalogCounts[1] != 0) {
         if ((legoGlobs_miniFigureData = (LegoCreatureModelE*)malloc(sizeof(LegoCreatureModelE) * legoGlobs_catalogCounts[1])) != NULL) {
             if ((legoGlobs_miniFigureName = (char**)malloc(sizeof(char*) * legoGlobs_catalogCounts[1])) != NULL) {
-                arrayItem = block_subgroup(legoGlobs_config, string_path_join(s_engine_config_root, "MiniFigureTypes", NULL));
+                arrayItem = block_subgroup(legoGlobs_config, string_path_join(s_engine_config_root, "MiniFigureTypes", (const char*)NULL));
                 while (arrayItem != NULL) {
                     if (!lego_creature_load_adapter(&legoGlobs_miniFigureData[loop], loop, legoGlobs_rootCont,
                                                     arrayItem->value, s_engine_config_root)) break;
@@ -5646,14 +5653,14 @@ int lego_entity_rockmonster_type_table_load(void)
     loop = 0;
     for (arrayItem = block_subgroup(legoGlobs_config, string_path_join(s_engine_config_root,
              // STRING: LEGORR 0x004a4650
-             "RockMonsterTypes", NULL));
+             "RockMonsterTypes", (const char*)NULL));
          arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
         legoGlobs_catalogCounts[2]++;
     }
     if (legoGlobs_catalogCounts[2] != 0) {
         if ((legoGlobs_rockMonsterData = (LegoCreatureModelE*)malloc(sizeof(LegoCreatureModelE) * legoGlobs_catalogCounts[2])) != NULL) {
             if ((legoGlobs_rockMonsterName = (char**)malloc(sizeof(char*) * legoGlobs_catalogCounts[2])) != NULL) {
-                arrayItem = block_subgroup(legoGlobs_config, string_path_join(s_engine_config_root, "RockMonsterTypes", NULL));
+                arrayItem = block_subgroup(legoGlobs_config, string_path_join(s_engine_config_root, "RockMonsterTypes", (const char*)NULL));
                 while (arrayItem != NULL) {
                     if (!lego_creature_load_adapter(&legoGlobs_rockMonsterData[loop], loop, legoGlobs_rootCont,
                                                     arrayItem->value, s_engine_config_root)) break;
@@ -5683,14 +5690,14 @@ int lego_entity_building_types_load(void)
     loop = 0;
     for (arrayItem = block_subgroup(legoGlobs_config, string_path_join(s_engine_config_root,
              // STRING: LEGORR 0x004a4664
-             "BuildingTypes", NULL));
+             "BuildingTypes", (const char*)NULL));
          arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
         legoGlobs_catalogCounts[3]++;
     }
     if (legoGlobs_catalogCounts[3] != 0) {
         if ((legoGlobs_buildingData = (LegoBuildingModelE*)malloc(sizeof(LegoBuildingModelE) * legoGlobs_catalogCounts[3])) != NULL) {
             if ((legoGlobs_buildingName = (char**)malloc(sizeof(char*) * legoGlobs_catalogCounts[3])) != NULL) {
-                arrayItem = block_subgroup(legoGlobs_config, string_path_join(s_engine_config_root, "BuildingTypes", NULL));
+                arrayItem = block_subgroup(legoGlobs_config, string_path_join(s_engine_config_root, "BuildingTypes", (const char*)NULL));
                 while (arrayItem != NULL) {
                     if (!entity_building_type_config_record_parse(&legoGlobs_buildingData[loop], loop, legoGlobs_rootCont,
                                                                   arrayItem->value, (void*)s_engine_config_root)) break;
@@ -5720,14 +5727,14 @@ int lego_upgrade_types_load(void)
     loop = 0;
     for (arrayItem = block_subgroup(legoGlobs_config, string_path_join(s_engine_config_root,
              // STRING: LEGORR 0x004a4674
-             "UpgradeTypes", NULL));
+             "UpgradeTypes", (const char*)NULL));
          arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
         legoGlobs_catalogCounts[4]++;
     }
     if (legoGlobs_catalogCounts[4] != 0) {
         if ((s_upgrade_records = malloc(sizeof(LegoUpgradeModelE) * legoGlobs_catalogCounts[4])) != NULL) {
             if ((legoGlobs_upgradeName = (char**)malloc(sizeof(char*) * legoGlobs_catalogCounts[4])) != NULL) {
-                arrayItem = block_subgroup(legoGlobs_config, string_path_join(s_engine_config_root, "UpgradeTypes", NULL));
+                arrayItem = block_subgroup(legoGlobs_config, string_path_join(s_engine_config_root, "UpgradeTypes", (const char*)NULL));
                 while (arrayItem != NULL) {
                     render_resource_binding_initialize((struct RenderResourceBinding*)&((LegoUpgradeModelE*)s_upgrade_records)[loop],
                                                        loop, legoGlobs_rootCont, arrayItem->value);
@@ -5762,43 +5769,43 @@ void lego_object_names_load(struct BlockRec* config)
     for (i = 0; i < legoGlobs_catalogCounts[0]; i++) {
         legoGlobs_objectNamesKind1[i] = formatted_text_escape_decode_and_emit(block_get_strptr(config, string_path_join(s_engine_config_root,
             // STRING: LEGORR 0x004a4684
-            "ObjectNames", legoGlobs_vehicleName[i], NULL)));
+            "ObjectNames", legoGlobs_vehicleName[i], (const char*)NULL)));
     }
     legoGlobs_objectNamesKind2 = (const char**)malloc(legoGlobs_catalogCounts[1] * sizeof(char*));
     for (i = 0; i < legoGlobs_catalogCounts[1]; i++) {
-        legoGlobs_objectNamesKind2[i] = formatted_text_escape_decode_and_emit(block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", legoGlobs_miniFigureName[i], NULL)));
+        legoGlobs_objectNamesKind2[i] = formatted_text_escape_decode_and_emit(block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", legoGlobs_miniFigureName[i], (const char*)NULL)));
     }
     legoGlobs_objectNamesKind3 = (const char**)malloc(legoGlobs_catalogCounts[2] * sizeof(char*));
     for (i = 0; i < legoGlobs_catalogCounts[2]; i++) {
-        legoGlobs_objectNamesKind3[i] = formatted_text_escape_decode_and_emit(block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", legoGlobs_rockMonsterName[i], NULL)));
+        legoGlobs_objectNamesKind3[i] = formatted_text_escape_decode_and_emit(block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", legoGlobs_rockMonsterName[i], (const char*)NULL)));
     }
     legoGlobs_objectNamesKind4 = (const char**)malloc(legoGlobs_catalogCounts[3] * sizeof(char*));
     for (i = 0; i < legoGlobs_catalogCounts[3]; i++) {
-        legoGlobs_objectNamesKind4[i] = formatted_text_escape_decode_and_emit(block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", legoGlobs_buildingName[i], NULL)));
+        legoGlobs_objectNamesKind4[i] = formatted_text_escape_decode_and_emit(block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", legoGlobs_buildingName[i], (const char*)NULL)));
     }
     legoGlobs_objectNamesKind10 = (const char**)malloc(legoGlobs_catalogCounts[4] * sizeof(char*));
     for (i = 0; i < legoGlobs_catalogCounts[4]; i++) {
-        if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", legoGlobs_upgradeName[i], NULL))) != NULL)
+        if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", legoGlobs_upgradeName[i], (const char*)NULL))) != NULL)
             legoGlobs_objectNamesKind10[i] = formatted_text_escape_decode_and_emit(name);
         legoGlobs_objectNamesKind10[i] = NULL;
     }
-    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", "PowerCrystal", NULL))) != NULL)
+    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", "PowerCrystal", (const char*)NULL))) != NULL)
         legoGlobs_objectNamesSpecial[0] = formatted_text_escape_decode_and_emit(name);
-    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", "Ore", NULL))) != NULL)
+    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", "Ore", (const char*)NULL))) != NULL)
         legoGlobs_objectNamesSpecial[1] = formatted_text_escape_decode_and_emit(name);
-    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", "ProcessedOre", NULL))) != NULL)
+    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", "ProcessedOre", (const char*)NULL))) != NULL)
         legoGlobs_objectNamesSpecial[2] = formatted_text_escape_decode_and_emit(name);
-    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", "Dynamite", NULL))) != NULL)
+    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", "Dynamite", (const char*)NULL))) != NULL)
         legoGlobs_objectNamesSpecial[3] = formatted_text_escape_decode_and_emit(name);
-    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", "Barrier", NULL))) != NULL)
+    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", "Barrier", (const char*)NULL))) != NULL)
         legoGlobs_objectNamesSpecial[4] = formatted_text_escape_decode_and_emit(name);
-    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", "ElectricFence", NULL))) != NULL)
+    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", "ElectricFence", (const char*)NULL))) != NULL)
         legoGlobs_objectNamesSpecial[5] = formatted_text_escape_decode_and_emit(name);
-    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", "SpiderWeb", NULL))) != NULL)
+    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", "SpiderWeb", (const char*)NULL))) != NULL)
         legoGlobs_objectNamesSpecial[6] = formatted_text_escape_decode_and_emit(name);
-    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", "OohScary", NULL))) != NULL)
+    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", "OohScary", (const char*)NULL))) != NULL)
         legoGlobs_objectNamesSpecial[7] = formatted_text_escape_decode_and_emit(name);
-    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", "Path", NULL))) != NULL)
+    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectNames", "Path", (const char*)NULL))) != NULL)
         legoGlobs_objectNamesSpecial[8] = formatted_text_escape_decode_and_emit(name);
 }
 
@@ -5813,43 +5820,43 @@ void lego_object_the_names_load(struct BlockRec* config)
     for (i = 0; i < legoGlobs_catalogCounts[0]; i++) {
         legoGlobs_objectTheNamesKind1[i] = formatted_text_escape_decode_and_emit(block_get_strptr(config, string_path_join(s_engine_config_root,
             // STRING: LEGORR 0x004a4690
-            "ObjectTheNames", legoGlobs_vehicleName[i], NULL)));
+            "ObjectTheNames", legoGlobs_vehicleName[i], (const char*)NULL)));
     }
     legoGlobs_objectTheNamesKind2 = (const char**)malloc(legoGlobs_catalogCounts[1] * sizeof(char*));
     for (i = 0; i < legoGlobs_catalogCounts[1]; i++) {
-        legoGlobs_objectTheNamesKind2[i] = formatted_text_escape_decode_and_emit(block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", legoGlobs_miniFigureName[i], NULL)));
+        legoGlobs_objectTheNamesKind2[i] = formatted_text_escape_decode_and_emit(block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", legoGlobs_miniFigureName[i], (const char*)NULL)));
     }
     legoGlobs_objectTheNamesKind3 = (const char**)malloc(legoGlobs_catalogCounts[2] * sizeof(char*));
     for (i = 0; i < legoGlobs_catalogCounts[2]; i++) {
-        legoGlobs_objectTheNamesKind3[i] = formatted_text_escape_decode_and_emit(block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", legoGlobs_rockMonsterName[i], NULL)));
+        legoGlobs_objectTheNamesKind3[i] = formatted_text_escape_decode_and_emit(block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", legoGlobs_rockMonsterName[i], (const char*)NULL)));
     }
     legoGlobs_objectTheNamesKind4 = (const char**)malloc(legoGlobs_catalogCounts[3] * sizeof(char*));
     for (i = 0; i < legoGlobs_catalogCounts[3]; i++) {
-        legoGlobs_objectTheNamesKind4[i] = formatted_text_escape_decode_and_emit(block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", legoGlobs_buildingName[i], NULL)));
+        legoGlobs_objectTheNamesKind4[i] = formatted_text_escape_decode_and_emit(block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", legoGlobs_buildingName[i], (const char*)NULL)));
     }
     legoGlobs_objectTheNamesKind10 = (const char**)malloc(legoGlobs_catalogCounts[4] * sizeof(char*));
     for (i = 0; i < legoGlobs_catalogCounts[4]; i++) {
-        if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", legoGlobs_upgradeName[i], NULL))) != NULL)
+        if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", legoGlobs_upgradeName[i], (const char*)NULL))) != NULL)
             legoGlobs_objectTheNamesKind10[i] = formatted_text_escape_decode_and_emit(name);
         legoGlobs_objectTheNamesKind10[i] = NULL;
     }
-    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", "PowerCrystal", NULL))) != NULL)
+    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", "PowerCrystal", (const char*)NULL))) != NULL)
         legoGlobs_objectTheNamesSpecial[0] = formatted_text_escape_decode_and_emit(name);
-    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", "Ore", NULL))) != NULL)
+    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", "Ore", (const char*)NULL))) != NULL)
         legoGlobs_objectTheNamesSpecial[1] = formatted_text_escape_decode_and_emit(name);
-    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", "ProcessedOre", NULL))) != NULL)
+    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", "ProcessedOre", (const char*)NULL))) != NULL)
         legoGlobs_objectTheNamesSpecial[2] = formatted_text_escape_decode_and_emit(name);
-    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", "Dynamite", NULL))) != NULL)
+    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", "Dynamite", (const char*)NULL))) != NULL)
         legoGlobs_objectTheNamesSpecial[3] = formatted_text_escape_decode_and_emit(name);
-    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", "Barrier", NULL))) != NULL)
+    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", "Barrier", (const char*)NULL))) != NULL)
         legoGlobs_objectTheNamesSpecial[4] = formatted_text_escape_decode_and_emit(name);
-    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", "ElectricFence", NULL))) != NULL)
+    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", "ElectricFence", (const char*)NULL))) != NULL)
         legoGlobs_objectTheNamesSpecial[5] = formatted_text_escape_decode_and_emit(name);
-    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", "SpiderWeb", NULL))) != NULL)
+    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", "SpiderWeb", (const char*)NULL))) != NULL)
         legoGlobs_objectTheNamesSpecial[6] = formatted_text_escape_decode_and_emit(name);
-    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", "OohScary", NULL))) != NULL)
+    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", "OohScary", (const char*)NULL))) != NULL)
         legoGlobs_objectTheNamesSpecial[7] = formatted_text_escape_decode_and_emit(name);
-    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", "Path", NULL))) != NULL)
+    if ((name = block_get_strptr(config, string_path_join(s_engine_config_root, "ObjectTheNames", "Path", (const char*)NULL))) != NULL)
         legoGlobs_objectTheNamesSpecial[8] = formatted_text_escape_decode_and_emit(name);
 }
 
@@ -5971,30 +5978,30 @@ int lego_object_list_load_file(Lego_Level* level, const char* fileName)
         memset(legoGlobs_recordObjects, 0, sizeof(void*) * 10);
         legoGlobs_recordObjectCount = 0;
 
-        if ((item = block_subgroup(ol, string_path_join(s_engine_config_root, NULL))) != NULL) {
+        if ((item = block_subgroup(ol, string_path_join(s_engine_config_root, (const char*)NULL))) != NULL) {
             for (; item != NULL; item = block_next_equal_key(item)) {
                 if ((typeName = block_get_str_copy(ol, string_path_join(s_engine_config_root, item->key,
                         // STRING: LEGORR 0x004a46d4
-                        "type", NULL))) == NULL) break;
+                        "type", (const char*)NULL))) == NULL) break;
                 if (block_find(ol, string_path_join(s_engine_config_root, item->key,
                         // STRING: LEGORR 0x004a46cc
-                        "xpos", NULL)) == NULL) break;
+                        "xpos", (const char*)NULL)) == NULL) break;
                 if (block_find(ol, string_path_join(s_engine_config_root, item->key,
                         // STRING: LEGORR 0x004a46c4
-                        "ypos", NULL)) == NULL) break;
+                        "ypos", (const char*)NULL)) == NULL) break;
                 if (block_find(ol, string_path_join(s_engine_config_root, item->key,
                         // STRING: LEGORR 0x004a46bc
-                        "heading", NULL)) == NULL) break;
+                        "heading", (const char*)NULL)) == NULL) break;
 
-                xPos = (float)LEGO_A_CFG_FLOAT(ol, string_path_join(s_engine_config_root, item->key, "xpos", NULL));
-                yPos = (float)LEGO_A_CFG_FLOAT(ol, string_path_join(s_engine_config_root, item->key, "ypos", NULL));
-                heading = (float)LEGO_A_CFG_FLOAT(ol, string_path_join(s_engine_config_root, item->key, "heading", NULL));
+                xPos = (float)LEGO_A_CFG_FLOAT(ol, string_path_join(s_engine_config_root, item->key, "xpos", (const char*)NULL));
+                yPos = (float)LEGO_A_CFG_FLOAT(ol, string_path_join(s_engine_config_root, item->key, "ypos", (const char*)NULL));
+                heading = (float)LEGO_A_CFG_FLOAT(ol, string_path_join(s_engine_config_root, item->key, "heading", (const char*)NULL));
                 if (0.0f == (health = (float)LEGO_A_CFG_FLOAT(ol, string_path_join(s_engine_config_root, item->key,
                         // STRING: LEGORR 0x004a46b4
-                        "health", NULL)))) health = 100.0f;
+                        "health", (const char*)NULL)))) health = 100.0f;
                 drivingNames[count] = drivingName = block_get_str_copy(ol, string_path_join(s_engine_config_root, item->key,
                         // STRING: LEGORR 0x004a46ac
-                        "driving", NULL));
+                        "driving", (const char*)NULL));
                 olNames[count] = olName = string_duplicate(item->key);
 
                 yPos -= 1.0f;
@@ -8612,11 +8619,11 @@ int lego_render_quality_config_apply(void)
     if (0.0f != (legoGlobs_FPClipBlocks = (float)atof(LEGO_A_CFG_STR(legoGlobs_config,
             string_path_join(s_engine_config_root, "Main",
                 // STRING: LEGORR 0x004a4784
-                "fpclipblocks", 0))))) {
+                "fpclipblocks", (const char*)NULL))))) {
         str = block_get_strptr(legoGlobs_config,
             string_path_join(s_engine_config_root, "Main",
                 // STRING: LEGORR 0x004a477c
-                "quality", 0));
+                "quality", (const char*)NULL));
         if (str != NULL) {
             // STRING: LEGORR 0x004a4774
             if (stricmp("gouraud", str) == 0) quality = 3;
@@ -8630,27 +8637,27 @@ int lego_render_quality_config_apply(void)
             dither = block_get_bool_path(legoGlobs_config,
                 string_path_join(s_engine_config_root, "Main",
                     // STRING: LEGORR 0x004a4758
-                    "dither", 0));
+                    "dither", (const char*)NULL));
             filter = block_get_bool_path(legoGlobs_config,
                 string_path_join(s_engine_config_root, "Main",
                     // STRING: LEGORR 0x004a4750
-                    "filter", 0));
+                    "filter", (const char*)NULL));
             blend = block_get_bool_path(legoGlobs_config,
                 string_path_join(s_engine_config_root, "Main",
                     // STRING: LEGORR 0x004a4748
-                    "blend", 0));
+                    "blend", (const char*)NULL));
             sort = block_get_bool_path(legoGlobs_config,
                 string_path_join(s_engine_config_root, "Main",
                     // STRING: LEGORR 0x004a4740
-                    "sort", 0));
+                    "sort", (const char*)NULL));
             mipmap = block_get_bool_path(legoGlobs_config,
                 string_path_join(s_engine_config_root, "Main",
                     // STRING: LEGORR 0x004a4738
-                    "mipmap", 0));
+                    "mipmap", (const char*)NULL));
             linearMipMap = block_get_bool_path(legoGlobs_config,
                 string_path_join(s_engine_config_root, "Main",
                     // STRING: LEGORR 0x004a4728
-                    "linearmipmap", 0));
+                    "linearmipmap", (const char*)NULL));
             lego_main_setup3d_adapter(quality, dither == 1, filter == 1,
                                       mipmap == 1, linearMipMap == 1);
             return 1;
@@ -8669,7 +8676,7 @@ int lego_scene_lights_build_from_config(void)
     if (!config_rgb_vector_read(legoGlobs_config,
             string_path_join(s_engine_config_root, "Main",
                 // STRING: LEGORR 0x004a47cc
-                "topspotrgb", 0),
+                "topspotrgb", (const char*)NULL),
             &r, &g, &b)) return 0;
     if ((legoGlobs_spotlightTop = ddiscene_light_create(
              s_zoom_step_context->contListener, 2,
@@ -8686,7 +8693,7 @@ int lego_scene_lights_build_from_config(void)
     if (!config_rgb_vector_read(legoGlobs_config,
             string_path_join(s_engine_config_root, "Main",
                 // STRING: LEGORR 0x004a47bc
-                "trackspotrgb", 0),
+                "trackspotrgb", (const char*)NULL),
             &r, &g, &b)) return 0;
     if ((legoGlobs_spotlightTrack = ddiscene_light_create(
              legoGlobs_cameraTrack->contRoot, 2,
@@ -8699,7 +8706,7 @@ int lego_scene_lights_build_from_config(void)
     if (!config_rgb_vector_read(legoGlobs_config,
             string_path_join(s_engine_config_root, "Main",
                 // STRING: LEGORR 0x004a47b0
-                "ambientrgb", 0),
+                "ambientrgb", (const char*)NULL),
             &r, &g, &b)) return 0;
     if ((legoGlobs_ambientLight = ddiscene_light_create(legoGlobs_rootCont, 0,
              r, g, b)) == NULL) return 0;
@@ -8707,7 +8714,7 @@ int lego_scene_lights_build_from_config(void)
     if (!config_rgb_vector_read(legoGlobs_config,
             string_path_join(s_engine_config_root, "Main",
                 // STRING: LEGORR 0x004a47a4
-                "fplightrgb", 0),
+                "fplightrgb", (const char*)NULL),
             &r, &g, &b)) return 0;
     if ((legoGlobs_f_5560f8 = ddiscene_light_create(
              legoGlobs_cameraFP->contCam, 1,
@@ -8716,7 +8723,7 @@ int lego_scene_lights_build_from_config(void)
     if (config_rgb_vector_read(legoGlobs_config,
             string_path_join(s_engine_config_root, "Main",
                 // STRING: LEGORR 0x004a4794
-                "fprotlightrgb", 0),
+                "fprotlightrgb", (const char*)NULL),
             &r, &g, &b)) {
         legoGlobs_dirLightFP = ddiscene_light_create(
             legoGlobs_cameraFP->contCam, 3,
@@ -9186,9 +9193,9 @@ void lego_panels_config_entry_apply(struct BlockRec* config,
     snprintf(buff, sizeof(buff), "Panels%ix%i", screenWidth, screenHeight);
     /* [divergence:layout-fallback] Lego.cfg lays the interface out only for
      * 640x480; another mode reads that layout instead of finding none. */
-    if (block_subgroup(config, string_path_join(s_engine_config_root, buff, 0)) == NULL)
+    if (block_subgroup(config, string_path_join(s_engine_config_root, buff, (const char*)NULL)) == NULL)
         snprintf(buff, sizeof(buff), "Panels%ix%i", 640, 480);
-    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, buff, 0));
+    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, buff, (const char*)NULL));
          arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
         if (ui_panel_name_table_lookup(arrayItem->key, &panelType)) {
             strcpy(buff, arrayItem->value);
@@ -9224,9 +9231,9 @@ void lego_panel_button_layout_config_load(struct BlockRec* config,
     // STRING: LEGORR 0x004a47e4
     snprintf(buff, sizeof(buff), "Buttons%ix%i", screenWidth, screenHeight);
     /* [divergence:layout-fallback] As Panels: the 640x480 layout. */
-    if (block_subgroup(config, string_path_join(s_engine_config_root, buff, 0)) == NULL)
+    if (block_subgroup(config, string_path_join(s_engine_config_root, buff, (const char*)NULL)) == NULL)
         snprintf(buff, sizeof(buff), "Buttons%ix%i", 640, 480);
-    if ((arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, buff, 0))) != NULL) {
+    if ((arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, buff, (const char*)NULL))) != NULL) {
         do {
             if (ui_panel_name_table_lookup(arrayItem->key, (int*)&panelType)) {
                 copies[copyCount] = string_duplicate(arrayItem->value);
@@ -9268,7 +9275,7 @@ void lego_advisor_tutorial_icon_image_load(struct BlockRec* config)
 
     if ((fileName = block_get_str_copy(config, string_path_join(s_engine_config_root, "Main",
         // STRING: LEGORR 0x004a47f4
-        "TutorialIcon", 0))) != NULL) {
+        "TutorialIcon", (const char*)NULL))) != NULL) {
         if ((legoGlobs_TutorialIcon = image_load_bmp_scaled(fileName, 0, 0)) != NULL) {
             resource_record_add_ref(legoGlobs_TutorialIcon);
         }
@@ -9286,7 +9293,7 @@ void lego_sound_samples_config_load(struct BlockRec* config, int noReduceSamples
     int skip;
 
     // STRING: LEGORR 0x004a4804
-    if ((arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "Samples", 0))) != NULL) {
+    if ((arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "Samples", (const char*)NULL))) != NULL) {
         sound_alias_registration_set(1);
         do {
             name = arrayItem->key;
@@ -9315,14 +9322,14 @@ void lego_text_messages_config_load(struct BlockRec* config)
     char* argv[10];
 
     // STRING: LEGORR 0x004a4824
-    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "TextMessages", 0));
+    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "TextMessages", (const char*)NULL));
          arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
         if (ui_message_label_index_find(arrayItem->key, &textType)) {
             ui_message_text_slot_assign(textType, arrayItem->value);
         }
     }
     // STRING: LEGORR 0x004a480c
-    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "TextMessagesWithImages", 0));
+    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "TextMessagesWithImages", (const char*)NULL));
          arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
         if (ui_message_label_index_find(arrayItem->key, &textType)) {
             strcpy(buff, arrayItem->value);
@@ -9344,7 +9351,7 @@ void lego_message_load_infomessages(struct BlockRec* config)
     unsigned int argc;
 
     // STRING: LEGORR 0x004a484c
-    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "InfoMessages", 0));
+    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "InfoMessages", (const char*)NULL));
          arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
         if (info_get_type(arrayItem->key, &infoType)) {
             strcpy(buff, arrayItem->value);
@@ -9377,14 +9384,14 @@ void lego_advisor_tooltip_and_sound_config_load(struct BlockRec* config)
     int sfxType;
 
     // STRING: LEGORR 0x004a486c
-    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "ToolTips", 0));
+    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "ToolTips", (const char*)NULL));
          arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
         if (case_insensitive_name_table_lookup(arrayItem->key, &toolTipType)) {
             tooltip_set_content(toolTipType, arrayItem->value);
         }
     }
     // STRING: LEGORR 0x004a485c
-    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "ToolTipsSFXs", 0));
+    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "ToolTipsSFXs", (const char*)NULL));
          arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
         if (case_insensitive_name_table_lookup(arrayItem->key, &toolTipType) &&
             sound_alias_lookup(arrayItem->value, &sfxType)) {
@@ -9507,7 +9514,7 @@ void lego_surface_type_descriptions_config_load(struct BlockRec* config,
     for (sfx = s_surface_type_values; sfx < &s_surface_type_values[18]; sfx++) {
         // STRING: LEGORR 0x004a4878
         if ((str = block_get_strptr(config, string_path_join(gameName, "SurfaceTypeDescriptions",
-                                                             legoGlobs_langSurface_name[sfx - s_surface_type_values], 0))) != NULL) {
+                                                             legoGlobs_langSurface_name[sfx - s_surface_type_values], (const char*)NULL))) != NULL) {
             strcpy(buff, str);
             sound_variant_split((char*)str, argv, ",");
             s_surface_type_names[sfx - s_surface_type_values] = formatted_text_escape_decode_and_emit(argv[0]);

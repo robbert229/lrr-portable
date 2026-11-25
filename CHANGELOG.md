@@ -242,7 +242,10 @@ keeping:
 - The original's command-line options: `-window`, `-nosound`, `-best` and
   `-debug`.
 - **Android (test build):** the game runs full screen in landscape, drawn
-  with OpenGL ES 3, on `arm64-v8a` and `x86_64` devices.
+  with OpenGL ES 3, on `arm64-v8a` and `x86_64` devices, with touch
+  controls: tap to click, hold still to see a tooltip, drag with two fingers
+  to scroll, pinch to zoom, twist to turn the view, tap with two fingers for
+  Space and with three for the on-screen keyboard. Back is Escape.
 - **New Nintendo 3DS (test build):** the game draws the level on the 3DS's
   GPU, with the whole picture fitted to the bottom screen.
 - **The web build** streams the game data from a server, so you can host it
@@ -261,6 +264,8 @@ details, is in [docs/divergences.md](docs/divergences.md).
   behaviour.
 - **A resizable window**, with the 3D view drawn at the window's resolution
   (above). Set `display = original` to turn it off.
+- **Touch controls** on Android (above), each with a `LegoRR.ini` setting
+  to turn it off. A tap or key shorter than a frame is no longer missed.
 - **Saves and settings in your user folder.** Saves and `LegoRR.ini` live in
   a per-user folder, not in the game folder, and nothing is written to the
   registry:
@@ -312,9 +317,6 @@ details, is in [docs/divergences.md](docs/divergences.md).
 - **The web build uses the software renderer**, and you have to host it
   and your own game files yourself.
 - **Android:**
-  - a tap is a left click, and there are no touch controls yet for right
-    click, scrolling, zoom, keys or Back
-    ([#986](https://github.com/robbert229/lrr-portable/issues/986));
   - you copy the game files onto the device with `adb push`
     ([#909](https://github.com/robbert229/lrr-portable/issues/909) will add
     a folder picker); [docs/building.md](docs/building.md#android) shows how.
@@ -335,9 +337,8 @@ These are in progress and not in 1.0.0-beta1:
 
 - Widescreen interface layouts
   ([#915](https://github.com/robbert229/lrr-portable/issues/915)).
-- Touch controls and a folder picker on Android
-  ([#986](https://github.com/robbert229/lrr-portable/issues/986),
-  [#909](https://github.com/robbert229/lrr-portable/issues/909)).
+- A folder picker on Android
+  ([#909](https://github.com/robbert229/lrr-portable/issues/909)).
 - Pause, resume and exit on the 3DS's HOME button
   ([#910](https://github.com/robbert229/lrr-portable/issues/910)).
 

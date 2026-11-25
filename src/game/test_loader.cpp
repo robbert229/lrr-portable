@@ -5,9 +5,9 @@
 #include <fstream>
 #include <iterator>
 
+#include "platform/native/test_fixture.h"
 #include "game/loader.h"
 #include "gods98/files.h"
-#include "platform/native/test_fixture.h"
 #include "test/lrr_test.h"
 
 static Image background, bar;

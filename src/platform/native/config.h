@@ -22,7 +22,8 @@
  * And it holds the port's opt-outs from its divergences from the original
  * game (docs/divergences.md), in their own section, [tweaks]:
  * tweaks:Training Save, tweaks:display, tweaks:controls,
- * tweaks:fix_idleness_syndrome and tweaks:fps_overlay.
+ * tweaks:fix_idleness_syndrome, tweaks:fps_overlay, and the touch controls'
+ * tweaks:touch keys and tweaks:back_button.
  *
  * And it holds cheats, off by default, in their own section, [cheats]:
  * cheats:unlimited_raiders and cheats:unlimited_oxygen. */
@@ -33,7 +34,8 @@
  * directory, e.g. ~/.local/share/lrr-portable/LegoRR/ on Linux. */
 #define LRR_CONFIG_ORG "lrr-portable"
 #define LRR_CONFIG_APP "LegoRR"
-/* The file in the preference directory, and its keys. */
+/* The file in the preference directory, its sections, and the [legorr]
+ * keys, which a host's defaults override (<platform>/config.cpp). */
 #define LRR_CONFIG_FILE "LegoRR.ini"
 #define LRR_CONFIG_SECTION "legorr"
 #define LRR_CONFIG_SAVEPATH "legorr:savepath"
@@ -44,15 +46,68 @@
 #define LRR_CONFIG_DEVICE "legorr:3D Device"
 /* The section for the divergences' switches. */
 #define LRR_CONFIG_TWEAKS_SECTION "tweaks"
-#define LRR_CONFIG_TRAININGSAVE "tweaks:Training Save"
-#define LRR_CONFIG_DISPLAY "tweaks:display"
-#define LRR_CONFIG_CONTROLS "tweaks:controls"
-#define LRR_CONFIG_FIXIDLENESS "tweaks:fix_idleness_syndrome"
-#define LRR_CONFIG_FPSOVERLAY "tweaks:fps_overlay"
 /* The section for the cheats. */
 #define LRR_CONFIG_CHEATS_SECTION "cheats"
-#define LRR_CONFIG_UNLIMITEDRAIDERS "cheats:unlimited_raiders"
-#define LRR_CONFIG_UNLIMITEDOXYGEN "cheats:unlimited_oxygen"
+
+/* The settings: one per key of the file, each one row of the table in
+ * config.cpp, which gives its key, its kind, its default and, for a
+ * choice, its values' names. The table drives reading the file, writing
+ * its defaults, and LRR_GetSetting.
+ *
+ * A value is read by its setting's kind, in any case:
+ * - a switch (false or true): "true", "on", "yes" and "1" are true;
+ *   "false", "off", "no", "0" and "original" are false; past those, a value
+ *   that starts with y, t or 1 is true and one that starts with n, f or 0
+ *   is false, as iniparser_getboolean reads one;
+ * - a choice: one of its names, the original's first; "original", "off",
+ *   "false", "no" and "0" are the original's; and a choice of two also
+ *   takes "true", "on", "yes" and "1" for its second;
+ * - a number: as strtol reads it, in base 0;
+ * - text, or a directory: as written.
+ * Any other value, and a missing key, takes the default. */
+enum LRR_Setting {
+    LRR_SETTING_SAVEPATH,              /* legorr:savepath, a directory */
+    LRR_SETTING_DISKPATH,              /* legorr:diskpath, a directory */
+    LRR_SETTING_FULLSCREEN,            /* legorr:Full Screen, a switch */
+    LRR_SETTING_XRES,                  /* legorr:Horizontal Resolution */
+    LRR_SETTING_YRES,                  /* legorr:Vertical Resolution */
+    LRR_SETTING_DEVICE,                /* legorr:3D Device, text */
+    LRR_SETTING_TRAINING_SAVE,         /* tweaks:Training Save, a choice */
+    LRR_SETTING_DISPLAY,               /* tweaks:display, a choice */
+    LRR_SETTING_CONTROLS,              /* tweaks:controls, a choice */
+    LRR_SETTING_FIX_IDLENESS_SYNDROME, /* tweaks:fix_idleness_syndrome */
+    LRR_SETTING_FPS_OVERLAY,           /* tweaks:fps_overlay, a switch */
+    LRR_SETTING_TOUCH,                 /* tweaks:touch, a switch */
+    LRR_SETTING_TOUCH_LONG_PRESS,      /* tweaks:touch_long_press, a choice */
+    LRR_SETTING_TOUCH_SCROLL,          /* tweaks:touch_scroll, a switch */
+    LRR_SETTING_TOUCH_ZOOM,            /* tweaks:touch_zoom, a switch */
+    LRR_SETTING_TOUCH_ROTATE,          /* tweaks:touch_rotate, a switch */
+    LRR_SETTING_TOUCH_TWO_FINGER_TAP,  /* tweaks:touch_two_finger_tap */
+    LRR_SETTING_TOUCH_THREE_FINGER_TAP, /* tweaks:touch_three_finger_tap */
+    LRR_SETTING_TOUCH_KEYBOARD,        /* tweaks:touch_keyboard, a choice */
+    LRR_SETTING_BACK_BUTTON,           /* tweaks:back_button, a choice */
+    LRR_SETTING_UNLIMITED_RAIDERS,     /* cheats:unlimited_raiders */
+    LRR_SETTING_UNLIMITED_OXYGEN,      /* cheats:unlimited_oxygen */
+    LRR_SETTING_COUNT
+};
+
+/* A setting's value, as LRR_LoadConfig or LRR_SetSetting left it, or its
+ * default before either runs: a switch's 0 or 1, a choice's index into its
+ * names, a number; 0 for text. Cheap enough to call every tick. */
+int LRR_GetSetting(LRR_Setting setting);
+
+/* Sets `setting` in this process as if the file said `value`, read by the
+ * setting's kind (NULL: as if the key were missing, so the default), and
+ * applies it as LRR_LoadConfig would (a directory reaches
+ * files_native_set_save_path or files_native_set_disk_path). The file is
+ * neither read nor written, and the next LRR_LoadConfig reads it again.
+ * legorr:savepath's default is the save directory LRR_LoadConfig chose,
+ * empty before it runs.
+ *
+ * It overrides a setting for one run: entry.cpp sets legorr:diskpath from
+ * --game this way. And it is the tests' seam: a unit reads the setting
+ * through its getter below, on every host, without a file. */
+void LRR_SetSetting(LRR_Setting setting, const char* value);
 
 /* The display settings, in place of the dialog's choices. device is a 3D
  * device's description as DirectDraw.c lists it, e.g. "Miniwin driver
@@ -171,6 +226,49 @@ enum LRR_Controls {
  * original shows no frame rate. "true" draws the frames a second in the
  * top right corner of the screen; "false", the default, draws nothing. */
 
+/* What a two-finger tap sends (tweaks:touch_two_finger_tap): "space", the
+ * default, "right click", or "off". */
+enum LRR_TouchTwoFingerTap {
+    LRR_TOUCH_TAP_OFF = 0,
+    LRR_TOUCH_TAP_SPACE = 1,
+    LRR_TOUCH_TAP_RIGHT_CLICK = 2,
+};
+
+/* The touch controls (docs/divergences.md, "Touch controls";
+ * platform/native/touch_gestures.h). Each key's "off" turns its part off.
+ * - tweaks:touch: "true" or "false". True, the port makes the mouse from
+ *   finger events with the gestures below, and SDL's own touch-to-mouse
+ *   mapping (a touch is the left button, held) is off; false keeps SDL's
+ *   mapping. True by default on Android and iOS, false elsewhere: on a
+ *   desktop the pointer follows a finger only where the system lets SDL
+ *   move it.
+ * - tweaks:touch_long_press: "hover" (a finger held still moves the pointer
+ *   without pressing, so tooltips show) or "off" (it holds the left
+ *   button).
+ * - tweaks:touch_scroll, touch_zoom, touch_rotate: "true" or "false", for a
+ *   two-finger drag (scrolls the map), a pinch (zooms) and a twist (turns
+ *   the view).
+ * - tweaks:touch_two_finger_tap: LRR_TouchTwoFingerTap.
+ * - tweaks:touch_three_finger_tap: "keyboard" (opens or closes the
+ *   on-screen keyboard) or "off".
+ * - tweaks:touch_keyboard: "auto" (the on-screen keyboard opens while the
+ *   game takes typed text, on hosts that have one) or "off".
+ * - tweaks:back_button: "escape" (Android's Back button is Escape) or
+ *   "off" (Back is left to the system).
+ * The keys other than tweaks:touch work only while it is on, except
+ * touch_keyboard and back_button, which work either way. */
+struct LRR_TouchConfig {
+    bool enabled;
+    bool longPressHover;
+    bool scroll;
+    bool zoom;
+    bool rotate;
+    LRR_TouchTwoFingerTap twoFingerTap;
+    bool threeFingerKeyboard;
+    bool keyboard;
+    bool backEscape;
+};
+
 /* cheats:unlimited_raiders (docs/divergences.md, "Cheat: unlimited
  * raiders"). The original greys out the Teleport Rock Raider button, and
  * its teleporters hold back queued raiders, once the level's raiders would
@@ -186,57 +284,77 @@ enum LRR_Controls {
  * it stays at the full 100 the level starts with; "false", the default,
  * keeps the original's air supply. */
 
-/* The launch options a launcher passes (--game and --data, entry.cpp), for
- * the next LRR_LoadConfig; NULL or "" leaves an option unset, and without
- * either the configuration is read and written exactly as before.
- *
- * `gamePath` is the directory that holds the WADs and Data, in place of
- * legorr:diskpath for this run (the file is not changed).
- *
- * `dataPath` is the one directory for everything the port writes: the
- * configuration file, unless --ini names another, is LegoRR.ini inside it,
- * and the saves go in its Saves subdirectory unless the file's savepath
- * names another place. The directory is made when it is missing. */
-void LRR_SetLaunchOptions(const char* gamePath, const char* dataPath);
-
-/* Reads the configuration from `iniPath`, or from LRR_CONFIG_FILE in the
- * preference directory when it is NULL, writing that file with defaults
- * when it is missing or empty, and applies it (files_native_set_save_path,
- * files_native_set_disk_path).
+/* Reads the configuration and applies it (files_native_set_save_path,
+ * files_native_set_disk_path). First it chooses where the port's files
+ * live, the data directory:
+ * - `dataPath` (--data, entry.cpp), the one directory a launcher gives for
+ *   everything the port writes, made when it is missing; the saves go in its
+ *   Saves subdirectory;
+ * - else the host's preference directory, which also holds the saves.
+ * That save directory is legorr:savepath's default. The file is `iniPath`
+ * (--ini), or LRR_CONFIG_FILE in the data directory when it is NULL, which
+ * is written with defaults when it is missing or empty. NULL or "" for
+ * `dataPath` is the preference directory, as before launchers.
  * False when an explicit `iniPath` does not load, or the defaults cannot
  * be written. */
-bool LRR_LoadConfig(const char* iniPath);
+bool LRR_LoadConfig(const char* iniPath, const char* dataPath = nullptr);
 
 /* The display settings LRR_LoadConfig read, or the defaults before it
  * runs: a 640x480 window on the platform's default device. */
 const LRR_DisplayConfig* LRR_GetDisplayConfig();
 
-/* The tweaks:Training Save setting LRR_LoadConfig read, or the default,
- * LRR_TRAINING_SAVE_PROMPT, before it runs. */
-LRR_TrainingSave LRR_GetTrainingSave();
+/* The settings the units read, by their types. Each is its row's value
+ * (LRR_GetSetting), so its default is the table's: LRR_TRAINING_SAVE_PROMPT,
+ * LRR_DISPLAY_FIT, LRR_CONTROLS_MODERN, true, and false for the rest. */
+inline LRR_TrainingSave LRR_GetTrainingSave()
+{
+    return static_cast<LRR_TrainingSave>(LRR_GetSetting(LRR_SETTING_TRAINING_SAVE));
+}
 
-/* The tweaks:display setting LRR_LoadConfig read, or the default,
- * LRR_DISPLAY_FIT, before it runs. */
-LRR_DisplayScaling LRR_GetDisplayScaling();
+inline LRR_DisplayScaling LRR_GetDisplayScaling()
+{
+    return static_cast<LRR_DisplayScaling>(LRR_GetSetting(LRR_SETTING_DISPLAY));
+}
 
-/* The tweaks:controls setting LRR_LoadConfig read, or the default,
- * LRR_CONTROLS_MODERN, before it runs. */
-LRR_Controls LRR_GetControls();
+inline LRR_Controls LRR_GetControls()
+{
+    return static_cast<LRR_Controls>(LRR_GetSetting(LRR_SETTING_CONTROLS));
+}
 
-/* The tweaks:fix_idleness_syndrome setting LRR_LoadConfig read, or the
- * default, true, before it runs. */
-bool LRR_GetFixIdlenessSyndrome();
+inline bool LRR_GetFixIdlenessSyndrome()
+{
+    return LRR_GetSetting(LRR_SETTING_FIX_IDLENESS_SYNDROME) != 0;
+}
 
-/* The tweaks:fps_overlay setting LRR_LoadConfig read, or the default,
- * false, before it runs. */
-bool LRR_GetFpsOverlay();
+inline bool LRR_GetFpsOverlay()
+{
+    return LRR_GetSetting(LRR_SETTING_FPS_OVERLAY) != 0;
+}
 
-/* The cheats:unlimited_raiders setting LRR_LoadConfig read, or the
- * default, false, before it runs. */
-bool LRR_GetUnlimitedRaiders();
+/* The touch settings, from their rows (LRR_TouchConfig). */
+inline LRR_TouchConfig LRR_GetTouchConfig()
+{
+    LRR_TouchConfig touch;
+    touch.enabled = LRR_GetSetting(LRR_SETTING_TOUCH) != 0;
+    touch.longPressHover = LRR_GetSetting(LRR_SETTING_TOUCH_LONG_PRESS) != 0;
+    touch.scroll = LRR_GetSetting(LRR_SETTING_TOUCH_SCROLL) != 0;
+    touch.zoom = LRR_GetSetting(LRR_SETTING_TOUCH_ZOOM) != 0;
+    touch.rotate = LRR_GetSetting(LRR_SETTING_TOUCH_ROTATE) != 0;
+    touch.twoFingerTap = static_cast<LRR_TouchTwoFingerTap>(LRR_GetSetting(LRR_SETTING_TOUCH_TWO_FINGER_TAP));
+    touch.threeFingerKeyboard = LRR_GetSetting(LRR_SETTING_TOUCH_THREE_FINGER_TAP) != 0;
+    touch.keyboard = LRR_GetSetting(LRR_SETTING_TOUCH_KEYBOARD) != 0;
+    touch.backEscape = LRR_GetSetting(LRR_SETTING_BACK_BUTTON) != 0;
+    return touch;
+}
 
-/* The cheats:unlimited_oxygen setting LRR_LoadConfig read, or the
- * default, false, before it runs. */
-bool LRR_GetUnlimitedOxygen();
+inline bool LRR_GetUnlimitedRaiders()
+{
+    return LRR_GetSetting(LRR_SETTING_UNLIMITED_RAIDERS) != 0;
+}
+
+inline bool LRR_GetUnlimitedOxygen()
+{
+    return LRR_GetSetting(LRR_SETTING_UNLIMITED_OXYGEN) != 0;
+}
 
 #endif /* LEGORRR_PLATFORM_NATIVE_CONFIG_H */

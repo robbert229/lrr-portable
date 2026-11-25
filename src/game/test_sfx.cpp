@@ -6,17 +6,26 @@
 #include "gods98/sound3d.h"
 #include "test/lrr_test.h"
 
+#include <vector>
+
 static std::string loadedName;
-static int loadedStream, loadedMulti;
+static int loadedStream, loadedMulti, loadedVolume;
+struct SampleLoad {
+    std::string name;
+    int stream, multi, volume;
+};
+static std::vector<SampleLoad> loads;
 static int playedMode, playedSlot, playedLoop;
 static unsigned int playCount;
 
 extern "C" int __wrap_sound_bank_entry_load(const char* name, int stream,
-                                            int multi, int)
+                                            int multi, int volume)
 {
     loadedName = name;
     loadedStream = stream;
     loadedMulti = multi;
+    loadedVolume = volume;
+    loads.push_back({name, stream, multi, volume});
     return 5;
 }
 
@@ -54,6 +63,7 @@ int main(void)
     CHECK_STREQ(loadedName.c_str(), "synthetic");
     CHECK_EQ(loadedStream, 1);
     CHECK_EQ(loadedMulti, 1);
+    CHECK_EQ(loadedVolume, 0);
     CHECK_EQ(sfx_random_get_sound3d_handle(custom), 5);
     CHECK_EQ(sfx_random_get_sound3d_handle(0), -1);
 
@@ -74,5 +84,26 @@ int main(void)
     sfx_set_sound_on(0, 0);
     sfx_random_play_sound_normal(custom, 0);
     CHECK_EQ(playCount, 1u);
+
+    // Characterize the loader's existing routing at the bank boundary.
+    // The volume marker belongs to each sample, while the stream marker
+    // persists across the comma-separated property, as on main.
+    char compound[] = "*#-321#@first,#-7#second,third";
+    loads.clear();
+    CHECK_EQ(sfx_load_sample_property(compound, custom), 1);
+    if (CHECK_EQ(loads.size(), 3u)) {
+        CHECK_STREQ(loads[0].name.c_str(), "first");
+        CHECK_EQ(loads[0].volume, -321);
+        CHECK_EQ(loads[0].stream, 1);
+        CHECK_EQ(loads[0].multi, 1);
+        CHECK_STREQ(loads[1].name.c_str(), "second");
+        CHECK_EQ(loads[1].volume, -7);
+        CHECK_EQ(loads[1].stream, 1);
+        CHECK_EQ(loads[1].multi, 0);
+        CHECK_STREQ(loads[2].name.c_str(), "third");
+        CHECK_EQ(loads[2].volume, 0);
+        CHECK_EQ(loads[2].stream, 1);
+        CHECK_EQ(loads[2].multi, 0);
+    }
     return lrr_test_result();
 }

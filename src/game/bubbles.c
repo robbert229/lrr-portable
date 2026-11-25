@@ -250,7 +250,7 @@ void bubble_load_bubbles(BlockRec* config)
     int bubbleType;
 
     // STRING: LEGORR 0x004a1cb4
-    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "Bubbles", 0));
+    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "Bubbles", (const char*)NULL));
          arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
         name = arrayItem->key;
         use = 1;

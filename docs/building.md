@@ -310,6 +310,9 @@ besides libctru's 32 MB linear heap (some 14 MB of it in use: textures, the
 GPU command buffer and the frame's vertices), more than an Old 3DS gives an
 application, so the `.cia` asks for the New 3DS's 124 MB mode
 (`template.rsf`); the `.3dsx` gets what the Homebrew Launcher gives it.
+The game starts through SDL's 3DS `main` (`SDL_main.h` in
+`src/platform/native/entry.cpp`), which runs a New 3DS at 804 MHz with its
+L2 cache, three times the 268 MHz an application otherwise gets.
 
 miniwin lists Citro3D, the palette software renderer and the software
 renderer here; the default device is Citro3D (`3ds/config.h`), which draws
@@ -443,14 +446,35 @@ to the shell user and the app can no longer write it. Pull the file, edit
 it, and push it back, or delete it to get the defaults again. Uninstalling
 the app deletes the directory and everything in it, including the saves.
 
-**Touch.** SDL turns a touch into mouse events: a tap moves the pointer to
-the finger and presses and releases the left button, and miniwin passes
-those on as `WM_MOUSEMOVE` and `WM_LBUTTON*`. A press of a frame or more
-clicks, in the menus and in a level; a tap shorter than one game frame can
-be missed, because the game reads the button state once per frame. A mouse
-and keyboard work. #986 tracks what touch still lacks: a right click,
-scrolling and zooming the map, the keys the game asks for (Space, Escape,
-typing a save's name) and Android's Back button.
+**Touch.** The touch controls (#986; `src/platform/native/input.h`) make
+the mouse and keys from finger events, in place of SDL's own mapping:
+
+| Touch | Does |
+| --- | --- |
+| Tap | Left click |
+| Drag | Left button held: selects, drags |
+| Hold still, then move | Moves the pointer without pressing, so tooltips show; lifting clicks nothing |
+| Two-finger drag | Scrolls the map: the pointer waits on the picture's edge, opposite the drag |
+| Pinch | Zooms (holds `-` or `=`), in the top view |
+| Two-finger twist | Turns the view (holds an arrow key), in the top view |
+| Two-finger tap | Space: the units' status bubbles, closing a briefing |
+| Three-finger tap | Opens or closes the on-screen keyboard |
+| Back | Escape |
+
+The on-screen keyboard also opens by itself while the game takes typed
+text: a unit's name (Return on a selected, trained raider, where the
+level allows renaming) or a menu's text field. The shipped `Lego.cfg` has
+no text field, and saves have no names. A right click acts as a left click
+in Rock Raiders unless the game runs with `-dualmouse`, so no gesture
+makes one by default; `touch_two_finger_tap = right click` makes one.
+A tap, or an on-screen key, shorter than a frame is held until the game has
+read it. The `[tweaks]` `touch` keys in `LegoRR.ini` turn each gesture off
+(docs/divergences.md, "Touch controls"); `touch = false` gives SDL's mapping
+back, where a touch is the left button. `touch` is true by default on
+Android and iOS. A desktop touch screen can use it too, with `touch = true`;
+there the pointer follows a finger only where the system lets SDL move the
+pointer.
+A mouse and keyboard work as before.
 
 **Signing.** CI builds only the debug APK, signed with Android's debug key,
 so it installs for testing. `./gradlew assembleRelease` gives an unsigned,
@@ -481,6 +505,14 @@ units directly (bezier, steering, animation_object, draw, registry) or
 miniwin (miniwin_dx6), on synthetic data only. Passing tests establishes the
 behavior covered by those tests; gameplay comparison against the original is
 a separate check.
+
+Each CTest test (including each variant of a shared executable) runs in
+its own `build/test-fixtures/<test-name>/` directory, or the corresponding
+directory under a custom build tree. Generated fixtures and scratch files
+stay there, not in the source tree. For a test that needs static checked-in
+synthetic data, keep it under `src/test/fixtures/`; do not commit generated
+fixture directories. Run file-writing tests with CTest, or from their
+build-tree working directory when invoking the executable directly.
 
 The miniwin rendering tests (`miniwin_immediate`, `_viewports`,
 `_textures`, `_lights` and `_fog`) draw with the software renderer. Their
@@ -563,6 +595,11 @@ lrr_unit_test_variant(audio_mix OF audio
   LABELS audio
   SKIP_RETURN_CODE 77)
 ```
+
+A test of a `LegoRR.ini` key at its unit's site sets the key with
+`LRR_SetSetting` (`src/platform/native/config.h`) rather than wrapping the
+getter, so it needs no `WRAP` for it and runs on every host
+(`src/game/test_cheats.cpp`).
 
 The assertions are in `src/test/lrr_test.h`, header-only, on every test's
 include path:
@@ -759,3 +796,507 @@ the seam stubs.
 `main` has no matching build, Reccmp gate or Windows reference backend
 (ADR 0007). They live on the `decomp` branch, where the decomp tag will be
 cut; see `decomp`'s `docs/building.md`.
+
+### Synthetic headless level fixtures
+
+Tests can add `${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp`
+to their `lrr_unit_test(... SOURCES ...)` and include
+`test/synthetic_level_fixture.h`. The helpers are test-only:
+
+- `make_fixture("unique_test_fixture")` replaces the named scratch
+  directory beneath the test working directory, enters it, and writes
+  artificial files under Data/L. Use a different directory for each
+  concurrently running test.
+- `write_text`, `write_map`, `write_bmp`, and `write_triangle` also
+  work independently with caller-supplied paths (parent directories must
+  exist). Maps take dimensions and a cell-value callback; BMPs are
+  grayscale, and the LWOB is a single triangle.
+- `initialise_headless("UniqueTestName")` initializes files, SDL and the
+  software device. Register the test with
+  `ENVIRONMENT "SDL_VIDEO_DRIVER=dummy"`.
+- `boot_game()` initializes the minimal subsystems needed by the existing
+  synthetic level loader. It is not the complete startup routine.
+  After it succeeds, call `lego_level_load("Level01")` and inspect the
+  resulting state. Run each scenario in a separate process: the helpers
+  do not reset all global state or perform shutdown.
+
+No installed game data is needed. All input files are generated in the
+scratch directory; the fixture is an artificial two-cave grid, not a
+shipped level.
+
+The separate `synthetic_lifecycle` test exercises two real load/tick/free
+cycles, including empty-level teardown. The `synthetic_missing_config`
+variant calls the complete startup entry point in a fresh process without
+a configuration file and checks that it rejects startup without installing
+a level. These tests do not establish successful complete initialization
+or full engine shutdown: the successful load uses the partial setup above,
+which lacks the complete object and interface catalogs. Coverage of those
+paths remains outstanding.
+
+#### Startup and shutdown subsystem tests
+
+The four `synthetic_startup*` scenarios use separate working directories
+and the software device, with only the grayscale BMP inputs that each
+scenario needs. They exercise real functions without replacing the game
+units:
+
+- Reward initialization and shutdown: a generated image and font, a
+  short synthetic text record, and the allocation of the reward item table.
+- Reward initialization with a missing image: the item retains the text
+  and font, but has no image pointer or image-present flag; shutdown
+  still completes.
+- Interface initialization and shutdown: menu name registration,
+  allocation of the menu items and initial position.
+- Scene initialization and shutdown: a root container, a first-person
+  camera, two viewports, and release of the viewports, camera, container
+  pool and software DirectDraw device in that order.
+
+Full game startup and shutdown are **not** covered by these tests.
+In a local synthetic probe, `lego_engine_shutdown` after the partial
+boot originally failed in `reward_shutdown` because reward initialization
+was omitted. After real reward and interface initialization, it reached
+camera cleanup and crashed in `Direct3DRMFrameImpl::GetParent` while
+freeing a camera after root destruction. A separate probe of
+`lego_game_config_init` with a minimal on-disk config and generated
+font, message and loader BMPs reached the failure-path
+`ddiscene_object_pool_shutdown` and crashed in the same frame method.
+The first-person scene test deliberately releases its camera before the
+root; the overhead camera's cleanup also did not complete in a probe.
+These probes do not establish whether the crashes occur after a complete
+production startup. No production changes or stubbed scene cleanup
+were made to bypass them. The existing missing-config test still
+exercises the early startup rejection.
+
+Local coverage measurement (GCC Debug build, `LRR_COVERAGE=ON`,
+gcovr 8.8, repository's source filters excluding test code): with counters
+cleared, the 144 pre-existing CTest cases yielded 15,835/43,166 lines
+(36.7%), 1,540/3,115 functions (49.4%) and 9,107/43,738 branches (20.8%).
+Adding the four subsystem scenarios in the same instrumented build
+yielded 15,980 lines (37.0%), 1,558 functions (50.0%) and 9,186 branches
+(21.0%). These are local incremental results, not a comparison against
+a separate main CI run.
+
+#### Positive startup configuration and resource loading
+
+`positive_startup` loads all five object type catalogs through the real
+catalog functions, using two generic vehicle entries and one entry each
+for the figure, creature, building, and upgrade catalogs. The only model
+geometry is a triangle; `write_null_scene(path)` adds a reusable LWS
+fixture containing one moving null (Anchor) with two keyframes and no
+external mesh or sound. The test verifies the activity selection, wheel
+mesh and explicit radius, upgrade-part binding, attachment metadata,
+building shape and power scene, and both display-name tables.
+
+Three separate process variants test additional startup paths:
+
+- `startup_missing_catalog`: an absent upgrade section and missing
+  model files in each of the other four catalogs are rejected.
+- `startup_misc_resources`: maps required resource slots to the same
+  triangle or null scene (with a minimal activity wrapper when required),
+  verifying that the loaded templates are hidden. None represents the
+  named game object or its appearance.
+- `startup_config_loader`: checks graphics quality acceptance and
+  rejection, configured tooltip and upgrade names, and the real software
+  loading and shutdown screens, font, progress callback, and profile
+  write-back.
+
+The catalog and miscellaneous resource tests are process-isolated rather
+than exercising full scene shutdown (see the preceding teardown probes).
+A local probe calling the real `lego_game_config_init` with the new catalog
+and generic font, message and loader BMPs progressed past all five catalog
+gates, then crashed in `container_load` at its filename copy in
+`lego_misc_object_resources_load` because a required filename was absent.
+With the generic miscellaneous resource inputs supplied, the same probe
+progressed further, to `info_set_overflow_image_file`, and crashed in
+`Image_SetPenZeroTrans` when the required overflow image was missing.
+Neither probe is registered as a passing test. Complete initialization
+still requires additional interface resources and configuration, and the
+earlier shutdown ordering problems remain unresolved. No production
+path was replaced or failure masked.
+
+Local matched coverage on the stacked building-lifecycle base (GCC Debug,
+`LRR_COVERAGE=ON`, gcovr 8.8, test sources excluded): the 158 existing
+cases covered 16,645/43,166 lines (38.6%), 1,611/3,115 functions (51.7%)
+and 9,618/43,738 branches (22.0%). Adding the four startup scenarios
+reached 17,338 lines (40.2%), 1,648 functions (52.9%) and 10,110 branches
+(23.1%). The 693 additional covered lines include 265 in
+`lego_unit.c`, 160 in `container.c`, 62 in `vehicle_model.c`,
+53 in `building_model.c` and 20 in `animation_object.c`.
+The full suite registered 162 cases, with 150 passing and the 12
+optional renderer-backend cases skipped.
+
+#### Scene ownership and teardown regression
+
+The `scene_teardown*` scenarios exercise generic retained-mode frames,
+all three camera types and their viewports, and real resource cleanup.
+The former scene teardown crashes above were reproduced without any
+model or level files: after `Container_Remove(root)`, calling
+`Container_GetParent(child)` segfaulted in
+`Direct3DRMFrameImpl::GetParent`. The camera-first and root-first
+teardown orders also crashed at the same frame method in
+`camera_free`. The parent frame owns a reference to its children
+through its child array, whereas each child has a non-owning parent
+pointer. Destroying the parent released its array without clearing
+that pointer, leaving a surviving child pointing to freed storage.
+
+The miniwin patch clears those back links before releasing the child
+array. It does not change the game units, scene destruction order or
+player-visible behaviour. The regression retains the root child array
+across root destruction, checks that the child's parent becomes null
+and the grandchild still refers to its live parent, then removes the
+remaining containers. The camera scenarios test both viewport-first
+cleanup and the engine's root-first order (primary viewport, root,
+cameras, container pool, remaining viewports).
+
+Additional cases verify:
+
+- Missing mesh, animation and activity files do not leave extra child
+  frames; valid triangle and null-scene resources can load afterwards,
+  the live pool shuts down, and a fresh pool can initialise.
+- The real `lego_game_config_init` rejects an incomplete on-disk config
+  after camera setup. Only solid grayscale placeholders are supplied
+  for early font/message/loader readers. The scene pool cleanup returns
+  safely and can be initialised again after releasing the remaining
+  viewports. This does not establish that every startup allocation is
+  reclaimed.
+- The real `lego_engine_shutdown` completes after the existing partial
+  boot fixture loads and ticks its artificial level. The test first
+  initialises reward records, owned font placeholders, interface and
+  blank panel buttons omitted by partial boot, and checks that shutdown
+  clears the current level.
+
+These results supersede the earlier scene teardown crash probes. A
+successful complete `lego_game_config_init` is still not established;
+the later interface-resource requirements remain untested. Full memory
+leak accounting and successful full-initializer shutdown are outside
+these regression assertions.
+
+Local matched coverage on the `d00f4af1` stack tip (GCC Debug,
+`LRR_COVERAGE=ON`, gcovr 8.8, test code and miniwin excluded): the
+164 base cases covered 17,674/43,166 lines (40.9%), 1,685/3,115
+functions (54.1%) and 10,358/43,738 branches (23.7%). With the patch
+and six new scenarios the 170-case suite covered 17,972 lines
+(41.6%), 1,706 functions (54.8%) and 10,606 branches (24.2%):
+298 additional lines, including 177 in `lego_unit.c`. Both
+instrumented runs had zero failures and 12 optional backend skips.
+
+#### Distinct-grid level transitions
+
+`make_transition_fixture(directory)` extends the existing fixture without
+changing `make_fixture` or the no-argument `boot_game()`. It writes
+`Data/transition.cfg` (open with `boot_game("transition.cfg")`) and two
+independent abstract grid records: GridA (8x8, block size 40, vertical
+barrier, two resource objects) and GridB (10x9, block size 32, horizontal
+barrier, one resource object). GridB has its own map layers, empty PTL and
+object list in Data/L2; `write_transition_surface()` restores its surface
+file after a negative test. Both records specify fixed random seeds.
+No shipped map or object artwork is involved.
+
+The three `distinct_level*` cases run in separate scratch directories
+with no save slot selected:
+
+- A real `lego_keep_running` call follows GridA's configured next level
+  to GridB. A second call follows GridB's self-reference to exercise
+  restart. Both grids are ticked and their barriers and resource
+  counters deliberately modified before leaving them.
+- Removing GridB's PTL causes the real transition from GridA to fail.
+  The test checks that no level or live object survives and restores
+  the file before loading GridB again.
+- Unloading GridA explicitly and removing GridB's surface causes a
+  direct load failure. Restoring the generated map allows recovery.
+
+All three cases check distinct dimensions, block size, terrain flags,
+resource census and positions, object registry, oxygen and resource
+balances, per-grid option flags, upgrade/train times, and explicit vs.
+default configuration values. Restart also checks that a seeded random
+block field is reproduced. Each recovered/current grid is ticked and
+then passed to the actual engine shutdown, with assertions that the
+current level and object registry are cleared.
+
+These assertions establish logical state isolation, not that every
+allocation has been reclaimed. The failure cases are before successful
+map allocation; later failures such as an absent object list after
+map loading are not covered. The existing complete-initializer
+limitations remain; this uses the real level/transition entry points
+after the documented partial setup, with no test-only production mode
+or mocked startup calls.
+
+Local matched coverage on the `5cc40e8f` stack tip (GCC Debug,
+`LRR_COVERAGE=ON`, gcovr 8.8, test code and miniwin excluded):
+171 base cases covered 18,529/43,166 lines (42.9%), 1,743/3,115
+functions (56.0%) and 11,035/43,738 branches (25.2%).
+Adding the three transition cases covered 18,579 lines (43.0%),
+1,746 functions (56.1%) and 11,112 branches (25.4%): 50 additional
+lines, 3 functions and 77 branches. The complete 174-case suite had
+162 passing, 12 optional backend skips and zero failures.
+
+#### Independent startup resources and host options
+
+The `startup_resources` test uses two grayscale BMPs and a small,
+independent configuration record. It runs the real panel and button
+loaders (including a missing panel and a missing button image), checks
+resolution fallback and bounds, loads a tutorial icon, registers tooltips
+and their sound aliases, and loads text and info messages. Replacing an
+image-bearing text message releases that image; the test releases its
+font and the image pool in the real shutdown functions. Panel button
+storage and text strings are freed explicitly where there is no exposed
+subsystem shutdown function. The process is isolated; this does not
+establish complete ownership or leak accounting for the static info
+and tooltip records.
+
+The two `startup_advisor` variants initialise a camera and viewport,
+then load a single generic animated null into two configured animation
+slots, with a third missing scene. They verify the actual child-frame
+count, parsed positions with resolution fallback, invalid position
+rejection, animation admission and end cleanup, then release the
+viewport, camera, container pool and device. The reduced-animation
+variant verifies that an optional `!key` is not loaded. The normal
+optional animation fallback was observed to re-query the unprefixed key
+instead of the generated prefixed key in `advisor_config_slots_load_target`;
+this existing defect is not changed or asserted as desired behaviour.
+
+`startup_options` exercises the existing WinMain option parser and
+start-level override getter without invoking WinMain or the game
+initializer. The `startup_device_fit`, `startup_device_original` and
+`startup_device_best` variants load isolated explicit preferences (or
+skip if the host cannot isolate its preference directory), initialise the
+real dummy-driver window and DirectDraw selection and setup, check the
+chosen device, mode and dimensions, then shut down DirectDraw and the
+window. The hardware flag in the best-device test is the flag returned
+by miniwin, not a claim that the dummy driver uses physical hardware.
+
+Three additional rejection tests use linker wrapping solely at the
+external driver/device enumeration and setup boundary: no driver,
+no hardware-flagged device, and all setup attempts failing. The real
+`init_initialise` must reject the first two without attempting setup and
+try each enumerated device once in the last case. No successful device
+setup or game callback is fabricated. The wrapping cases are registered
+where the toolchain supports the existing GNU linker-wrap mechanism.
+
+All input is generated in scratch directories. These tests do not
+exercise or claim successful complete game initialization, and they do
+not require a substitute game asset pack. Malformed bitmap decoding is
+not covered by the missing-file tests.
+
+Matched local coverage on the `913cbcfa` stack tip (GCC Debug,
+`LRR_COVERAGE=ON`, gcovr 8.8, test code and miniwin excluded):
+178 base cases covered 19,810/43,166 lines (45.9%), 1,834/3,115
+functions (58.9%) and 12,108/43,738 branches (27.7%). The ten new
+cases raised these to 20,052 lines (46.5%), 1,850 functions (59.4%)
+and 12,380 branches (28.3%), an increase of 242 lines, 16 functions
+and 272 branches. Newly covered lines include 83 in `init.c`, 48
+in `lego_unit.c`, 41 in `advisor.c` and 27 in `directdraw.c`.
+The complete 188-case suite had 176 passing, 12 optional renderer
+skips and zero failures.
+
+#### Native engine callback lifecycle
+
+The `engine_lifecycle*` tests exercise the existing WinMain as a host for
+generic application callbacks, not for the game. Each process supplies
+only an isolated host INI and one trivial application configuration text
+file, under its own generated scratch directory. The launch options
+explicitly direct both game-data and preferences paths into that fixture.
+No game models, levels or artwork are present.
+
+The test executable compiles the unchanged `main.c` unit with just the
+application-registration symbol renamed to the test's generic registry
+function. It still calls the real `window_runtime_callback_triplet_set`,
+and the window, software device, input, file layer, config pool, renderer
+and loop are real. This test-only link seam avoids the GNU linker-wrap
+restriction, so the tests are registered on Windows and other native
+toolchains as well.
+
+Seven separate processes cover:
+
+- Fixed timestep, paused timestep, deterministic timestep precedence and
+  resumption, plus the per-frame renderer update latch.
+- Real-time stepping with a deliberately long first tick and the
+  three-frame clamp; an enabled FPS overlay with no font exercises the
+  missing-resource path.
+- SDL focus loss/gain, keyboard acquire/unacquire, middle button and
+  wheel state, and a platform quit event; the last callback does not
+  request exit, so only the real window message terminates the loop.
+- Fullscreen host suspend/resume, including the delayed active frame and
+  system-key/focus filtering.
+- A rejected init that releases its own config, with no subsequent tick
+  or shutdown callback and all three callback pointers cleared.
+- A successfully initialised application without a loop callback, which
+  still receives shutdown.
+- A null registration, which does not install or invoke a callback state.
+
+Shutdown assertions verify the callback runs before the window and
+configuration pool are destroyed, the generic application's config is
+released, the pool is no longer resident, input is unacquired and the
+window ID no longer resolves. An exit guard fails if file initialisation
+or another engine path exits the process before the assertions complete.
+The scenarios intentionally use `-nosound` and do not establish
+successful game startup or exhaustive resource leak accounting.
+
+Matched local coverage on the `0420c8b7` base (GCC Debug,
+`LRR_COVERAGE=ON`, gcovr 8.8, test sources and miniwin excluded):
+the 190 pre-existing tests covered 20,440/43,172 lines (47.3%),
+1,877/3,115 functions (60.3%) and 12,722/43,748 branches (29.1%).
+Adding these seven scenarios covered 20,593 lines (47.7%), 1,886
+functions (60.5%) and 12,869 branches (29.4%): 153 new lines,
+9 functions and 147 branches, including 126 lines in `main.c`.
+The before/after denominator is from the same instrumented build,
+which includes the second compilation of `main.c`. The complete
+197-case suite had 185 passing, 12 optional renderer skips and
+zero failures.
+
+The host configuration variants add three more independent processes,
+using the same generic callbacks and no game callbacks:
+
+- `fit-config`: a 713x521 host window with the 640x480 virtual mode,
+  window-resolution rendering, and combined left/right mouse handling.
+- `debug-config`: an 800x600 mode accepted with `-debug`, virtual-mode
+  rendering, and independent mouse buttons with `-dualmouse`.
+- `resource-reject`: an unsupported window resolution falls back to
+  640x480; the application's config marks a missing resource as required,
+  so the callback releases its partial scene and rejects initialization.
+  The host must not call either the loop or the application shutdown.
+
+These variants create only an empty generic mesh and a spotlight, with
+no geometry or texture files. They exercise real container parenting,
+light setup, missing activity/animation/mesh resources, a valid config
+without the optional activity group and unknown resource types. Both
+successful and rejected callbacks release their scene before the host
+destroys its device and window. The successful cases also assert bounded
+mouse-event progression through the real native loop.
+
+Matched coverage from `d6e074b2` (GCC Debug, gcovr 8.8, same production
+source filters) increased from 23,987/43,178 lines (55.6%) to
+24,049/43,178 (55.7%), from 2,115 to 2,116 of 3,115 functions, and
+from 15,471 to 15,506 of 43,752 branches. The 62 additional lines are
+36 in `main.c` and 26 in `container.c`; three additional branches
+are in `init.c`. Full CTest: 207 passed, 12 existing optional renderer
+skips, zero failures. This is independent host coverage, not a successful
+game initialization or exhaustive leak check.
+The three new cases also passed in a local MinGW64 cross-build (GCC 14,
+SDL3 3.4.18) under Wine; native Windows CI is a separate verification.
+
+#### Real initializer smoke test
+
+`synthetic_initializer_smoke` exercises the actual `lego_game_config_init`
+entry point rather than the partial-boot helper. It combines the existing
+abstract grids with the primitive catalog and generates uniform grayscale
+placeholder inputs only for the resource slots necessary to initialize.
+The fixture is temporary; it is not a data pack or a reproduction of
+shipped artwork, sounds, models or levels. The frontend and intro media
+are disabled through configuration so this test exercises direct level
+startup rather than menu interaction.
+
+The test checks that complete initialization installs GridA and the
+configured catalog, counts the two expected resource objects, advances
+three ticks, follows the real level transition to GridB, verifies the new
+grid and its independent accounting and object count, advances another
+tick, and calls the real engine shutdown before releasing DirectDraw.
+This verifies the success path previously missing from the startup
+probes. It is not a complete frontend boot or memory-leak accounting test.
+
+#### Generic menu resource loading
+
+`menu_resource_load` parses two original abstract menu definitions with
+uniform placeholder textures and fonts. It verifies cache reuse, menu
+position/anchor fields, cycle labels and callback bindings, integer and
+real slider ranges, trigger ownership, optional overlay resources and
+links between the two generated menu records. No shipped menu layout or
+artwork is reproduced. It also releases the loaded menu items through
+the real cleanup routine; the item array must remain live until those
+items have been released. The fixture is process-isolated and does not
+establish comprehensive cache or frontend teardown accounting.
+
+#### Synthetic audio resource lifecycle
+
+The four `audio_resource*` processes use SDL's dummy audio driver and an
+isolated Data directory. Each generates two 100 ms mono PCM RIFF files
+with explicit little-endian fields: 8-bit silence and a low-amplitude
+16-bit square wave. A zero-entry archive enables the real file mount;
+there are no shipped media files or game callbacks.
+
+- `audio_resource`: real buffered loading, missing-file rejection,
+  sample length and volume, single/multiple voices, round-robin handles,
+  position and listener updates on generic retained-mode frames,
+  stop/refresh/release and slot reuse.
+- `audio_resource_streams`: actual streamed bank entries, independent
+  one-shot and looping channels, replacement of a playing stream,
+  repeated stop, release of file ownership, missing-file playback
+  rejection and recovery. The duration assertion pins the existing
+  stream-bank whole-file-size calculation, not PCM-only duration.
+- `audio_resource_aliases`: invented config labels with plain, multi
+  (`*`) and streamed (`@`) properties, missing resource rejection,
+  case-insensitive alias lookup, volume control, global cooldown,
+  deferred positional dispatch and stop-all. A real reserve sample
+  occupies slot zero because the current SFX playback wrappers treat
+  zero as a sentinel even though the bank accepts it.
+- `audio_resource_capacity`: fill all 600 bank entries using stream
+  metadata, reject another load, release and reuse a middle slot with
+  a buffered sample, then release and reuse the first slot.
+
+All cases explicitly release their bank entries before shutting down
+the device. They do not verify audible output (the existing disk-driver
+mix tests cover that), exhaustively account for allocations, or assert
+multi-entry comma-separated alias chains and the `#volume#` marker.
+The current SFX parser's chain insertion and volume-string termination
+need independent correctness verification before those contracts can
+be pinned. No production behavior is changed by this layer.
+
+Matched local coverage from `18fcd601` (GCC Debug, gcovr 8.8, same
+production source filters): 24,463/43,178 to 24,587/43,178 lines
+(56.7% to 56.9%), 2,136 to 2,143 of 3,115 functions, and 15,715 to
+15,844 of 43,752 branches. The 124 additional lines include 97 in
+`sound3d.c`, 21 in `sfx.c` and six in `audio_sdl.cpp`.
+The full 226-case suite had 214 passing, 12 existing renderer skips,
+and zero failures. All four new cases also passed in a local MinGW64
+cross-build (GCC 14, SDL3 3.4.18) under Wine; native Windows CI remains
+separate verification.
+
+#### Standalone generated FLIC media
+
+The `flic_media` and `flic_media_playback` tests use only original 5x3
+pixel grids, with explicitly encoded little-endian FLIC headers, frames,
+and chunks. They are independent of application or game initialization.
+
+- The decoder test uses a padded pixel buffer and checks each decoded
+  pixel and unchanged row padding. It covers a full indexed palette,
+  byte-run and 16-bit word-run packets (both repeated and literal runs),
+  indexed and word deltas, skipped rows, and the odd final indexed
+  pixel. The word decoder is checked in RGB565 and RGB555 output.
+- Playback writes two generated files into an isolated directory and
+  uses real offscreen DirectDraw surfaces on SDL's dummy video driver.
+  Each file has two frames and a ring frame; both streaming and memory
+  playback are exercised with and without looping. Assertions check
+  the actual decoded surface, destination pixels, transparent paused
+  blits, frame counters, end-of-playback and loop resumption. The real
+  close routine releases the file/decode state, then the test releases
+  its owned surface and record.
+
+Only ordinary supported media chunks are generated; unsupported or
+malformed formats, real-time playback, and comprehensive leak
+accounting are outside these tests. No production behavior changes.
+
+Matched local coverage from `ed5832c1` (GCC Debug, gcovr 8.8, same
+production source filters): 25,589/43,195 to 25,822/43,195 lines
+(59.2% to 59.8%), functions +6 and branches +121. All 233 additional
+lines are in `flic_unit.c`, whose line coverage rises from 171/531
+(32.2%) to 404/531 (76.1%). Full CTest: 225 passed, 12 existing
+renderer skips, zero failures. Both new cases also passed focused
+ASan/UBSan (leak detection disabled) and a MinGW64 GCC 14/SDL3 3.4.18
+cross-build under Wine, separately from native Windows CI.
+
+#### Generic container resource ownership
+
+`container_resource` independently creates a triangle and a quad with
+separate retained mesh groups, plus a generated 4x4 grayscale indexed
+BMP. It verifies group dimensions, vertex/UV readback and replacement,
+combined bounds, hide/show and visual counts, render quality, material
+binding, texture loading/binding, and forward/inverse frame transforms.
+Destruction callbacks confirm that removing the mesh destroys its
+separate group and group-owned material, while the caller-owned texture
+remains live until explicitly freed.
+
+An independent immediate mesh checks geometry scaling, diffuse/alpha
+and emissive material values, group visibility and visual destruction.
+Both use the real engine software device on SDL's dummy video driver.
+No application or game initialization is involved; retained-mode mesh
+scaling and comprehensive device/pool leak accounting are not asserted.

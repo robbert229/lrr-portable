@@ -103,10 +103,18 @@ lrr_unit_test(camera_control SOURCES ${GAME_DIR}/test_camera_control.cpp LABELS 
 # Live object work eligibility and capacity of the teleport request queue.
 lrr_unit_test(legoobject_unit SOURCES ${GAME_DIR}/test_legoobject_unit.cpp LABELS legoobject_unit)
 
+# The [cheats] keys at their units' sites, set in-process (LRR_SetSetting):
+# Lego.c's air supply and LegoObject.c's oxygen check for a new raider.
+lrr_unit_test(cheats SOURCES ${GAME_DIR}/test_cheats.cpp LABELS cheats)
+
 # Spotlight dimmer transitions and movement limits relative to the light.
 lrr_unit_test(lighteffects SOURCES ${GAME_DIR}/test_lighteffects.cpp
-  WRAP render_object_set_packed_rgba_from_float_channels ddiscene_object_position_get
+  WRAP render_object_set_packed_rgba_from_float_channels ddiscene_object_position_get ddiscene_object_position_set
   LABELS lighteffects)
+foreach(scenario IN ITEMS blink fade fade-negative move)
+  lrr_unit_test_variant(lighteffects_${scenario} OF lighteffects
+    ARGS ${scenario} LABELS lighteffects)
+endforeach()
 
 # Loader profile round-trip and progress bar geometry with synthetic files.
 lrr_unit_test(loader SOURCES ${GAME_DIR}/test_loader.cpp
@@ -147,10 +155,10 @@ lrr_unit_test(flock_position SOURCES ${GAME_DIR}/test_flock_position.cpp
 # a job with a unit on its way keeps no idle unit from the next job, a
 # unit that cannot reach a job does not pause it for the others, and an
 # idle unit is no job's unit on its way. The unit's calls to the map,
-# object, message and config units reach the test's __wrap_ stubs.
+# object and message units reach the test's __wrap_ stubs; the setting
+# is set with LRR_SetSetting.
 lrr_unit_test(idleness_syndrome SOURCES ${GAME_DIR}/test_idleness_syndrome.cpp
   WRAP
-    _Z26LRR_GetFixIdlenessSyndromev
     level_current_terrain_get
     selection_contains_entity_active_target
     lego_entity_matches_current_selection_or_owner
@@ -365,4 +373,305 @@ lrr_unit_test(weapons SOURCES ${GAME_DIR}/test_weapons.cpp
 # device, then the simulation for a while: the path a game session takes
 # through lego_level_load and the main simulation step.
 lrr_unit_test(level_boot SOURCES ${GAME_DIR}/test_level_boot.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
   LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Existing lifecycle entry points on generated inputs in an isolated process.
+lrr_unit_test(synthetic_lifecycle SOURCES ${GAME_DIR}/test_synthetic_lifecycle.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(synthetic_missing_config OF synthetic_lifecycle
+  ARGS missing-config LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Real setup and cleanup of individual subsystems in independent processes.
+lrr_unit_test(synthetic_startup_shutdown SOURCES ${GAME_DIR}/test_synthetic_startup_shutdown.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  ARGS reward LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+foreach(scenario IN ITEMS reward-missing-image interface scene)
+  lrr_unit_test_variant(synthetic_startup_${scenario} OF synthetic_startup_shutdown
+    ARGS ${scenario} LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+endforeach()
+# Synthetic resource classification and carrier admission.
+lrr_unit_test(mining_logistics SOURCES ${GAME_DIR}/test_mining_logistics.cpp
+  LABELS mining_logistics)
+
+# Real route search across an obstructed synthetic map.
+lrr_unit_test(navigation_synthetic SOURCES ${GAME_DIR}/test_navigation_synthetic.cpp
+  LABELS navigation)
+
+# Health changes and tool capacity/replacement on a synthetic raider.
+lrr_unit_test(raider_synthetic SOURCES ${GAME_DIR}/test_raider_synthetic.cpp
+  LABELS raider)
+
+# Pending task reassignment and pool-copy ownership.
+lrr_unit_test(task_lifecycle SOURCES ${GAME_DIR}/test_task_lifecycle.cpp
+  LABELS aitask)
+
+# A path's admission, resource requests, partial cancellation and completion.
+lrr_unit_test(construction_progress SOURCES ${GAME_DIR}/test_construction_progress.cpp
+  WRAP terrain_map_block_texture_set cancel_action_for_matching_coordinates
+    aitask_cmd_command_kind_record_issue entity_indexed_record_word_at_b0_get
+    entity_indexed_record_word_at_b4_get stats_table_word_at_b8 legoobject_query_center_mask02
+    aitask_bobbin_clear_delay aitask_cmd_create_task aitask_cmd_cancel_by_coords
+  LABELS construction)
+
+# Vehicle unload terrain changes and a crystal-carrying monster's damage/removal.
+lrr_unit_test(vehicle_creature_progress SOURCES ${GAME_DIR}/test_vehicle_creature_progress.cpp
+  WRAP scene_object_resource_get ddiscene_object_position_get entity_capability_flags_get
+    entity_state_flags_get flagged_object_timer_registry_insert
+  LABELS vehicle_model legoobject)
+
+# A floor cell progresses through erosion stages until it becomes lava.
+lrr_unit_test(erosion_progress SOURCES ${GAME_DIR}/test_erosion_progress.cpp
+  WRAP map_cell_tracking_flags_clear_and_refresh_current lego_cell_init_pass
+    terrain_map_block_to_world terrain_map_world_z_get lava_effect_select_and_place
+  LABELS erode)
+
+# Opening and resealing an outlet changes water height over successive ticks.
+lrr_unit_test(flood_progress SOURCES ${GAME_DIR}/test_flood_progress.cpp
+  WRAP scene_render_lock_toggle render_object_set_packed_rgba_from_float_channels
+    lwo_layer_polygon_vertex_data_read container_mesh_set_vertices
+    terrain_map_block_vertices_get lego_terrain_cell_edge_flag_set_and_update
+  LABELS water)
+
+# A valid rock face triggers a landslide and reserves the affected cell.
+lrr_unit_test(landslide_progress SOURCES ${GAME_DIR}/test_landslide_progress.cpp
+  WRAP terrain_cell_state_update_current terrain_cell_work_flag_clear_current
+    lego_cell_init_pass terrain_map_world_z_get scene_slot_pose_scale_register
+    sound_submission_route_wrapper
+  LABELS fallin)
+
+# Building footprint reservation, cancellation, and obstruction-delayed completion.
+lrr_unit_test(building_lifecycle SOURCES ${GAME_DIR}/test_building_lifecycle.cpp
+  WRAP terrain_map_shape_flatten terrain_map_block_texture_set terrain_cell_mutation_progress
+    cancel_action_for_matching_coordinates aitask_cmd_command_kind_record_issue
+    aitask_cmd_create_task aitask_cmd_cancel_by_coords legoobject_run_through_lists_skip_upgrade_parts
+    legoobject_position_to_terrain_cell legoobject_create_in_world legoobject_dispatch_event5_and_set_flag
+    info_send entity_stats_word_get entity_state_flags_get aitask_terrain_cell_refresh_dispatch_current
+    electric_fence_block_surfaces_update
+  LABELS construction)
+
+# Loaded synthetic caves: navigation and resource discovery through real ticks.
+lrr_unit_test(level_navigation_scenario SOURCES ${GAME_DIR}/test_level_navigation_scenario.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS level_boot navigation ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Real vehicle movement, creature pool lifecycle and geometry-based web trapping.
+lrr_unit_test(object_lifecycle_extra SOURCES ${GAME_DIR}/test_object_lifecycle_extra.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS vehicle_model legoobject spiderweb level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Generated model catalogs and startup resource loading.
+lrr_unit_test(positive_startup SOURCES ${GAME_DIR}/test_positive_startup.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(startup_missing_catalog OF positive_startup
+  ARGS missing LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(startup_misc_resources OF positive_startup
+  ARGS misc LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(startup_config_loader OF positive_startup
+  ARGS setup LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Collection assignment, cancellation, movement and resource ownership.
+lrr_unit_test(task_resource_progression SOURCES ${GAME_DIR}/test_task_resource_progression.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS aitask legoobject level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Parent ownership and engine scene teardown.
+lrr_unit_test(scene_teardown SOURCES ${GAME_DIR}/test_scene_teardown.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(scene_teardown_camera_first OF scene_teardown
+  ARGS camera-first LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(scene_teardown_camera_root_first OF scene_teardown
+  ARGS camera-root-first LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(scene_teardown_rejection OF scene_teardown
+  ARGS rejection LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(scene_teardown_initializer_rejection OF scene_teardown
+  ARGS initializer-rejection LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(scene_teardown_engine_shutdown OF scene_teardown
+  ARGS engine-shutdown LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Loaded primitive catalog objects: upgrade resources, boarding and recall.
+lrr_unit_test(upgrade_recall_progression SOURCES ${GAME_DIR}/test_upgrade_recall_progression.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS upgrade vehicle_model level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(vehicle_driver_progression OF upgrade_recall_progression
+  ARGS drive LABELS vehicle_model legoobject level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(teleport_recall_progression OF upgrade_recall_progression
+  ARGS recall LABELS teleporter objectrecall level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Distinct abstract grid transitions, restart and failure recovery.
+lrr_unit_test(distinct_level_lifecycle SOURCES ${GAME_DIR}/test_distinct_level_lifecycle.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(distinct_level_missing_ptl OF distinct_level_lifecycle
+  ARGS missing-ptl LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(distinct_level_missing_surface OF distinct_level_lifecycle
+  ARGS missing-surface LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Capability-dependent terrain admission and loaded excavation/clearing.
+lrr_unit_test(terrain_transitions SOURCES ${GAME_DIR}/test_terrain_transitions.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS level_boot navigation ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Direct/adjacent exit and owned-name checks without loading an LWS catalog.
+lrr_unit_test_variant(driver_recall_ownership OF upgrade_recall_progression
+  ARGS ownership LABELS vehicle_model objectrecall level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Live building construction, resource ownership and power-network changes.
+lrr_unit_test(live_building_power SOURCES ${GAME_DIR}/test_live_building_power.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS construction legoobject level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Independent startup resources and advisor lifecycle.
+lrr_unit_test(startup_resources SOURCES ${GAME_DIR}/test_startup_resources.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+lrr_unit_test(startup_advisor SOURCES ${GAME_DIR}/test_startup_advisor.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(startup_advisor_reduced OF startup_advisor
+  ARGS reduced LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Command routes and fixed-step activity completion on generic animated frames.
+lrr_unit_test(object_command_states SOURCES ${GAME_DIR}/test_object_command_states.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  ARGS training LABELS aitask legoobject level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+foreach(scenario IN ITEMS repair-eat follow-clear drill turn-slide)
+  lrr_unit_test_variant(object_command_${scenario} OF object_command_states
+    ARGS ${scenario} LABELS aitask legoobject level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+endforeach()
+
+# Actual initializer on an ephemeral abstract grid with generic input fixtures.
+lrr_unit_test_variant(synthetic_initializer_smoke OF positive_startup
+  ARGS initializer LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy" "SDL_AUDIO_DRIVER=dummy")
+
+# Synthetic creature emergence, neutral scene geometry and effect ownership.
+lrr_unit_test(creature_effect_lifecycle SOURCES ${GAME_DIR}/test_creature_effect_lifecycle.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS legoobject level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(effect_animation_lifecycle OF creature_effect_lifecycle
+  ARGS effects LABELS effects level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(scene_status_progression OF creature_effect_lifecycle
+  ARGS geometry LABELS weapons legoobject level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Generated mesh transitions and configured mission outcomes.
+lrr_unit_test(terrain_objectives SOURCES ${GAME_DIR}/test_terrain_objectives.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS terrain_map level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+foreach(outcome IN ITEMS success failure object)
+  lrr_unit_test_variant(objective_timer_${outcome} OF terrain_objectives
+    ARGS ${outcome} LABELS objective level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+endforeach()
+lrr_unit_test_variant(terrain_fence_lifecycle OF terrain_objectives
+  ARGS fence LABELS terrain_map level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Independent generic menu-resource loading and owned-item teardown.
+lrr_unit_test(menu_resource_load SOURCES ${GAME_DIR}/test_menu_resource_load.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS frontend level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Input release, heterogeneous selection and live command dispatch.
+lrr_unit_test(selection_commands SOURCES ${GAME_DIR}/test_selection_commands.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  ARGS selection LABELS selection aitask level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(selection_commands_pointer OF selection_commands
+  ARGS pointer LABELS selection aitask level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Full initializer: projected terrain and bounded transient mesh ownership.
+lrr_unit_test(environment_runtime SOURCES ${GAME_DIR}/test_environment_runtime.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS terrain_map level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(environment_texture_lifetime OF environment_runtime
+  ARGS transitions LABELS terrain_map level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(environment_mission_balance OF environment_runtime
+  ARGS mission LABELS objective level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Abstract rectangular-grid search and route ownership contracts.
+lrr_unit_test(grid_search_contracts SOURCES ${GAME_DIR}/test_grid_search_contracts.cpp
+  LABELS navigation)
+
+# Mission-result accounting and reset on invented grid/counter inputs.
+lrr_unit_test(reward_accounting SOURCES ${GAME_DIR}/test_reward_accounting.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS reward level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(reward_accounting_defaults OF reward_accounting
+  ARGS defaults LABELS reward level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Generic resource-backed command catalog and real availability checks.
+lrr_unit_test(command_permissions SOURCES ${GAME_DIR}/test_command_permissions.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(command_permissions_availability OF command_permissions
+  ARGS permissions LABELS legoobject aitask level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(command_tool_acquisition OF command_permissions
+  ARGS acquisition LABELS legoobject aitask level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(command_dispatch OF command_permissions
+  ARGS dispatch LABELS legoobject aitask level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Neutral task pool enumeration, queue aging and cancellation.
+lrr_unit_test(task_pool_queue SOURCES ${GAME_DIR}/test_task_pool_queue.cpp LABELS aitask)
+
+# Real sample and SFX loaders over generated PCM, on the dummy audio device.
+lrr_unit_test(audio_resource SOURCES ${GAME_DIR}/test_audio_resource.cpp
+  LABELS audio sound3d sfx ENVIRONMENT "SDL_AUDIO_DRIVER=dummy")
+foreach(scenario IN ITEMS streams aliases capacity)
+  lrr_unit_test_variant(audio_resource_${scenario} OF audio_resource
+    ARGS ${scenario} LABELS audio sound3d sfx ENVIRONMENT "SDL_AUDIO_DRIVER=dummy")
+endforeach()
+
+# Fixed simulation timing, air accounting and camera attachment ownership.
+lrr_unit_test(simulation_modes SOURCES ${GAME_DIR}/test_simulation_modes.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(simulation_view_ownership OF simulation_modes
+  ARGS view LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Deferred neutral object placement: record ownership, matching and reuse.
+lrr_unit_test(deferred_object_records SOURCES ${GAME_DIR}/test_deferred_object_records.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS legoobject level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Generated asymmetric footprint admission, preview and actual zone commit.
+lrr_unit_test(placement_preview SOURCES ${GAME_DIR}/test_placement_preview.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS construction selectplace level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Neutral cargo transfer, finite capacity and real attachment ownership.
+lrr_unit_test(transport_capacity SOURCES ${GAME_DIR}/test_transport_capacity.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS legoobject vehicle_model level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Standalone synthetic panel resources, draw geometry and state.
+lrr_unit_test(panel_resources SOURCES ${GAME_DIR}/test_panel_resources.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  WRAP Image_DisplayScaled LABELS panel_unit ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Optional independently generated grid layers and transition reset.
+lrr_unit_test(optional_grid_layers SOURCES ${GAME_DIR}/test_optional_grid_layers.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS terrain_map level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Actual projection and colour classification of generated grid geometry.
+lrr_unit_test(neutral_grid_render SOURCES ${GAME_DIR}/test_neutral_grid_render.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS radarmap level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Real config-driven task priority ordering, hit-state, and reset.
+lrr_unit_test(priority_registry SOURCES ${GAME_DIR}/test_priority_registry.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS aitask level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")

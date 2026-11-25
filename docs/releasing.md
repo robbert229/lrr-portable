@@ -105,7 +105,8 @@ for the player's Rock Raiders folder, how to start the game with `--game` and
 Linux `.tar.gz` and AppImage, where the launcher looks for it, and nowhere
 else; the macOS disk image has none, since the launcher installs a zipped
 `.app`. Keep its settings in step with `LegoRR.ini`'s keys
-(`tools/tests/test_packaging.py` checks them against `config.h`).
+(`tools/tests/test_packaging.py` checks each key, value and default against
+the settings table, `kTable` in `src/platform/native/config.cpp`).
 
 The two **test builds** are labelled as such in their names and in the
 notes:

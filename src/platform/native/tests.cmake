@@ -29,10 +29,23 @@ lrr_unit_test(fps_counter
     ${PLATFORM_DIR}/native/fps_counter.cpp
   INCLUDES ${SRC_ROOT} ${SRC_ROOT}/test
   LABELS config)
+# The settings, set in-process: no file, so on every host.
+lrr_unit_test(config_settings SOURCES ${PLATFORM_DIR}/native/test_config_settings.cpp
+  LABELS config)
 # The 3D device Init.c chooses, from synthetic device lists with each
 # platform's default device.
 lrr_unit_test(device_choice SOURCES ${PLATFORM_DIR}/native/test_device_choice.cpp
   LABELS config)
+# The input latch and the touch gestures (issue #986), driven with
+# synthetic events: plain C++, no SDL calls (SDL3 only for its headers).
+lrr_unit_test(touch_input
+  SOURCES
+    ${PLATFORM_DIR}/native/test_touch_input.cpp
+    ${PLATFORM_DIR}/native/input_latch.cpp
+    ${PLATFORM_DIR}/native/touch_gestures.cpp
+  LINK SDL3::SDL3
+  INCLUDES ${SRC_ROOT}
+  LABELS input)
 
 # The DirectX 6 interface versions the units use, declared in miniwin
 # (ADR 0007, decision 3): reachable, and failing rather than crashing
@@ -138,3 +151,19 @@ lrr_unit_test(miniwin_citro3d SOURCES ${PLATFORM_DIR}/native/test_miniwin_citro3
 lrr_unit_test(miniwin_keys SOURCES ${PLATFORM_DIR}/native/test_miniwin_keys.cpp
   LINK miniwin
   LABELS miniwin)
+
+lrr_unit_test(startup_options SOURCES ${PLATFORM_DIR}/native/test_startup_options.cpp
+  LABELS config)
+foreach(scenario IN ITEMS fit original best)
+  lrr_unit_test_variant(startup_device_${scenario} OF startup_options
+    ARGS ${scenario} LABELS config ENVIRONMENT "SDL_VIDEO_DRIVER=dummy" SKIP_RETURN_CODE 77)
+endforeach()
+
+# Only the external device availability/setup boundary is controlled here.
+lrr_unit_test(startup_device_errors SOURCES ${PLATFORM_DIR}/native/test_startup_device_errors.cpp
+  WRAP directdraw_enum_drivers directdraw_enum_devices directdraw_setup
+  ARGS no-driver LABELS config ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+foreach(scenario IN ITEMS no-hardware setup-fails)
+  lrr_unit_test_variant(startup_device_${scenario} OF startup_device_errors
+    ARGS ${scenario} LABELS config ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+endforeach()

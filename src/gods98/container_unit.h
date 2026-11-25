@@ -70,7 +70,7 @@ int Container_IsHidden(Container* cont);                            /* 00473ba0 
 Container* Container_SearchTree(Container* root, const char* name,
                                  int mode, unsigned int* count);     /* 00473bc0 */
 char* Container_FormatPartName(Container* cont, const char* partname,
-                                 unsigned long* instance);           /* 00473c60 */
+                                 const int* instance);           /* 00473c60 */
 void Container_SetUserData(Container* cont, void* data);           /* 00473da0 */
 void* Container_GetUserData(Container* cont);                      /* 00473db0 */
 void Container_EnableFog(int on);                                   /* 00473dc0 */

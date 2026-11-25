@@ -31,7 +31,10 @@
         "tweaks/training save": "prompt",
         "tweaks/display": "fit",
         "tweaks/controls": "modern",
-        "tweaks/fix_idleness_syndrome": "true"
+        "tweaks/fix_idleness_syndrome": "true",
+        "tweaks/fps_overlay": "false",
+        "cheats/unlimited_raiders": "false",
+        "cheats/unlimited_oxygen": "false"
       }
     }
   ],
@@ -73,6 +76,17 @@
       "defaults": { "tweaks/display": "fit" }
     },
     {
+      "id": "fps_overlay",
+      "label": "Frame rate",
+      "group": "Display",
+      "help": "Show draws the frames a second in the top right corner of the screen.",
+      "choices": [
+        { "label": "Hide", "set": { "tweaks/fps_overlay": "false" } },
+        { "label": "Show", "set": { "tweaks/fps_overlay": "true" } }
+      ],
+      "defaults": { "tweaks/fps_overlay": "false" }
+    },
+    {
       "id": "controls",
       "label": "Camera controls",
       "group": "Controls",
@@ -104,6 +118,30 @@
         { "label": "Original", "set": { "tweaks/fix_idleness_syndrome": "false" } }
       ],
       "defaults": { "tweaks/fix_idleness_syndrome": "true" }
+    },
+    {
+      "id": "unlimited_raiders",
+      "label": "Unlimited Rock Raiders",
+      "group": "Cheats",
+      "advanced": true,
+      "help": "On lets you teleport in raiders however little air your Support Stations make.",
+      "choices": [
+        { "label": "Off", "set": { "cheats/unlimited_raiders": "false" } },
+        { "label": "On", "set": { "cheats/unlimited_raiders": "true" } }
+      ],
+      "defaults": { "cheats/unlimited_raiders": "false" }
+    },
+    {
+      "id": "unlimited_oxygen",
+      "label": "Unlimited oxygen",
+      "group": "Cheats",
+      "advanced": true,
+      "help": "On keeps the air full, so a level is never lost to running out of it.",
+      "choices": [
+        { "label": "Off", "set": { "cheats/unlimited_oxygen": "false" } },
+        { "label": "On", "set": { "cheats/unlimited_oxygen": "true" } }
+      ],
+      "defaults": { "cheats/unlimited_oxygen": "false" }
     },
     {
       "id": "renderer",

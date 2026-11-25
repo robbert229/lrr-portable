@@ -1,0 +1,37 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Wed, 25 Nov 2026 11:37:03 -0800
+Subject: [PATCH] perf(miniwin): wait for one VBlank a frame on Citro3D
+
+Flip waited for a VBlank after C3D_FrameEnd, and the next frame's
+C3D_FrameBegin(C3D_FRAME_SYNCDRAW) waited for another, so every frame
+gave up to one more refresh to waiting. Flip now waits only when the
+frame drew nothing, which C3D_FrameBegin does not pace.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/src/d3drm/backends/citro3d/renderer.cpp b/miniwin/src/d3drm/backends/citro3d/renderer.cpp
+index 8ee9e55..bd7a36e 100644
+--- a/miniwin/src/d3drm/backends/citro3d/renderer.cpp
++++ b/miniwin/src/d3drm/backends/citro3d/renderer.cpp
+@@ -738,10 +738,19 @@ void Citro3DRenderer::Flip()
+ 		g_rendering = false;
+ 		return;
+ 	}
++	if (!g_rendering) {
++		// Nothing drawn: no frame to end, and C3D_FrameBegin will not pace
++		// this one, so wait for the screen here.
++		gfxFlushBuffers();
++		gspWaitForVBlank();
++		return;
++	}
+ 	FlushImmediateVertices();
+ 	C3D_FrameEnd(0);
++	// C3D_FrameBegin(C3D_FRAME_SYNCDRAW) waits for the next VBlank before
++	// the next frame, so a second wait here would cost up to a refresh a
++	// frame. The flush keeps the top screen's console current.
+ 	gfxFlushBuffers();
+-	gspWaitForVBlank();
+ 	g_rendering = false;
+ }
+ 

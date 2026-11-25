@@ -28,7 +28,8 @@ int main()
     s_window_application_active = 1;
     keyboard[SDL_SCANCODE_A] = true;
     keyboard[SDL_SCANCODE_SPACE] = true;
-    keyboard[SDL_SCANCODE_AC_BACK] = true;
+    /* A key DirectInput has no code for is never reported. */
+    keyboard[SDL_SCANCODE_AC_HOME] = true;
 
     constexpr unsigned int dikA = 0x1e;
     constexpr unsigned int dikSpace = 0x39;
@@ -56,6 +57,15 @@ int main()
     CHECK_EQ(s_input_keyboard_acquired, 1);
     CHECK_EQ(s_global_current_keys[dikSpace], 0x80u);
     CHECK_EQ(s_global_previous_keys[dikSpace], 0u);
+    /* Android's Back button is Escape (tweaks:back_button = escape, the
+     * default; platform/native/input.h). */
+    constexpr unsigned int dikEscape = 0x01;
+    keyboard[SDL_SCANCODE_AC_BACK] = true;
+    input_state_poll_retail();
+    CHECK_EQ(s_global_current_keys[dikEscape], 0x80u);
+    keyboard[SDL_SCANCODE_AC_BACK] = false;
+    input_state_poll_retail();
+    CHECK_EQ(s_global_current_keys[dikEscape], 0u);
     input_direct_shutdown();
     CHECK_EQ(s_input_keyboard_acquired, 0);
     return lrr_test_result();

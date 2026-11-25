@@ -108,8 +108,8 @@ float* surface_triangle_normal_calculate(float* n, const float* p1,
     return n;
 }
 
-/* `longest` is only assigned when an edge is longer than the last; with
- * all three lengths NaN it is read uninitialised, as in the original. */
+/* Degenerate or non-finite projected triangles have no drawable area.
+ * Reject their edges before normalisation. */
 // FUNCTION: LEGORR 0x00479630
 float surface_triangle_area_calculate(const float* p1, const float* p2,
                                       const float* p3, int bfc)
@@ -122,7 +122,7 @@ float surface_triangle_area_calculate(const float* p1, const float* p2,
     float max = 0.0f;
     float area = 0.0f;
     float angle;
-    unsigned int loop, longest, next;
+    unsigned int loop, longest = 0, next;
 
     pts[0] = &v[0];
     pts[1] = &v[1];
@@ -147,6 +147,7 @@ float surface_triangle_area_calculate(const float* p1, const float* p2,
             edge[loop].y = pts[loop * 2 + 1]->y - pts[loop * 2]->y;
             edge[loop].z = pts[loop * 2 + 1]->z - pts[loop * 2]->z;
             len[loop] = maths_vector3d_modulus(&edge[loop]);
+            if (!_finite(len[loop]) || len[loop] <= 0.0f) return 0.0f;
             maths_vector3d_scale(&edge[loop], &edge[loop], s_maths_one / len[loop]);
             if (len[loop] > max) {
                 max = len[loop];

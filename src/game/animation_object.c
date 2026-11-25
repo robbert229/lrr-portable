@@ -71,14 +71,14 @@ int entity_type_config_resource_row_load(void* destination,
                     string_path_join(gameName,
                                      // STRING: LEGORR 0x004a19a4
                                      "CameraNullName",
-                                     NULL)))) {
+                                     (const char*)NULL)))) {
                 object->cameraNullFrames = atoi(block_get_strptr(config,
                         string_path_join(gameName,
                                          // STRING: LEGORR 0x004a1990
                                          "CameraNullFrames",
-                                         NULL))
+                                         (const char*)NULL))
                     ? block_get_strptr(config,
-                          string_path_join(gameName, "CameraNullFrames", NULL))
+                          string_path_join(gameName, "CameraNullFrames", (const char*)NULL))
                     /* The original pools every unit's "" here, in the
                      * object's .bss (an all-zero literal). */
                     // STRING: LEGORR 0x004b8a14
@@ -87,7 +87,7 @@ int entity_type_config_resource_row_load(void* destination,
                     string_path_join(gameName,
                                      // STRING: LEGORR 0x004a1980
                                      "CameraFlipDir",
-                                     NULL));
+                                     (const char*)NULL));
             } else {
                 object->cameraNullFrames = 0;
             }
@@ -95,27 +95,27 @@ int entity_type_config_resource_row_load(void* destination,
                 string_path_join(gameName,
                                  // STRING: LEGORR 0x004a1970
                                  "DrillNullName",
-                                 NULL));
+                                 (const char*)NULL));
             object->footStepNullName = block_get_str_copy(config,
                 string_path_join(gameName,
                                  // STRING: LEGORR 0x004a195c
                                  "FootStepNullName",
-                                 NULL));
+                                 (const char*)NULL));
             object->carryNullName = block_get_str_copy(config,
                 string_path_join(gameName,
                                  // STRING: LEGORR 0x004a194c
                                  "CarryNullName",
-                                 NULL));
+                                 (const char*)NULL));
             object->throwNullName = block_get_str_copy(config,
                 string_path_join(gameName,
                                  // STRING: LEGORR 0x004a193c
                                  "ThrowNullName",
-                                 NULL));
+                                 (const char*)NULL));
             object->depositNullName = block_get_str_copy(config,
                 string_path_join(gameName,
                                  // STRING: LEGORR 0x004a192c
                                  "DepositNullName",
-                                 NULL));
+                                 (const char*)NULL));
             object->objectId = objectId;
             object->polyMedium = mesh_lod_load(config, gameName, filename, 1, 1);
             object->polyHigh = mesh_lod_load(config, gameName, filename, 2, 1);

@@ -144,6 +144,11 @@ display = fit
 | `3d device` | Leave empty to pick the best one automatically: your graphics card when it can, or a software renderer otherwise. `Miniwin driver (SDL3 GPU HAL)` forces the graphics card and `Miniwin driver (Miniwin Emulation)` forces the software renderer. |
 | `training save`, `display` | See [Improvements](#small-improvements-over-the-original) below. |
 
+Any `true`/`false` setting also takes `on`/`off`, `yes`/`no` or `1`/`0`, and
+any setting under `[tweaks]` takes `original` for the original game's
+behaviour. Case doesn't matter, and a value the game doesn't know means the
+default.
+
 The original game's command-line options still work too: `-window`,
 `-nosound`, `-best` (skip the settings and pick a screen mode automatically)
 and `-debug`. `--ini <file>` uses a different settings file.

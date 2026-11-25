@@ -248,11 +248,11 @@ void advisor_config_slots_load_target(BlockFile* config, const char* gameName)
 
     for (loop = 0; loop < ADVISOR_ANIM_COUNT; loop++) {
         // STRING: LEGORR 0x004a13ec
-        if ((str = block_get_strptr(config, string_path_join(gameName, "Advisor", advisorGlobs.animName[loop], 0))) == NULL) {
+        if ((str = block_get_strptr(config, string_path_join(gameName, "Advisor", advisorGlobs.animName[loop], (const char*)NULL))) == NULL) {
             if (!(s_engine_feature_word & ADVISOR_MAIN_FLAG_REDUCEANIMATION)) {
                 // STRING: LEGORR 0x004a13e8
                 snprintf(name, sizeof(name), "!%s", advisorGlobs.animName[loop]);
-                str = block_get_strptr(config, string_path_join(gameName, "Advisor", advisorGlobs.animName[loop], 0));
+                str = block_get_strptr(config, string_path_join(gameName, "Advisor", advisorGlobs.animName[loop], (const char*)NULL));
             }
         }
         if (str) {
@@ -352,9 +352,9 @@ void advisor_position_config_load(BlockFile* config, const char* gameName,
     snprintf(name, sizeof(name), "AdvisorPositions%ix%i", screenWidth, screenHeight);
     /* [divergence:layout-fallback] Lego.cfg lays the interface out only for
      * 640x480; another mode reads that layout instead of finding none. */
-    if (block_subgroup(config, string_path_join(gameName, name, 0)) == NULL)
+    if (block_subgroup(config, string_path_join(gameName, name, (const char*)NULL)) == NULL)
         snprintf(name, sizeof(name), "AdvisorPositions%ix%i", 640, 480);
-    for (item = block_subgroup(config, string_path_join(gameName, name, 0)); item; item = block_next_equal_key(item)) {
+    for (item = block_subgroup(config, string_path_join(gameName, name, (const char*)NULL)); item; item = block_next_equal_key(item)) {
         textType = ADVISOR_TEXT_NONE;
         panelType = ADVISOR_PANEL_NONE;
         if (advisor_position_name_to_index(item->key, &advisorType)) {

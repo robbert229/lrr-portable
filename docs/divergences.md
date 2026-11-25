@@ -9,6 +9,15 @@ should, where they can:
   original (cheats, off by default, go in a `[cheats]` section instead);
 - mark their call site `// [divergence:<name>]`.
 
+A key is one row of the settings table, `kTable` in
+`src/platform/native/config.cpp`, with its `LRR_Setting` and a typed getter
+in `config.h` for the unit to read. The row gives the key's default, which
+the new `LegoRR.ini` is written with, and its kind, which sets the
+spellings it accepts. A test sets the key with `LRR_SetSetting`. To show
+the key in RecompLauncher, add a setting to `packaging/recomplauncher.json`;
+`tools/tests/test_packaging.py` checks its keys, values and defaults against
+the table.
+
 Older ones carry a `PORT-ONLY:` comment instead.
 
 The list has three parts:
@@ -236,6 +245,41 @@ reference.
 - **Where:** `main_fps_overlay_draw` in `src/gods98/main.c`
   (`[divergence:fps-overlay]`); `src/platform/native/fps_counter.cpp`.
 
+### Touch controls
+
+- **Original:** a mouse and a keyboard. SDL's own mapping makes a touch the
+  left button, held while the finger is down.
+- **Port:** where `touch` is on (by default on Android and iOS), touches
+  are mapped onto the mouse and keys:
+  - a tap clicks;
+  - a drag holds the left button;
+  - holding a finger still moves the pointer without clicking, so
+    tooltips show;
+  - a two-finger drag scrolls the map, a pinch zooms, and a two-finger twist
+    turns the view;
+  - a two-finger tap is Space;
+  - a three-finger tap opens or closes the on-screen keyboard.
+
+  On every host, the on-screen keyboard also opens while a unit's name is
+  typed, and Android's Back button is Escape. A tap, or a key typed on the
+  on-screen keyboard, that is shorter than a frame is held until the game
+  has read it, so it is never lost.
+- **Why:** a touch screen has no right button, no pointer that can rest
+  without pressing, and no keys. Rock Raiders uses the right button as the
+  left one unless it is started with `-dualmouse`, so no gesture is spent
+  on it by default.
+- **Configurable:** `[tweaks]` `touch = true` or `false`, which keeps
+  SDL's mapping. The other keys are `touch_long_press = hover`,
+  `touch_scroll`, `touch_zoom` and `touch_rotate = true`,
+  `touch_two_finger_tap = space` (or `right click`),
+  `touch_three_finger_tap = keyboard`, `touch_keyboard = auto` and
+  `back_button = escape`; `off` turns each one off. A desktop touch screen
+  works with `touch = true`, where the system lets SDL move the pointer.
+- **Where:** `src/platform/native/input.cpp`, `touch_gestures.cpp` and
+  `input_latch.cpp`; `src/gods98/input_unit.c` (`[library:input]`);
+  `src/game/lego_unit.c` and `src/game/frontend_unit.c`
+  (`[divergence:touch-keyboard]`); #986.
+
 ### Movies fill a larger screen mode
 
 - **Original:** the front end plays its movies at 640x480. In a larger
@@ -385,6 +429,7 @@ These change the original's code where it misbehaves. Each one is marked
 | Unopened movie size | reads a NULL surface | guards it | `movie_unit.cpp` |
 | Region data on failure | frees it twice after a `SetClipList` failure | frees it once | `directdraw.c` |
 | RNC unpacked length | read as a signed long | read as unsigned | `rnc.c` |
+| Sound sample volume marker | `SFX_LoadSampleProperty` copies the digits of a `#volume#` marker into an unterminated temporary string (finding 585); the interpreted volume can include leftover digits | parses the marked number in place, rejects an unclosed or out-of-range marker. Sample selection, stream-marker inheritance and queue behaviour are unchanged. No `[tweaks]` key: the original read uninitialised memory | `sfx.c` (`[divergence:sfx-volume-parse]`) |
 | Info text image tokens | `info_compile_text` writes an uninitialised byte for a `$name$` token that names no image, overruns its image slots past the eighth token and its name buffer past 31 characters, and reads past the text for an unclosed token; Font draws any `@[0x` + 8 characters + `]` as an image | writes nothing for an imageless token, keeps five images and drops the rest, truncates the name, stops at the text's end; Font draws only a full hex address (#904) | `info_unit.c`, `font.c` |
 | Scene animation last key | `Lws_FindPrevKey` and `Lws_Interpolate` blend a node's last key with the slot after it. `Lws_Parse` leaves that slot unwritten when the last key is on the scene's last frame, and allocates no room after it when it fills the slot itself. In Tutorial01 the slot held NaN bytes, so a raider's nodes went NaN at the end of an animation, and a power crystal on its carry null took a NaN position | holds the last key, as `Lws_FindPrevDissolve` does. That is the original's result whenever the slot held finite values on another frame. No `[tweaks]` key: the original read memory it never wrote (#943) | `lws.c` |
 | Interface layout in other modes | `Lego.cfg` has the interface layout (`Panels`, `Buttons`, `AdvisorPositions`, `ObjectiveImage`, `NextButton`, `BackButton`, ... with a `640x480` suffix) only for 640x480. In another mode, 800x600 or 1024x768 with `-debug`, the lookups find nothing; the port crashed at start-up in `panel_item_flag32_set` (#915). | reads the 640x480 keys when the mode has none of its own. The interface stays at the 640x480 positions, as in the original's debug modes; the port's own scaling is the `display` tweak above. No `[tweaks]` key: without it the mode does not start | `lego_unit.c`, `advisor.c`, `objective_unit.c` (`[divergence:layout-fallback]`) |

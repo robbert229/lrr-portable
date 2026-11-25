@@ -908,7 +908,7 @@ void ui_scroll_info_panel_initialize(void)
     Area2F rect;
 
     // STRING: LEGORR 0x004a8968
-    info_panel_initialise("Interface\\InfoPanel\\scrollInfo.bmp", 0, 0, 7, 0);
+    info_panel_initialise("Interface\\InfoPanel\\scrollInfo.bmp", 0, 0, 7, (const char*)NULL);
     indexed_float_pair_set(0, 8, 33);
     rect.x = 0.0f;
     rect.y = 0.0f;
@@ -1003,7 +1003,7 @@ void frontend_panel_rotation_control_config_load(BlockFile* config,
         // STRING: LEGORR 0x004a89d0
         "PanelRotationControl",
         // STRING: LEGORR 0x004a89e8
-        "CenterPositionX", NULL))) != NULL) {
+        "CenterPositionX", (const char*)NULL))) != NULL) {
         panelGlobs.rotationCenterX = atoi(str);
     } else {
         panelGlobs.rotationCenterX = 1;
@@ -1011,7 +1011,7 @@ void frontend_panel_rotation_control_config_load(BlockFile* config,
     if ((str = block_get_strptr(config, string_path_join(gameName,
         "PanelRotationControl",
         // STRING: LEGORR 0x004a89c0
-        "CenterPositionY", NULL))) != NULL) {
+        "CenterPositionY", (const char*)NULL))) != NULL) {
         panelGlobs.rotationCenterY = atoi(str);
     } else {
         panelGlobs.rotationCenterY = 1;
@@ -1019,7 +1019,7 @@ void frontend_panel_rotation_control_config_load(BlockFile* config,
     if ((str = block_get_strptr(config, string_path_join(gameName,
         "PanelRotationControl",
         // STRING: LEGORR 0x004a89b8
-        "Radius", NULL))) != NULL) {
+        "Radius", (const char*)NULL))) != NULL) {
         panelGlobs.rotationRadius = atoi(str);
     } else {
         panelGlobs.rotationRadius = 1;
@@ -1027,7 +1027,7 @@ void frontend_panel_rotation_control_config_load(BlockFile* config,
     if ((copy = block_get_str_copy(config, string_path_join(gameName,
         "PanelRotationControl",
         // STRING: LEGORR 0x004a89ac
-        "LeftImage", NULL))) != NULL) {
+        "LeftImage", (const char*)NULL))) != NULL) {
         sound_variant_split(copy, argv, ",");
         panelGlobs.rotationImages[2] = image_load_bmp_scaled(argv[0], 0, 0);
         image_set_pen_zero_trans(panelGlobs.rotationImages[2]);
@@ -1040,7 +1040,7 @@ void frontend_panel_rotation_control_config_load(BlockFile* config,
     if ((copy = block_get_str_copy(config, string_path_join(gameName,
         "PanelRotationControl",
         // STRING: LEGORR 0x004a89a0
-        "RightImage", NULL))) != NULL) {
+        "RightImage", (const char*)NULL))) != NULL) {
         sound_variant_split(copy, argv, ",");
         panelGlobs.rotationImages[3] = image_load_bmp_scaled(argv[0], 0, 0);
         image_set_pen_zero_trans(panelGlobs.rotationImages[3]);
@@ -1053,7 +1053,7 @@ void frontend_panel_rotation_control_config_load(BlockFile* config,
     if ((copy = block_get_str_copy(config, string_path_join(gameName,
         "PanelRotationControl",
         // STRING: LEGORR 0x004a8998
-        "UpImage", NULL))) != NULL) {
+        "UpImage", (const char*)NULL))) != NULL) {
         sound_variant_split(copy, argv, ",");
         panelGlobs.rotationImages[0] = image_load_bmp_scaled(argv[0], 0, 0);
         image_set_pen_zero_trans(panelGlobs.rotationImages[0]);
@@ -1066,7 +1066,7 @@ void frontend_panel_rotation_control_config_load(BlockFile* config,
     if ((copy = block_get_str_copy(config, string_path_join(gameName,
         "PanelRotationControl",
         // STRING: LEGORR 0x004a898c
-        "DownImage", NULL))) != NULL) {
+        "DownImage", (const char*)NULL))) != NULL) {
         sound_variant_split(copy, argv, ",");
         panelGlobs.rotationImages[1] = image_load_bmp_scaled(argv[0], 0, 0);
         image_set_pen_zero_trans(panelGlobs.rotationImages[1]);
@@ -1176,8 +1176,8 @@ void mission_crystal_quota_setup(BlockFile* config, const char* gameName,
             // STRING: LEGORR 0x004a89f8
             "Reward",
             // STRING: LEGORR 0x004a8a00
-            "Quota", "Crystals", NULL)) != NULL) {
-        str = block_get_strptr(config, string_path_join(gameName, levelName, "Reward", "Quota", "Crystals", NULL));
+            "Quota", "Crystals", (const char*)NULL)) != NULL) {
+        str = block_get_strptr(config, string_path_join(gameName, levelName, "Reward", "Quota", "Crystals", (const char*)NULL));
     } else {
         str = "";
     }

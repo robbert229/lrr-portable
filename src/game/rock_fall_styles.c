@@ -250,7 +250,7 @@ void effect_load_rock_fall_styles_all(BlockFile* config, const char* gameName,
     unsigned short i;
 
     // STRING: LEGORR 0x004a1dcc
-    for (item = block_subgroup(config, string_path_join(gameName, "RockFallStyles", 0));
+    for (item = block_subgroup(config, string_path_join(gameName, "RockFallStyles", (const char*)NULL));
          item != NULL; item = block_next_equal_key(item)) {
         effectGlobs.rockFallStyleNames[effectGlobs.rockFallStyleCount] = string_duplicate(item->key);
         strcpy(str, item->value);
@@ -605,43 +605,43 @@ void effect_load_misc_objects(BlockFile* config, const char* gameName, void* roo
             // STRING: LEGORR 0x004a1e74
             "MiscObjects",
             // STRING: LEGORR 0x004a1e80
-            "LazerHit", 0)));
+            "LazerHit", (const char*)NULL)));
     effect_load_misc_effect(&effectGlobs.miscEffects[1], root,
         block_get_strptr(config, string_path_join(gameName, "MiscObjects",
             // STRING: LEGORR 0x004a1e68
-            "PusherHit", 0)));
+            "PusherHit", (const char*)NULL)));
     effect_load_misc_effect(&effectGlobs.miscEffects[2], root,
         block_get_strptr(config, string_path_join(gameName, "MiscObjects",
             // STRING: LEGORR 0x004a1e5c
-            "FreezerHit", 0)));
+            "FreezerHit", (const char*)NULL)));
     effect_load_misc_effect(&effectGlobs.miscEffects[3], root,
         block_get_strptr(config, string_path_join(gameName, "MiscObjects",
             // STRING: LEGORR 0x004a1e50
-            "PathDust", 0)));
+            "PathDust", (const char*)NULL)));
     effect_load_misc_effect(&effectGlobs.miscEffects[4], root,
         block_get_strptr(config, string_path_join(gameName, "MiscObjects",
             // STRING: LEGORR 0x004a1e3c
-            "LavaErosionSmoke1", 0)));
+            "LavaErosionSmoke1", (const char*)NULL)));
     effect_load_misc_effect(&effectGlobs.miscEffects[5], root,
         block_get_strptr(config, string_path_join(gameName, "MiscObjects",
             // STRING: LEGORR 0x004a1e28
-            "LavaErosionSmoke2", 0)));
+            "LavaErosionSmoke2", (const char*)NULL)));
     effect_load_misc_effect(&effectGlobs.miscEffects[6], root,
         block_get_strptr(config, string_path_join(gameName, "MiscObjects",
             // STRING: LEGORR 0x004a1e14
-            "LavaErosionSmoke3", 0)));
+            "LavaErosionSmoke3", (const char*)NULL)));
     effect_load_misc_effect(&effectGlobs.miscEffects[7], root,
         block_get_strptr(config, string_path_join(gameName, "MiscObjects",
             // STRING: LEGORR 0x004a1e00
-            "LavaErosionSmoke4", 0)));
+            "LavaErosionSmoke4", (const char*)NULL)));
     effect_load_misc_effect(&effectGlobs.miscEffects[8], root,
         block_get_strptr(config, string_path_join(gameName, "MiscObjects",
             // STRING: LEGORR 0x004a1df4
-            "BirdScarer", 0)));
+            "BirdScarer", (const char*)NULL)));
     effect_load_misc_effect(&effectGlobs.miscEffects[9], root,
         block_get_strptr(config, string_path_join(gameName, "MiscObjects",
             // STRING: LEGORR 0x004a1de4
-            "UpgradeEffect", 0)));
+            "UpgradeEffect", (const char*)NULL)));
 }
 
 // FUNCTION: LEGORR 0x0040cb70
