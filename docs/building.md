@@ -1051,3 +1051,58 @@ and 272 branches. Newly covered lines include 83 in `init.c`, 48
 in `lego_unit.c`, 41 in `advisor.c` and 27 in `directdraw.c`.
 The complete 188-case suite had 176 passing, 12 optional renderer
 skips and zero failures.
+
+#### Native engine callback lifecycle
+
+The `engine_lifecycle*` tests exercise the existing WinMain as a host for
+generic application callbacks, not for the game. Each process supplies
+only an isolated host INI and one trivial application configuration text
+file, under its own generated scratch directory. The launch options
+explicitly direct both game-data and preferences paths into that fixture.
+No game models, levels or artwork are present.
+
+The test executable compiles the unchanged `main.c` unit with just the
+application-registration symbol renamed to the test's generic registry
+function. It still calls the real `window_runtime_callback_triplet_set`,
+and the window, software device, input, file layer, config pool, renderer
+and loop are real. This test-only link seam avoids the GNU linker-wrap
+restriction, so the tests are registered on Windows and other native
+toolchains as well.
+
+Seven separate processes cover:
+
+- Fixed timestep, paused timestep, deterministic timestep precedence and
+  resumption, plus the per-frame renderer update latch.
+- Real-time stepping with a deliberately long first tick and the
+  three-frame clamp; an enabled FPS overlay with no font exercises the
+  missing-resource path.
+- SDL focus loss/gain, keyboard acquire/unacquire, middle button and
+  wheel state, and a platform quit event; the last callback does not
+  request exit, so only the real window message terminates the loop.
+- Fullscreen host suspend/resume, including the delayed active frame and
+  system-key/focus filtering.
+- A rejected init that releases its own config, with no subsequent tick
+  or shutdown callback and all three callback pointers cleared.
+- A successfully initialised application without a loop callback, which
+  still receives shutdown.
+- A null registration, which does not install or invoke a callback state.
+
+Shutdown assertions verify the callback runs before the window and
+configuration pool are destroyed, the generic application's config is
+released, the pool is no longer resident, input is unacquired and the
+window ID no longer resolves. An exit guard fails if file initialisation
+or another engine path exits the process before the assertions complete.
+The scenarios intentionally use `-nosound` and do not establish
+successful game startup or exhaustive resource leak accounting.
+
+Matched local coverage on the `0420c8b7` base (GCC Debug,
+`LRR_COVERAGE=ON`, gcovr 8.8, test sources and miniwin excluded):
+the 190 pre-existing tests covered 20,440/43,172 lines (47.3%),
+1,877/3,115 functions (60.3%) and 12,722/43,748 branches (29.1%).
+Adding these seven scenarios covered 20,593 lines (47.7%), 1,886
+functions (60.5%) and 12,869 branches (29.4%): 153 new lines,
+9 functions and 147 branches, including 126 lines in `main.c`.
+The before/after denominator is from the same instrumented build,
+which includes the second compilation of `main.c`. The complete
+197-case suite had 185 passing, 12 optional renderer skips and
+zero failures.
