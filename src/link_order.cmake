@@ -118,6 +118,7 @@ lrr_link(platform -     platform      platform/native/seam_stubs.cpp)
 lrr_link(platform -     platform      platform/native/files_native.cpp)
 lrr_link(platform -     platform      platform/native/config.cpp)
 lrr_link(platform -     platform      platform/native/lifecycle.cpp)
+lrr_link(platform -     platform      platform/native/fps_counter.cpp)
 
 # The libraries the units' substitutions call (ADR 0007).
 lrr_link(library  -     library       library/video_ffmpeg.cpp)

@@ -220,6 +220,22 @@ reference.
   the original's air supply) or `true`.
 - **Where:** `src/game/lego_unit.c` (`[divergence:unlimited-oxygen]`).
 
+### Frame rate overlay
+
+- **Original:** shows no frame rate.
+- **Port:** with the overlay on, the frames a second (`15 FPS`) are drawn in
+  the top right corner of the screen, in the `Font5_Hi2` font, over
+  whatever the game drew. The number is counted over half a second, so it
+  is steady enough to read. It is drawn every frame the game presents,
+  while a level loads and in movies too, where it says little.
+- **Why:** to see how fast the port runs, on a 3DS above all, where a slow
+  frame rate is the first thing to find out.
+- **Configurable:** `[tweaks]` `fps_overlay = false` (the default, no
+  overlay) or `true`. `LegoRR.ini` written before the key existed does not
+  have it; add `fps_overlay = true` under `[tweaks]`.
+- **Where:** `main_fps_overlay_draw` in `src/gods98/main.c`
+  (`[divergence:fps-overlay]`); `src/platform/native/fps_counter.cpp`.
+
 ### Movies fill a larger screen mode
 
 - **Original:** the front end plays its movies at 640x480. In a larger

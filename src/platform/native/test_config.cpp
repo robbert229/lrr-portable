@@ -133,6 +133,10 @@ int main(void)
               text.find("false", text.find("unlimited_oxygen")) != std::string::npos,
           "default: unlimited_oxygen = false is written under [cheats]");
     CHECK(!LRR_GetUnlimitedOxygen(), "default: the air drains");
+    CHECK(text.find("fps_overlay") > text.find("[" LRR_CONFIG_TWEAKS_SECTION "]") &&
+              text.find("false", text.find("fps_overlay")) != std::string::npos,
+          "default: fps_overlay = false is written under [tweaks]");
+    CHECK(!LRR_GetFpsOverlay(), "default: no frame rate overlay");
 
     /* A later run reads the file the user edited. */
     write_text(defaultIni, "[" LRR_CONFIG_SECTION "]\nsavepath = " + root + "/elsewhere/\n");
@@ -341,6 +345,21 @@ int main(void)
     LRR_SetLaunchOptions(NULL, NULL);
     CHECK(LRR_LoadConfig(NULL) && save_path() == prefDir && files_native_disk_path() == NULL,
           "no launch options: the preference directory again");
+
+    /* tweaks:fps_overlay: "true" draws the frame rate; anything else
+     * draws nothing. */
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nfps_overlay = true\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetFpsOverlay(), "fps_overlay: true");
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nfps_overlay = On\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetFpsOverlay(), "fps_overlay: on in any case");
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nfps_overlay = false\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && !LRR_GetFpsOverlay(), "fps_overlay: false");
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nfps_overlay = bogus\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && !LRR_GetFpsOverlay(), "fps_overlay: an unknown value draws nothing");
+    write_text(custom, "[" LRR_CONFIG_SECTION "]\nother = 1\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && !LRR_GetFpsOverlay(), "fps_overlay: a file without the key draws nothing");
+    write_text(custom, "[" LRR_CONFIG_CHEATS_SECTION "]\nfps_overlay = true\n");
+    CHECK(LRR_LoadConfig(custom.c_str()) && !LRR_GetFpsOverlay(), "fps_overlay: the key is read from [tweaks], not [cheats]");
 
     /* An explicit file that does not load fails, as isle-portable's does. */
     CHECK(!LRR_LoadConfig((root + "/missing.ini").c_str()), "explicit: a missing file fails");

@@ -22,6 +22,13 @@ lrr_unit_test(config SOURCES ${PLATFORM_DIR}/native/test_config.cpp
 # what the game's main loop reads as its activity, and the exit request.
 lrr_unit_test(lifecycle SOURCES ${PLATFORM_DIR}/native/test_lifecycle.cpp
   LABELS config)
+# The frame rate the FPS overlay shows, over windows of half a second.
+lrr_unit_test(fps_counter
+  SOURCES
+    ${PLATFORM_DIR}/native/test_fps_counter.cpp
+    ${PLATFORM_DIR}/native/fps_counter.cpp
+  INCLUDES ${SRC_ROOT} ${SRC_ROOT}/test
+  LABELS config)
 # The 3D device Init.c chooses, from synthetic device lists with each
 # platform's default device.
 lrr_unit_test(device_choice SOURCES ${PLATFORM_DIR}/native/test_device_choice.cpp
