@@ -72,9 +72,11 @@ what you were doing when it happened.
 
 ## Getting the game running
 
-1. **Get a build.** Ready-made builds are made for every change: an AppImage
-   or Flatpak for Linux, a DMG for macOS and a ZIP for Windows. They're on
-   the [Actions page](https://github.com/robbert229/lrr-portable/actions)
+1. **Get a build.** Download the latest release from the
+   [Releases page](https://github.com/robbert229/lrr-portable/releases): a
+   ZIP for Windows, a DMG for macOS, and an AppImage, `.tar.gz` or Flatpak
+   for Linux. Builds of every change since the last release are on the
+   [Actions page](https://github.com/robbert229/lrr-portable/actions)
    (open the latest successful `native-packages` run and download one under
    *Artifacts*; you need to be signed in to GitHub). You can also
    [build it yourself](#building-it-yourself).
