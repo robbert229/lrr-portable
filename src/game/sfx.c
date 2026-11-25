@@ -19,6 +19,8 @@
  * port tail serves those names and nothing calls these. */
 #include "sfx_link_names.h"
 
+#include <errno.h>
+#include <limits.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -289,7 +291,6 @@ int sfx_get_type(const char* sfxName, int* sfxID)
 int sfx_load_sample_property(char* value, int sfxID)
 {
     char* stringParts[100];
-    char volumeStr[64];
     SFX_Property* sfxProp = &sfxGlobs.sfxProperties[sfxID];
     int result = 1;
     SFX_Property* prevProp = NULL;
@@ -312,15 +313,22 @@ int sfx_load_sample_property(char* value, int sfxID)
 
         volume = 0;
         if (*str == '#') {
-            char* s;
-            if (*++str != '#') {
-                s = volumeStr;
-                do {
-                    *s++ = *str;
-                } while (*++str != '#');
+            // [divergence:sfx-volume-parse] The closing marker terminates
+            // the number. Parse in place rather than reading a temporary
+            // string that was never NUL-terminated.
+            char* end = strchr(++str, '#');
+            if (end == NULL) {
+                result = 0;
+                continue;
             }
-            volume = atoi(volumeStr);
-            str++;
+            errno = 0;
+            long parsedVolume = strtol(str, NULL, 10);
+            if (errno == ERANGE || parsedVolume < INT_MIN || parsedVolume > INT_MAX) {
+                result = 0;
+                continue;
+            }
+            volume = (int)parsedVolume;
+            str = end + 1;
         }
         if (*str == '@') {
             isStream = 1;
