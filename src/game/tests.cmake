@@ -505,3 +505,8 @@ lrr_unit_test(terrain_transitions SOURCES ${GAME_DIR}/test_terrain_transitions.c
 # Direct/adjacent exit and owned-name checks without loading an LWS catalog.
 lrr_unit_test_variant(driver_recall_ownership OF upgrade_recall_progression
   ARGS ownership LABELS vehicle_model objectrecall level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Live building construction, resource ownership and power-network changes.
+lrr_unit_test(live_building_power SOURCES ${GAME_DIR}/test_live_building_power.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS construction legoobject level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
