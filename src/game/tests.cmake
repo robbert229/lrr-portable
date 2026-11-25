@@ -534,3 +534,12 @@ endforeach()
 # Actual initializer on an ephemeral abstract grid with generic input fixtures.
 lrr_unit_test_variant(synthetic_initializer_smoke OF positive_startup
   ARGS initializer LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy" "SDL_AUDIO_DRIVER=dummy")
+
+# Synthetic creature emergence, neutral scene geometry and effect ownership.
+lrr_unit_test(creature_effect_lifecycle SOURCES ${GAME_DIR}/test_creature_effect_lifecycle.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS legoobject level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(effect_animation_lifecycle OF creature_effect_lifecycle
+  ARGS effects LABELS effects level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(scene_status_progression OF creature_effect_lifecycle
+  ARGS geometry LABELS weapons legoobject level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
