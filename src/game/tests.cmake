@@ -641,3 +641,8 @@ lrr_unit_test(transport_capacity SOURCES ${GAME_DIR}/test_transport_capacity.cpp
   ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
   ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
   LABELS legoobject vehicle_model level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Standalone synthetic panel resources, draw geometry and state.
+lrr_unit_test(panel_resources SOURCES ${GAME_DIR}/test_panel_resources.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  WRAP Image_DisplayScaled LABELS panel_unit ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
