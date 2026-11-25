@@ -378,3 +378,6 @@ foreach(scenario IN ITEMS reward-missing-image interface scene)
   lrr_unit_test_variant(synthetic_startup_${scenario} OF synthetic_startup_shutdown
     ARGS ${scenario} LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
 endforeach()
+# Synthetic resource classification and carrier admission.
+lrr_unit_test(mining_logistics SOURCES ${GAME_DIR}/test_mining_logistics.cpp
+  LABELS mining_logistics)
