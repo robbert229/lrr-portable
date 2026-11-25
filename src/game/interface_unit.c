@@ -363,14 +363,18 @@ void interface_reset(void)
            sizeof(interfaceGlobs.menuItemClicks));
     memset(interfaceGlobs.menuItemFlags, 0,
            sizeof(interfaceGlobs.menuItemFlags));
-    memset(interfaceGlobs.vehicleItemClicks, 0,
-           sizeof(unsigned int) * LEGO_VEHICLE_TYPE_COUNT);
-    memset(interfaceGlobs.vehicleItemFlags, 0,
-           sizeof(unsigned int) * LEGO_VEHICLE_TYPE_COUNT);
-    memset(interfaceGlobs.buildingItemClicks, 0,
-           sizeof(unsigned int) * LEGO_BUILDING_TYPE_COUNT);
-    memset(interfaceGlobs.buildingItemFlags, 0,
-           sizeof(unsigned int) * LEGO_BUILDING_TYPE_COUNT);
+    if (LEGO_VEHICLE_TYPE_COUNT != 0) {
+        memset(interfaceGlobs.vehicleItemClicks, 0,
+               sizeof(unsigned int) * LEGO_VEHICLE_TYPE_COUNT);
+        memset(interfaceGlobs.vehicleItemFlags, 0,
+               sizeof(unsigned int) * LEGO_VEHICLE_TYPE_COUNT);
+    }
+    if (LEGO_BUILDING_TYPE_COUNT != 0) {
+        memset(interfaceGlobs.buildingItemClicks, 0,
+               sizeof(unsigned int) * LEGO_BUILDING_TYPE_COUNT);
+        memset(interfaceGlobs.buildingItemFlags, 0,
+               sizeof(unsigned int) * LEGO_BUILDING_TYPE_COUNT);
+    }
     memset(interfaceGlobs.blockPermissions, 0,
            sizeof(interfaceGlobs.blockPermissions));
     interface_reset_menu();

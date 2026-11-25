@@ -487,3 +487,12 @@ lrr_unit_test_variant(vehicle_driver_progression OF upgrade_recall_progression
   ARGS drive LABELS vehicle_model legoobject level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
 lrr_unit_test_variant(teleport_recall_progression OF upgrade_recall_progression
   ARGS recall LABELS teleporter objectrecall level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Distinct abstract grid transitions, restart and failure recovery.
+lrr_unit_test(distinct_level_lifecycle SOURCES ${GAME_DIR}/test_distinct_level_lifecycle.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(distinct_level_missing_ptl OF distinct_level_lifecycle
+  ARGS missing-ptl LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(distinct_level_missing_surface OF distinct_level_lifecycle
+  ARGS missing-surface LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")

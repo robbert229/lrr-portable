@@ -239,13 +239,70 @@ bool make_fixture(const char* directory)
            write_bmp("Data/L/panel.bmp", 16, 16) && write_triangle("Data/L/ore.lwo");
 }
 
+static bool transition_border(unsigned x, unsigned y)
+{
+    return x == 0 || y == 0 || x == TransitionW - 1 || y == TransitionH - 1;
+}
+
+static unsigned transition_terrain(unsigned x, unsigned y)
+{
+    return transition_border(x, y) ? 1 : (y == 3 || y == 4) ? 4 : 0;
+}
+
+static unsigned transition_predug(unsigned x, unsigned y)
+{
+    return transition_terrain(x, y) == 0 ? 1 : 0;
+}
+
+bool write_transition_surface()
+{
+    return write_map("Data/L2/surf.map", TransitionW, TransitionH, height_of);
+}
+
+bool make_transition_fixture(const char* directory)
+{
+    if (!make_fixture(directory) || !fixture_mkdir("Data/L2") ||
+        !write_transition_surface() ||
+        !write_map("Data/L2/dug.map", TransitionW, TransitionH, transition_predug) ||
+        !write_map("Data/L2/terr.map", TransitionW, TransitionH, transition_terrain) ||
+        !write_text("Data/L2/empty.ptl", "Lego* {\n}\n") ||
+        !write_text("Data/L2/objects.ol",
+            "Lego* { Camera { type TVCamera xPos 3.5 yPos 3.5 heading 0 } "
+            "Resource { type PowerCrystal xPos 7.5 yPos 6.5 heading 0 } }")) return false;
+
+    // Keep the original fixture's shared configuration and Level01 intact.
+    std::string config(CONFIG);
+    config.insert(config.rfind('}'),
+        "  GridA {\n"
+        "    FullName Grid_A nextlevel GridB Seed 17 blocksize 40 roughlevel 0 textureset TS\n"
+        "    surfacemap L\\surf.map predugmap L\\dug.map terrainmap L\\terr.map\n"
+        "    PTLFile L\\empty.ptl olistfile L\\objects.ol EmergeCreature TVCamera\n"
+        "    NoDrain TRUE NoAutoEat TRUE NoMultiSelect TRUE OxygenRate 2\n"
+        "    UpgradeTime 4 VehicleUpgradeTime 6 BuildingUpgradeTime 8 TrainTime 3\n"
+        "    EmergeTimeOut 50 BuildingTolerance 2 BuildingMaxVariation 3\n"
+        "  }\n"
+        "  GridB {\n"
+        "    FullName Grid_B nextlevel GridB Seed 31 blocksize 32 roughlevel 0 textureset TS\n"
+        "    surfacemap L2\\surf.map predugmap L2\\dug.map terrainmap L2\\terr.map\n"
+        "    PTLFile L2\\empty.ptl olistfile L2\\objects.ol EmergeCreature TVCamera\n"
+        "    NoDrain FALSE NoAutoEat FALSE NoMultiSelect FALSE OxygenRate 5\n"
+        "    UpgradeTime 2 MinifigureUpgradeTime 5 TrainTime 1\n"
+        "  }\n");
+    return write_text("Data/transition.cfg", config.c_str());
+}
+
 /* Lego_Initialise's steps that the level loader and the main loop rely
  * on, in its order (lego_unit.c, lego_game_config_init). */
 bool boot_game()
 {
+    return boot_game(nullptr);
+}
+
+bool boot_game(const char* configPath)
+{
     step("config");
     block_text_token_pool_init();
-    legoGlobs.config = block_parse(CONFIG, sizeof(CONFIG) - 1);
+    legoGlobs.config = configPath ? block_open(configPath) : block_parse(CONFIG, sizeof(CONFIG) - 1);
     legoGlobs.gameName = "Lego";
     if (!CHECK(legoGlobs.config != nullptr, "parse config")) return false;
     legoGlobs_rootCont = Container_Initialise("Lego");

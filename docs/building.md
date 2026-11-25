@@ -942,3 +942,53 @@ and six new scenarios the 170-case suite covered 17,972 lines
 (41.6%), 1,706 functions (54.8%) and 10,606 branches (24.2%):
 298 additional lines, including 177 in `lego_unit.c`. Both
 instrumented runs had zero failures and 12 optional backend skips.
+
+#### Distinct-grid level transitions
+
+`make_transition_fixture(directory)` extends the existing fixture without
+changing `make_fixture` or the no-argument `boot_game()`. It writes
+`Data/transition.cfg` (open with `boot_game("transition.cfg")`) and two
+independent abstract grid records: GridA (8x8, block size 40, vertical
+barrier, two resource objects) and GridB (10x9, block size 32, horizontal
+barrier, one resource object). GridB has its own map layers, empty PTL and
+object list in Data/L2; `write_transition_surface()` restores its surface
+file after a negative test. Both records specify fixed random seeds.
+No shipped map or object artwork is involved.
+
+The three `distinct_level*` cases run in separate scratch directories
+with no save slot selected:
+
+- A real `lego_keep_running` call follows GridA's configured next level
+  to GridB. A second call follows GridB's self-reference to exercise
+  restart. Both grids are ticked and their barriers and resource
+  counters deliberately modified before leaving them.
+- Removing GridB's PTL causes the real transition from GridA to fail.
+  The test checks that no level or live object survives and restores
+  the file before loading GridB again.
+- Unloading GridA explicitly and removing GridB's surface causes a
+  direct load failure. Restoring the generated map allows recovery.
+
+All three cases check distinct dimensions, block size, terrain flags,
+resource census and positions, object registry, oxygen and resource
+balances, per-grid option flags, upgrade/train times, and explicit vs.
+default configuration values. Restart also checks that a seeded random
+block field is reproduced. Each recovered/current grid is ticked and
+then passed to the actual engine shutdown, with assertions that the
+current level and object registry are cleared.
+
+These assertions establish logical state isolation, not that every
+allocation has been reclaimed. The failure cases are before successful
+map allocation; later failures such as an absent object list after
+map loading are not covered. The existing complete-initializer
+limitations remain; this uses the real level/transition entry points
+after the documented partial setup, with no test-only production mode
+or mocked startup calls.
+
+Local matched coverage on the `5cc40e8f` stack tip (GCC Debug,
+`LRR_COVERAGE=ON`, gcovr 8.8, test code and miniwin excluded):
+171 base cases covered 18,529/43,166 lines (42.9%), 1,743/3,115
+functions (56.0%) and 11,035/43,738 branches (25.2%).
+Adding the three transition cases covered 18,579 lines (43.0%),
+1,746 functions (56.1%) and 11,112 branches (25.4%): 50 additional
+lines, 3 functions and 77 branches. The complete 174-case suite had
+162 passing, 12 optional backend skips and zero failures.
