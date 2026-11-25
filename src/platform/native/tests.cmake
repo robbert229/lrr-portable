@@ -130,6 +130,12 @@ lrr_unit_test(miniwin_messages SOURCES ${PLATFORM_DIR}/native/test_miniwin_messa
   LINK miniwin
   LABELS miniwin)
 
+# The desktop window's rectangle: the primary display's bounds, so that
+# Main.c's fullscreen window goes fullscreen on the primary display.
+lrr_unit_test(miniwin_desktop SOURCES ${PLATFORM_DIR}/native/test_miniwin_desktop.cpp
+  LINK miniwin
+  LABELS miniwin)
+
 # The virtual display fitted into a window of another size: the fit, the
 # render size and filtering rule, the mouse through the fit, and a frame
 # buffer lock that draws only the pixels it changed
