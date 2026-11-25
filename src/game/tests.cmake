@@ -646,3 +646,9 @@ lrr_unit_test(transport_capacity SOURCES ${GAME_DIR}/test_transport_capacity.cpp
 lrr_unit_test(panel_resources SOURCES ${GAME_DIR}/test_panel_resources.cpp
   ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
   WRAP Image_DisplayScaled LABELS panel_unit ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Optional independently generated grid layers and transition reset.
+lrr_unit_test(optional_grid_layers SOURCES ${GAME_DIR}/test_optional_grid_layers.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS terrain_map level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
