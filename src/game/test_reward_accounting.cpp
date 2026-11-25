@@ -64,6 +64,8 @@ void accounting(bool configured)
         CHECK_EQ(items[REWARD_ITEM_CRYSTALS].importance, configured ? 2.0f : 0.0f);
         CHECK_EQ(items[REWARD_ITEM_ORE].importance, 0.0f);
         CHECK_EQ(reward_level_start(), 1);
+        // The neutral catalog deliberately contains Figure rather than Pilot.
+        CHECK_EQ(rewardGlobs.level.itemsArray[REWARD_ITEM_FIGURES].startCount, 0u);
         CHECK_EQ(rewardGlobs.level.buildingCounts.count, 0u);
         CHECK_EQ(rewardGlobs.level.buildingCounts.gridCount, 0u);
 

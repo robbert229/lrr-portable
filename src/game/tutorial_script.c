@@ -2665,7 +2665,11 @@ unsigned int nerps_object_count(const char* name, int level)
     int type;
     unsigned int id;
 
-    lego_entity_type_pair_lookup(name, &type, &id, NULL);
+    // A missing catalog name leaves type unset. Only real counter-table
+    // coordinates may be passed to the unchecked grid accessor.
+    if (!lego_entity_type_pair_lookup(name, &type, &id, NULL) ||
+        type < 0 || type >= 20 || id >= 15 || level < 0 || level >= 16)
+        return 0;
     return legoobject_grid_record_count_get(type, id, level);
 }
 
