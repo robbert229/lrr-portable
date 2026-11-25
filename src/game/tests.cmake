@@ -654,3 +654,9 @@ lrr_unit_test(optional_grid_layers SOURCES ${GAME_DIR}/test_optional_grid_layers
   ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
   ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
   LABELS terrain_map level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Actual projection and colour classification of generated grid geometry.
+lrr_unit_test(neutral_grid_render SOURCES ${GAME_DIR}/test_neutral_grid_render.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_initializer_fixture.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS radarmap level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
