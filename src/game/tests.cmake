@@ -393,3 +393,11 @@ lrr_unit_test(raider_synthetic SOURCES ${GAME_DIR}/test_raider_synthetic.cpp
 # Pending task reassignment and pool-copy ownership.
 lrr_unit_test(task_lifecycle SOURCES ${GAME_DIR}/test_task_lifecycle.cpp
   LABELS aitask)
+
+# A path's admission, resource requests, partial cancellation and completion.
+lrr_unit_test(construction_progress SOURCES ${GAME_DIR}/test_construction_progress.cpp
+  WRAP terrain_map_block_texture_set cancel_action_for_matching_coordinates
+    aitask_cmd_command_kind_record_issue entity_indexed_record_word_at_b0_get
+    entity_indexed_record_word_at_b4_get stats_table_word_at_b8 legoobject_query_center_mask02
+    aitask_bobbin_clear_delay aitask_cmd_create_task aitask_cmd_cancel_by_coords
+  LABELS construction)
