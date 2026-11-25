@@ -1107,6 +1107,37 @@ which includes the second compilation of `main.c`. The complete
 197-case suite had 185 passing, 12 optional renderer skips and
 zero failures.
 
+The host configuration variants add three more independent processes,
+using the same generic callbacks and no game callbacks:
+
+- `fit-config`: a 713x521 host window with the 640x480 virtual mode,
+  window-resolution rendering, and combined left/right mouse handling.
+- `debug-config`: an 800x600 mode accepted with `-debug`, virtual-mode
+  rendering, and independent mouse buttons with `-dualmouse`.
+- `resource-reject`: an unsupported window resolution falls back to
+  640x480; the application's config marks a missing resource as required,
+  so the callback releases its partial scene and rejects initialization.
+  The host must not call either the loop or the application shutdown.
+
+These variants create only an empty generic mesh and a spotlight, with
+no geometry or texture files. They exercise real container parenting,
+light setup, missing activity/animation/mesh resources, a valid config
+without the optional activity group and unknown resource types. Both
+successful and rejected callbacks release their scene before the host
+destroys its device and window. The successful cases also assert bounded
+mouse-event progression through the real native loop.
+
+Matched coverage from `d6e074b2` (GCC Debug, gcovr 8.8, same production
+source filters) increased from 23,987/43,178 lines (55.6%) to
+24,049/43,178 (55.7%), from 2,115 to 2,116 of 3,115 functions, and
+from 15,471 to 15,506 of 43,752 branches. The 62 additional lines are
+36 in `main.c` and 26 in `container.c`; three additional branches
+are in `init.c`. Full CTest: 207 passed, 12 existing optional renderer
+skips, zero failures. This is independent host coverage, not a successful
+game initialization or exhaustive leak check.
+The three new cases also passed in a local MinGW64 cross-build (GCC 14,
+SDL3 3.4.18) under Wine; native Windows CI is a separate verification.
+
 #### Real initializer smoke test
 
 `synthetic_initializer_smoke` exercises the actual `lego_game_config_init`
