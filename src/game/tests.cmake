@@ -463,3 +463,18 @@ lrr_unit_test_variant(startup_config_loader OF positive_startup
 lrr_unit_test(task_resource_progression SOURCES ${GAME_DIR}/test_task_resource_progression.cpp
   ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
   LABELS aitask legoobject level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Parent ownership and engine scene teardown.
+lrr_unit_test(scene_teardown SOURCES ${GAME_DIR}/test_scene_teardown.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(scene_teardown_camera_first OF scene_teardown
+  ARGS camera-first LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(scene_teardown_camera_root_first OF scene_teardown
+  ARGS camera-root-first LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(scene_teardown_rejection OF scene_teardown
+  ARGS rejection LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(scene_teardown_initializer_rejection OF scene_teardown
+  ARGS initializer-rejection LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+lrr_unit_test_variant(scene_teardown_engine_shutdown OF scene_teardown
+  ARGS engine-shutdown LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")

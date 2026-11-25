@@ -887,3 +887,58 @@ reached 17,338 lines (40.2%), 1,648 functions (52.9%) and 10,110 branches
 53 in `building_model.c` and 20 in `animation_object.c`.
 The full suite registered 162 cases, with 150 passing and the 12
 optional renderer-backend cases skipped.
+
+#### Scene ownership and teardown regression
+
+The `scene_teardown*` scenarios exercise generic retained-mode frames,
+all three camera types and their viewports, and real resource cleanup.
+The former scene teardown crashes above were reproduced without any
+model or level files: after `Container_Remove(root)`, calling
+`Container_GetParent(child)` segfaulted in
+`Direct3DRMFrameImpl::GetParent`. The camera-first and root-first
+teardown orders also crashed at the same frame method in
+`camera_free`. The parent frame owns a reference to its children
+through its child array, whereas each child has a non-owning parent
+pointer. Destroying the parent released its array without clearing
+that pointer, leaving a surviving child pointing to freed storage.
+
+The miniwin patch clears those back links before releasing the child
+array. It does not change the game units, scene destruction order or
+player-visible behaviour. The regression retains the root child array
+across root destruction, checks that the child's parent becomes null
+and the grandchild still refers to its live parent, then removes the
+remaining containers. The camera scenarios test both viewport-first
+cleanup and the engine's root-first order (primary viewport, root,
+cameras, container pool, remaining viewports).
+
+Additional cases verify:
+
+- Missing mesh, animation and activity files do not leave extra child
+  frames; valid triangle and null-scene resources can load afterwards,
+  the live pool shuts down, and a fresh pool can initialise.
+- The real `lego_game_config_init` rejects an incomplete on-disk config
+  after camera setup. Only solid grayscale placeholders are supplied
+  for early font/message/loader readers. The scene pool cleanup returns
+  safely and can be initialised again after releasing the remaining
+  viewports. This does not establish that every startup allocation is
+  reclaimed.
+- The real `lego_engine_shutdown` completes after the existing partial
+  boot fixture loads and ticks its artificial level. The test first
+  initialises reward records, owned font placeholders, interface and
+  blank panel buttons omitted by partial boot, and checks that shutdown
+  clears the current level.
+
+These results supersede the earlier scene teardown crash probes. A
+successful complete `lego_game_config_init` is still not established;
+the later interface-resource requirements remain untested. Full memory
+leak accounting and successful full-initializer shutdown are outside
+these regression assertions.
+
+Local matched coverage on the `d00f4af1` stack tip (GCC Debug,
+`LRR_COVERAGE=ON`, gcovr 8.8, test code and miniwin excluded): the
+164 base cases covered 17,674/43,166 lines (40.9%), 1,685/3,115
+functions (54.1%) and 10,358/43,738 branches (23.7%). With the patch
+and six new scenarios the 170-case suite covered 17,972 lines
+(41.6%), 1,706 functions (54.8%) and 10,606 branches (24.2%):
+298 additional lines, including 177 in `lego_unit.c`. Both
+instrumented runs had zero failures and 12 optional backend skips.
