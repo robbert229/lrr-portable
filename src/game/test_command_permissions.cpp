@@ -2,6 +2,7 @@
 /* Existing command admission and resource setup on invented records. The
  * icons are the neutral fixture's two solid bitmaps; no UI is reproduced. */
 #include <string>
+#include <utility>
 #include "gods98/directdraw.h"
 #include "gods98/input_keys.h"
 #include "game/aitask.h"
@@ -24,8 +25,8 @@ extern "C" int legoobject_activity_scan(Lego_Object*, int);
 
 namespace {
 constexpr char Stats[] =
-    " Figure { Levels 1 CollRadius 3 CrossLand TRUE RouteSpeed 5 NumOfToolsCanCarry 2 } "
-    " Structure { Levels 1 CollRadius 3 SelfPowered TRUE ToolStore TRUE TrainDriver TRUE TrainRepair TRUE TrainScanner TRUE TrainPilot TRUE TrainSailor TRUE } ";
+    " Figure { Levels 1 CollRadius 3 CrossLand TRUE RouteSpeed 5 LooseDrillTime 1 NumOfToolsCanCarry 2 } "
+    " Structure { Levels 1 CollRadius 3 SelfPowered TRUE ToolStore TRUE TrainDriver TRUE TrainRepair TRUE TrainScanner TRUE TrainPilot TRUE TrainSailor TRUE SmallTeleporter TRUE } ";
 constexpr char Resources[] =
     " InterfaceImages { "
     " Interface_MenuItem_GetDrill L\\panel.bmp:L\\load.bmp:L\\panel.bmp:Ready|SFX_NULL:Blocked|SFX_NULL:KEY_A:TRUE "
@@ -193,6 +194,112 @@ void Permissions()
     message_clear_selected_units();
 }
 
+void Dispatch()
+{
+    auto* level = legoGlobs.currLevel;
+    int pos[] = {2, 3};
+    int entrance[] = {2, 3, 2, 3};
+    auto* station = static_cast<Lego_Object*>(construction_place_building(0, pos, 0, entrance, 2, 0));
+    if (!CHECK(station != nullptr, "generic facility created")) return;
+    legoobject_kind_four_post_create_resolve(station);
+    auto* figure = Figure(1, 3);
+    auto* other = Figure(1, 4);
+    if (!figure || !other) return;
+
+    // Route and scheduling commands are meaningful only when the
+    // underlying candidate is active and has the appropriate capability.
+    for (const auto test : {std::pair<int, unsigned>{58, 4}, {59, 16}, {60, 32}, {61, 1}, {62, 2}}) {
+        aitask_cmd_flush_all(0);
+        aitask_cmd_flush_all(1);
+        message_select_object2(figure, 1, 0);
+        figure->field_3d4 = level->trainTime;
+        figure->abilityFlags = 0;
+        Available(test.first, true);
+        CHECK_EQ(interface_do_action(test.first), 1);
+        const auto* task = aiTaskGlobs.globalHead;
+        if (CHECK(task != nullptr, "training request queued")) {
+            CHECK_EQ(task->type, 0x17);
+            CHECK_EQ(task->object, station);
+            CHECK_EQ(task->field_3c, test.second);
+            CHECK_EQ(task->count, 1u);
+            if (CHECK(task->buffer != nullptr, "owned selection snapshot"))
+                CHECK_EQ(static_cast<Lego_Object**>(task->buffer)[0], figure);
+        }
+        message_update();
+        CHECK_EQ(message_get_num_selected_units(), 0u);
+        message_select_object2(figure, 1, 0);
+        figure->abilityFlags = test.second;
+        Available(test.first, false);
+        message_clear_selected_units();
+    }
+    aitask_cmd_flush_all(0);
+    aitask_cmd_flush_all(1);
+
+    // An intrinsically self-powered facility cannot be power toggled.
+    message_select_object2(station, 1, 0);
+    Available(35, false);
+    CHECK_EQ(interface_do_action(35), 0);
+    Available(34, false);
+    CHECK_EQ(interface_do_action(34), 0);
+    CHECK_EQ(station->flags3 & 0x80000000u, 0u);
+    CHECK_EQ(legoobject_shared_eligibility_check(station, 0), 1);
+    CHECK_EQ(interface_any_object_with_flags2_100000(), 1);
+    message_clear_selected_units();
+    message_select_object2(station, 1, 0);
+    Available(37, true);
+    CHECK_EQ(interface_do_action(37), 1);
+    CHECK_EQ(legoGlobs.field_38c, station);
+    message_update();
+
+    // A meal request affects only the object that needs it.
+    message_select_object2(figure, 1, 0);
+    message_select_object2(other, 1, 0);
+    figure->energy = 25;
+    other->energy = 100;
+    Available(31, true);
+    CHECK_EQ(interface_do_action(31), 1);
+    message_update();
+    CHECK(figure->flags2 & 0x800, "hungry figure marked");
+    CHECK_EQ(other->flags2 & 0x800, 0u);
+    CHECK(figure->flags1 & 0x40000000, "meal activity begun");
+    CHECK_EQ(other->flags1 & 0x40000000, 0u);
+
+    // Direct terrain command dispatch can enqueue and cancel a request
+    // on the generated boundary between the two rectangular spaces.
+    message_clear_selected_units();
+    // Mark the second figure as capable of the work: the generic
+    // catalog contains no drill attachment, and no activity is executed.
+    other->flags3 |= 2u;
+    interfaceGlobs.selBlockPos.x = 3;
+    interfaceGlobs.selBlockPos.y = 3;
+    // Explicitly stage neighboring occupancy independent of the generic
+    // facility's footprint orientation.
+    auto& neighbor = level->blocks[3 * level->width + 2];
+    const auto originalFlags = neighbor.flags1;
+    neighbor.flags1 |= 0x400;
+    Available(11, false);
+    neighbor.flags1 = originalFlags;
+    interfaceGlobs.selBlockPos.y = 1;
+    auto& wall = level->blocks[level->width + 3];
+    CHECK(wall.flags1 & 4, "intact test wall");
+    Available(11, true);
+    CHECK_EQ(interface_do_action(11), 1);
+    const auto* work = aiTaskGlobs.globalHead;
+    if (CHECK(work != nullptr, "terrain request queued")) {
+        CHECK_EQ(work->type, 8);
+        CHECK_EQ(work->blockX, 3);
+        CHECK_EQ(work->blockY, 1);
+        CHECK(wall.flags1 & 0x800000, "wall reservation visible");
+        CHECK_EQ(terrain_map_block_highlight_get(level->map, 3, 1), 1);
+    }
+    Available(15, true);
+    CHECK_EQ(interface_do_action(15), 1);
+    CHECK_EQ(terrain_map_block_highlight_get(level->map, 3, 1), 4);
+    CHECK_EQ(interfaceGlobs.blockHighlight, 0u);
+    if (work) CHECK(work->flags & 0x20, "cancelled request marked for removal");
+    message_update();
+}
+
 void Acquisition()
 {
     int pos[] = {2, 3};
@@ -249,12 +356,13 @@ void Acquisition()
 int main(int argc, char** argv)
 {
     const std::string mode = argc == 2 ? argv[1] : "resources";
-    if (!CHECK(mode == "resources" || mode == "permissions" || mode == "acquisition", "known scenario") ||
+    if (!CHECK(mode == "resources" || mode == "permissions" || mode == "acquisition" || mode == "dispatch", "known scenario") ||
         !synthetic_fixture::initialise_full_game(("command_permissions_" + mode).c_str(),
                                                  "CommandPermissions", Stats, Resources)) return lrr_test_result();
     if (mode == "resources") ResourcesLoaded();
     else if (mode == "permissions") Permissions();
-    else Acquisition();
+    else if (mode == "acquisition") Acquisition();
+    else Dispatch();
     lego_engine_shutdown();
     CHECK_EQ(legoGlobs.currLevel, nullptr);
     directdraw_shutdown();
