@@ -310,6 +310,9 @@ besides libctru's 32 MB linear heap (some 14 MB of it in use: textures, the
 GPU command buffer and the frame's vertices), more than an Old 3DS gives an
 application, so the `.cia` asks for the New 3DS's 124 MB mode
 (`template.rsf`); the `.3dsx` gets what the Homebrew Launcher gives it.
+The game starts through SDL's 3DS `main` (`SDL_main.h` in
+`src/platform/native/entry.cpp`), which runs a New 3DS at 804 MHz with its
+L2 cache, three times the 268 MHz an application otherwise gets.
 
 miniwin lists Citro3D, the palette software renderer and the software
 renderer here; the default device is Citro3D (`3ds/config.h`), which draws
