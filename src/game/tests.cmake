@@ -458,3 +458,8 @@ lrr_unit_test_variant(startup_misc_resources OF positive_startup
   ARGS misc LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
 lrr_unit_test_variant(startup_config_loader OF positive_startup
   ARGS setup LABELS level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
+
+# Collection assignment, cancellation, movement and resource ownership.
+lrr_unit_test(task_resource_progression SOURCES ${GAME_DIR}/test_task_resource_progression.cpp
+  ${PROJECT_SOURCE_DIR}/src/test/synthetic_level_fixture.cpp
+  LABELS aitask legoobject level_boot ENVIRONMENT "SDL_VIDEO_DRIVER=dummy")
