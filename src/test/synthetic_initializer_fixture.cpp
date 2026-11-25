@@ -61,7 +61,8 @@ std::string misc_resource_block()
 // This fixture is ephemeral and deliberately uses the same single geometric
 // primitive and grayscale images for each required input slot. It does not
 // represent or substitute for any shipped game asset or level.
-bool initialise_full_game(const char* directory, const char* programName, const char* extraStats)
+bool initialise_full_game(const char* directory, const char* programName, const char* extraStats,
+                          const char* extraRootConfig)
 {
     if (!CHECK(make_transition_fixture(directory), "generate abstract grid fixture") ||
         !CHECK(prepare_catalog("Lego"), "generate primitive model fixture")) return false;
@@ -102,6 +103,7 @@ bool initialise_full_game(const char* directory, const char* programName, const 
         resources += std::string("Panel_TopPanel PanelButton_TopPanel_") + key + ",L\\panel.bmp,NULL,NULL,1,2,8,9,Unknown ";
     resources += "}\n";
     config.insert(config.rfind('}'), resources);
+    if (extraRootConfig != nullptr) config.insert(config.rfind('}'), extraRootConfig);
     if (!CHECK(write_text("Data/Lego.cfg", config.c_str()), "write original fixture configuration") ||
         !initialise_headless(programName)) return false;
     block_text_token_pool_init();
