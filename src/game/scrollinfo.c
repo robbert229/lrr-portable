@@ -61,6 +61,7 @@ void scroll_info_initialise(const char* imageName, unsigned int index,
         }
         imageName = va_arg(args, const char*);
         scrollInfo->panel = panel;
+        if (imageName == NULL) break;
         index = va_arg(args, unsigned int);
         horizontal = va_arg(args, int);
         panel = va_arg(args, int);

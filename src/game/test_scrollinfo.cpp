@@ -8,9 +8,11 @@
 
 static Image bar, thumb;
 static Point2F thumbPosition;
+static unsigned int imageLoads;
 
 extern "C" Image* __wrap_Image_LoadBMPScaled(const char* name, unsigned int, unsigned int)
 {
+    ++imageLoads;
     return std::strcmp(name, "thumb") == 0 ? &thumb : &bar;
 }
 
@@ -41,8 +43,10 @@ int main(void)
     const Area2F track = { 2.0f, 6.0f, 4.0f, 16.0f };
     constexpr int informationPanel = 7;
     thumb.height = 4;
+    // The terminator is a pointer, and no record fields follow it.
     scroll_info_initialise("bar", 0, 0, informationPanel,
-                           static_cast<const char*>(nullptr), 0u, 0, 0);
+                           static_cast<const char*>(nullptr));
+    CHECK_EQ(imageLoads, 1u);
     scroll_info_set_xy_offset(0, 2, 4);
     scroll_info_add_structure(0, 0, &increase, nullptr, nullptr);
     scroll_info_add_structure(0, 1, &decrease, nullptr, nullptr);
