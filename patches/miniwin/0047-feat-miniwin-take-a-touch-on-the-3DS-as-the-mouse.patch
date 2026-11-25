@@ -10,10 +10,10 @@ no mouse events. Create the window on the touch screen's display, and make
 the pointer move and the left button press from the finger events.
 
 diff --git a/miniwin/src/windows/windowmessages.cpp b/miniwin/src/windows/windowmessages.cpp
-index 6090c26..fd1c7be 100644
+index 03e209b..10d1b4c 100644
 --- a/miniwin/src/windows/windowmessages.cpp
 +++ b/miniwin/src/windows/windowmessages.cpp
-@@ -352,6 +352,35 @@ void Translate(const SDL_Event& event)
+@@ -374,6 +374,35 @@ void Translate(const SDL_Event& event)
  		);
  		break;
  	}
@@ -49,7 +49,7 @@ index 6090c26..fd1c7be 100644
  	case SDL_EVENT_KEY_DOWN:
  	case SDL_EVENT_KEY_UP:
  		TranslateKey(event.key);
-@@ -403,12 +432,35 @@ HWND CreateWindowExA(
+@@ -425,12 +454,35 @@ HWND CreateWindowExA(
  		flags |= SDL_WINDOW_RESIZABLE;
  	}
  	SDL_Window* window = nullptr;
@@ -86,7 +86,7 @@ index 6090c26..fd1c7be 100644
  		Miniwin_SetupWindowCreateProperties(props);
  		window = SDL_CreateWindowWithProperties(props);
  		SDL_DestroyProperties(props);
-@@ -421,6 +473,14 @@ HWND CreateWindowExA(
+@@ -443,6 +495,14 @@ HWND CreateWindowExA(
  		return NULL;
  	}
  	SDL_SetWindowPosition(window, X, Y);

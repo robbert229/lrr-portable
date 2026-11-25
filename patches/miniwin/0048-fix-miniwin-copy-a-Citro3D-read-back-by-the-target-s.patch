@@ -1,0 +1,76 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Tue, 24 Nov 2026 15:52:39 -0800
+Subject: [PATCH] fix(miniwin): copy a Citro3D read-back by the target's pixel
+ size
+
+Download turned the framebuffer with Uint32 copies, so a 2-byte RGB565
+target (the 3DS's) read and wrote twice its surface, corrupting the heap.
+
+diff --git a/miniwin/src/d3drm/backends/citro3d/renderer.cpp b/miniwin/src/d3drm/backends/citro3d/renderer.cpp
+index 218020b..8ee9e55 100644
+--- a/miniwin/src/d3drm/backends/citro3d/renderer.cpp
++++ b/miniwin/src/d3drm/backends/citro3d/renderer.cpp
+@@ -883,16 +883,17 @@ void Citro3DRenderer::Download(SDL_Surface* target)
+ 		return;
+ 	}
+ 
+-	Uint32* srcPixels = (Uint32*) convertedSurface->pixels;
+-	Uint32* dstPixels = (Uint32*) rotatedSurface->pixels;
+-	for (int y = 0; y < height; ++y) {
+-		for (int x = 0; x < width; ++x) {
+-			Uint32 pixel = srcPixels[y * width + x];
+-			int newX = y;
+-			int newY = width - 1 - x;
+-			dstPixels[newY * rotatedWidth + newX] = pixel;
+-		}
+-	}
++	// The target's pixels are the target's format, 2 bytes in the 3DS's RGB565:
++	// copy them as that many bytes, by each surface's pitch.
++	Citro3DImmediate::RotateFramebuffer(
++		(const unsigned char*) convertedSurface->pixels,
++		convertedSurface->pitch,
++		width,
++		height,
++		(unsigned char*) rotatedSurface->pixels,
++		rotatedSurface->pitch,
++		SDL_BYTESPERPIXEL(target->format)
++	);
+ 
+ 	SDL_DestroySurface(convertedSurface);
+ 
+diff --git a/miniwin/src/internal/citro3dimmediate.h b/miniwin/src/internal/citro3dimmediate.h
+index a2e108f..9b8506e 100644
+--- a/miniwin/src/internal/citro3dimmediate.h
++++ b/miniwin/src/internal/citro3dimmediate.h
+@@ -4,6 +4,8 @@
+ 
+ #include <SDL3/SDL_rect.h>
+ 
++#include <cstring>
++
+ // The arithmetic of the Citro3D backend's immediate mode, apart from citro3d
+ // so that it builds, and is tested, on any host:
+ // - the 3DS's framebuffers lie on their side;
+@@ -230,4 +232,21 @@ void FogTable(const D3DRMMATRIX4D& p, FogFactor fogFactor, float data[256])
+ 	}
+ }
+ 
++// The bottom screen's framebuffer as it was read, width x height pixels with
++// x running up the screen, turned upright into dst, height x width pixels:
++// (x, y) goes to (y, width - 1 - x). A pixel is bytesPerPixel bytes, 1 to 4,
++// and each surface has its own pitch: the target is the game's RGB565
++// surface on a 3DS, whose pixels are not the 4 bytes a Uint32 copy takes.
++inline void RotateFramebuffer(const unsigned char* src, int srcPitch, int width, int height, unsigned char* dst,
++							  int dstPitch, int bytesPerPixel)
++{
++	for (int y = 0; y < height; ++y) {
++		const unsigned char* srcRow = src + (size_t) y * srcPitch;
++		for (int x = 0; x < width; ++x) {
++			unsigned char* out = dst + (size_t) (width - 1 - x) * dstPitch + (size_t) y * bytesPerPixel;
++			std::memcpy(out, srcRow + (size_t) x * bytesPerPixel, (size_t) bytesPerPixel);
++		}
++	}
++}
++
+ } // namespace Citro3DImmediate
