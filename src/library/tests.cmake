@@ -29,7 +29,7 @@ lrr_unit_test(video_missing
 if(APPLE AND LRR_BUNDLED_FFMPEG_LIBS)
   lrr_unit_test_variant(video_bundled OF video
     LABELS video
-    ENVIRONMENT "SDL_AUDIO_DRIVER=dummy;DYLD_LIBRARY_PATH=${LRR_FFMPEG_DIR}/lib")
+    ENVIRONMENT "SDL_AUDIO_DRIVER=dummy" "DYLD_LIBRARY_PATH=${LRR_FFMPEG_DIR}/lib")
 endif()
 # The LRR_MOVIES=OFF stub, which every build checks whatever the option.
 lrr_unit_test(video_stub
