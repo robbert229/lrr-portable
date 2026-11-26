@@ -77,7 +77,8 @@ what you were doing when it happened.
 
 1. **Get a build.** Download the latest release from the
    [Releases page](https://github.com/robbert229/lrr-portable/releases): a
-   ZIP for Windows, a DMG for macOS, and an AppImage, `.tar.gz` or Flatpak
+   ZIP for Windows, a DMG for macOS (the macOS ZIP is for
+   RecompLauncher), and an AppImage, `.tar.gz` or Flatpak
    for Linux. Builds of every change since the last release are on the
    [Actions page](https://github.com/robbert229/lrr-portable/actions)
    (open the latest successful `native-packages` run and download one under

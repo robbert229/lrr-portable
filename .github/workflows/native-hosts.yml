@@ -68,17 +68,27 @@ jobs:
           ctest --test-dir build --output-on-failure
 
       # LegoRR.app in a disk image (packaging/macos): ad-hoc signed, not
-      # notarized. verify.sh mounts the image and checks the bundle.
-      - name: Package (DMG)
+      # notarized. verify.sh mounts the image and checks the bundle. The ZIP
+      # of the same app, with recomplauncher.json beside it, is the one
+      # RecompLauncher installs; ditto unpacks it as the launcher would.
+      - name: Package (DMG and ZIP)
         run: |
           cmake --build build --target package
           packaging/macos/verify.sh build/dist/lrr-portable-*-Darwin-*.dmg
+          python3 tools/check_package.py --require recomplauncher.json \
+            --require LegoRR build/dist/lrr-portable-*-Darwin-*.zip
+          unzipped="$RUNNER_TEMP/lrr-portable-zip"
+          ditto -x -k build/dist/lrr-portable-*-Darwin-*.zip "$unzipped"
+          codesign --verify --deep --strict --verbose=2 "$unzipped"/*/LegoRR.app
+          test -x "$unzipped"/*/LegoRR.app/Contents/MacOS/LegoRR
 
       - name: Upload package
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
-          path: build/dist/lrr-portable-*.dmg
+          path: |
+            build/dist/lrr-portable-*.dmg
+            build/dist/lrr-portable-*.zip
           if-no-files-found: error
 
   freebsd:

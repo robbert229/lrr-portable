@@ -77,7 +77,7 @@ workflows that build every pull request, and attaches these:
 | Asset | Built by |
 | --- | --- |
 | `lrr-portable-<v>-Windows-x64.zip`, `-x86.zip`, `-arm64.zip` | `native-hosts`, MSVC jobs |
-| `lrr-portable-<v>-Darwin-arm64.dmg`, `-Darwin-x86_64.dmg` | `native-hosts`, macOS jobs |
+| `lrr-portable-<v>-Darwin-arm64.dmg`, `-Darwin-x86_64.dmg`, `-Darwin-arm64.zip`, `-Darwin-x86_64.zip` | `native-hosts`, macOS jobs |
 | `lrr-portable-<v>-Linux-x86_64.AppImage`, `.tar.gz` | `native-packages`, `linux-x86_64` |
 | `lrr-portable-<v>-Linux-x86_64.flatpak`, `-aarch64.flatpak` | `native-packages`, Flatpak jobs |
 | `lrr-portable-<v>-Android-debug-test.apk` (test build) | `native-hosts`, `android` |
@@ -96,15 +96,18 @@ Each Windows ZIP holds `LegoRR.exe`, `LICENSE.txt`, `THIRD-PARTY-NOTICES.txt`,
 `recomplauncher.json` and the Visual C++ runtime DLLs (`msvcp140*.dll`, `vcruntime140*.dll`), so
 it runs without the Visual C++ Redistributable installed. Each DMG holds
 `LegoRR.app`, with the licence and notices in `Contents/Resources` and
-beside the app. The Linux packages hold them in `share/doc/lrr-portable`.
+beside the app, and `recomplauncher.json`; each macOS ZIP holds the same
+files, for RecompLauncher. The Linux packages hold them in `share/doc/lrr-portable`.
 
 `recomplauncher.json` (`packaging/recomplauncher.json`) is
 [RecompLauncher](https://recomplauncher.com)'s manifest: it says how to ask
 for the player's Rock Raiders folder, how to start the game with `--game` and
-`--data`, and which settings to show. It sits at the top of each Windows ZIP,
-Linux `.tar.gz` and AppImage, where the launcher looks for it, and nowhere
-else; the macOS disk image has none, since the launcher installs a zipped
-`.app`. Keep its settings in step with `LegoRR.ini`'s keys
+`--data`, and which settings to show. It sits at the top of each Windows and
+macOS ZIP, Linux `.tar.gz` and AppImage, where the launcher looks for it, and
+beside `LegoRR.app` in each macOS disk image. On macOS the launcher installs
+the ZIP, a `.app` at its top with the manifest beside it; given only a disk
+image it installs the app but finds no manifest, so it starts the game
+without the player's Rock Raiders folder or its settings. Keep its settings in step with `LegoRR.ini`'s keys
 (`tools/tests/test_packaging.py` checks each key, value and default against
 the settings table, `kTable` in `src/platform/native/config.cpp`).
 

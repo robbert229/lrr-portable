@@ -5,7 +5,8 @@
 #   - Linux:   a TGZ with LegoRR, the desktop entry, the AppStream metadata and
 #              the icon; packaging/linux also holds the AppImage and Flatpak
 #              recipes the CI packages workflow runs.
-#   - macOS:   a DragNDrop disk image holding LegoRR.app (packaging/macos).
+#   - macOS:   a DragNDrop disk image holding LegoRR.app (packaging/macos),
+#              and a ZIP of the same for RecompLauncher.
 #   - Windows: a ZIP with LegoRR.exe, SDL3.dll beside it when SDL is shared,
 #              and the Visual C++ runtime DLLs in an MSVC build.
 # Every package carries LICENSE and THIRD-PARTY-NOTICES.txt.
@@ -114,9 +115,10 @@ else()
 endif()
 
 # RecompLauncher reads recomplauncher.json from the top of the ZIP or TGZ (the
-# AppImage's copy goes to its root: appimage/build.sh). The macOS disk image
-# is not one the launcher installs, so it has none.
-if(WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+# AppImage's copy goes to its root: appimage/build.sh). On macOS it installs
+# the ZIP, whose name says the system, over the disk image; the disk image
+# carries the same copy beside LegoRR.app, harmlessly.
+if(WIN32 OR APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
   install(FILES recomplauncher.json DESTINATION ".")
 endif()
 
@@ -145,7 +147,9 @@ set(CPACK_PACKAGE_FILE_NAME "lrr-portable-${LRR_VERSION}-${LRR_PACKAGE_NAME}")
 if(WIN32)
   set(CPACK_GENERATOR ZIP)
 elseif(APPLE)
-  set(CPACK_GENERATOR DragNDrop)
+  # The disk image is for players; RecompLauncher installs the ZIP, a .app
+  # at its top with recomplauncher.json beside it.
+  set(CPACK_GENERATOR DragNDrop ZIP)
   set(CPACK_DMG_VOLUME_NAME "${LRR_APP_NAME}")
 else()
   set(CPACK_GENERATOR TGZ)
