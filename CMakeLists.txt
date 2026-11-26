@@ -8,7 +8,7 @@ project(lrr-portable VERSION 1.0.0 LANGUAGES C CXX)
 # version 1.0.0-beta1. project(VERSION) takes numbers only, so the label is
 # set here, and LRR_VERSION is the full version that packages and the game
 # report.
-set(LRR_VERSION_PRERELEASE "beta2")
+set(LRR_VERSION_PRERELEASE "beta3")
 if(LRR_VERSION_PRERELEASE STREQUAL "")
   set(_lrr_version "${PROJECT_VERSION}")
 else()
