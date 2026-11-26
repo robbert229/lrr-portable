@@ -1,0 +1,139 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Wed, 25 Nov 2026 13:33:44 -0800
+Subject: [PATCH] feat(miniwin): frame a viewport's field of view in a chosen
+ aspect
+
+Miniwin_SetViewportFieldAspect sets the aspect of the area a D3DRM
+viewport's field of view frames. 0, the default, keeps D3DRM's framing,
+where the field spans the viewport's width, so a viewport wider than the
+game was made for shows less above and below. A positive aspect frames
+an area of that aspect instead: a wider viewport keeps that area's
+vertical field and shows more at the sides, and a narrower one is
+unchanged. A 4:3 game sets 4/3 to draw at a wider virtual display.
+
+Pick's ray now follows the projection's scales, so it agrees with the
+picture with either framing and with Miniwin_SetViewportsFillWindow.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/include/miniwin/miniwinpresentation.h b/miniwin/include/miniwin/miniwinpresentation.h
+index d33bb2b..62c01f2 100644
+--- a/miniwin/include/miniwin/miniwinpresentation.h
++++ b/miniwin/include/miniwin/miniwinpresentation.h
+@@ -61,6 +61,23 @@ MiniwinRenderResolution Miniwin_GetRenderResolution();
+ void Miniwin_SetViewportsFillWindow(bool fill);
+ bool Miniwin_GetViewportsFillWindow();
+ 
++// The aspect of the area a D3DRM viewport's field of view frames. 0, the
++// default, is D3DRM's framing: the field spans the viewport's width, so a
++// wider viewport shows less above and below. A positive aspect frames an
++// area of that aspect instead: a viewport wider than it keeps that area's
++// vertical field and shows more at the sides, and a viewport no wider than
++// it keeps D3DRM's framing. A game made for 4:3 sets 4/3 to draw at a wider
++// virtual display. Applies to viewports whose projection is set after the
++// call.
++void Miniwin_SetViewportFieldAspect(float aspect);
++float Miniwin_GetViewportFieldAspect();
++
++// The projection's horizontal and vertical scales for a viewport of
++// `aspect` (width over height) with D3DRM's front clipping distance `front`
++// and field `field`, framed as Miniwin_SetViewportFieldAspect sets: x / z is
++// at the viewport's edge when x * scaleX / z is 1, and likewise y.
++void Miniwin_ViewportProjectionScales(float aspect, float front, float field, float* scaleX, float* scaleY);
++
+ // The size, in pixels, of a render target for a window of windowW x windowH
+ // pixels showing a virtualW x virtualH display at `resolution`: the window's
+ // size for Window; for Virtual, the window's aspect with the virtual display
+diff --git a/miniwin/src/d3drm/d3drmviewport.cpp b/miniwin/src/d3drm/d3drmviewport.cpp
+index c4a6fae..8ea362f 100644
+--- a/miniwin/src/d3drm/d3drmviewport.cpp
++++ b/miniwin/src/d3drm/d3drmviewport.cpp
+@@ -613,9 +613,8 @@ void Direct3DRMViewportImpl::UpdateProjectionMatrix()
+ 		windowAspect = virtualAspect;
+ 	}
+ 
+-	float base_f = m_front / m_field;
+-	float f_v = base_f * virtualAspect;
+-	float f_h = base_f;
++	float f_h, f_v;
++	Miniwin_ViewportProjectionScales(virtualAspect, m_front, m_field, &f_h, &f_v);
+ 	if (windowAspect >= virtualAspect) {
+ 		f_h *= virtualAspect / windowAspect;
+ 	}
+@@ -760,17 +759,15 @@ Ray BuildPickingRay(
+ 	IDirect3DRMFrame* camera,
+ 	float front,
+ 	float back,
+-	float field,
+-	float aspect
++	float scaleX,
++	float scaleY
+ )
+ {
+ 	float nx = (2.0f * x) / width - 1.0f;
+ 	float ny = 1.0f - (2.0f * y) / height;
+ 
+-	float f = front / field;
+-
+-	// Ray in view space at near plane:
+-	D3DVECTOR rayDirView = {nx / f, ny / (f * aspect), 1.0f};
++	// Ray in view space at near plane, by the projection's scales:
++	D3DVECTOR rayDirView = {nx / scaleX, ny / scaleY, 1.0f};
+ 
+ 	// Normalize ray direction
+ 	float len = sqrt(DotProduct(rayDirView, rayDirView));
+@@ -923,8 +920,8 @@ HRESULT Direct3DRMViewportImpl::Pick(float x, float y, LPDIRECT3DRMPICKEDARRAY*
+ 		m_camera,
+ 		m_front,
+ 		m_back,
+-		m_field,
+-		(float) m_virtualWidth / (float) m_virtualHeight
++		m_projectionMatrix[0][0],
++		m_projectionMatrix[1][1]
+ 	);
+ 
+ 	std::function<void(IDirect3DRMFrame*, std::vector<IDirect3DRMFrame*>&)> recurse;
+diff --git a/miniwin/src/ddraw/presentation.cpp b/miniwin/src/ddraw/presentation.cpp
+index 35a97ea..20d386a 100644
+--- a/miniwin/src/ddraw/presentation.cpp
++++ b/miniwin/src/ddraw/presentation.cpp
+@@ -7,6 +7,7 @@ namespace {
+ 
+ MiniwinRenderResolution g_renderResolution = MiniwinRenderResolution::Window;
+ bool g_viewportsFillWindow = true;
++float g_viewportFieldAspect = 0.0f;
+ 
+ struct VirtualDisplay {
+ 	SDL_Window* window;
+@@ -68,6 +69,30 @@ bool Miniwin_GetViewportsFillWindow()
+ 	return g_viewportsFillWindow;
+ }
+ 
++void Miniwin_SetViewportFieldAspect(float aspect)
++{
++	g_viewportFieldAspect = aspect > 0.0f ? aspect : 0.0f;
++}
++
++float Miniwin_GetViewportFieldAspect()
++{
++	return g_viewportFieldAspect;
++}
++
++void Miniwin_ViewportProjectionScales(float aspect, float front, float field, float* scaleX, float* scaleY)
++{
++	// D3DRM's framing: the field spans the width.
++	float base = front / field;
++	*scaleX = base;
++	*scaleY = base * aspect;
++	// Wider than the framed area: that area's vertical field, and more at
++	// the sides.
++	if (g_viewportFieldAspect > 0.0f && aspect > g_viewportFieldAspect) {
++		*scaleY = base * g_viewportFieldAspect;
++		*scaleX = *scaleY / aspect;
++	}
++}
++
+ void Miniwin_RenderSize(
+ 	MiniwinRenderResolution resolution,
+ 	int virtualW,

@@ -24,6 +24,12 @@
 #include "crt/vc5names.h"
 #include "helpwindow.h"
 #include "helpwindow_imports.h"
+#include "gods98/directdraw.h" // [divergence:widescreen] directdraw_widescreen_margin
+
+/* [divergence:widescreen] The help window is centred in a mode wider than
+ * 4:3: its 640x480 positions, and the "more" arrow drawn and hit-tested at
+ * one, move right by half the extra width (DirectDraw.c). */
+#define HELPWINDOW_WIDE_CENTRE ((float)(directdraw_widescreen_margin() / 2))
 
 /* The unit's functions have C linkage in the native C++ compile too. */
 #ifdef __cplusplus
@@ -138,7 +144,7 @@ void help_window_initialise(BlockFile* config, const char* gameName)
             image_surface_blit_transformed((struct TextureSurface*)helpwindowGlobs.windowImage,
                                            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
         }
-        helpwindowGlobs.windowPos.x = (float)atoi(stringParts[1]);
+        helpwindowGlobs.windowPos.x = (float)atoi(stringParts[1]) + HELPWINDOW_WIDE_CENTRE; // [divergence:widescreen]
         helpwindowGlobs.windowPos.y = (float)atoi(stringParts[2]);
         free(str);
     }
@@ -149,7 +155,7 @@ void help_window_initialise(BlockFile* config, const char* gameName)
         // STRING: LEGORR 0x004a27d8
         "TextWindowArea", (const char*)NULL))) != NULL) {
         sound_variant_split(str, stringParts, ",");
-        area.x = (float)atoi(stringParts[0]);
+        area.x = (float)atoi(stringParts[0]) + HELPWINDOW_WIDE_CENTRE; // [divergence:widescreen]
         area.y = (float)atoi(stringParts[1]);
         area.width = (float)atoi(stringParts[2]);
         area.height = (float)atoi(stringParts[3]);
@@ -415,7 +421,7 @@ void help_window_update(void)
                         }
                         if (helpwindowGlobs.scroll < helpwindowGlobs.scrollMax) {
                             Point2F pointerPos;
-                            pointerPos.x = 345.0f;
+                            pointerPos.x = 345.0f + HELPWINDOW_WIDE_CENTRE; // [divergence:widescreen]
                             pointerPos.y = 350.0f;
                             objective_score_text_origin_set(&pointerPos.x);
                         }
@@ -447,7 +453,7 @@ int help_window_check_buttons(unsigned int mouseX, unsigned int mouseY, int left
         helpwindowGlobs.flags &= ~HELPWINDOW_FLAG_HILIGHT;
         msx = (float)mouseX;
         helpwindowGlobs.flags &= ~HELPWINDOW_FLAG_PRESSED;
-        area.x = 345.0f;
+        area.x = 345.0f + HELPWINDOW_WIDE_CENTRE; // [divergence:widescreen]
         area.y = 350.0f;
         area.width = (float)(int)legoGlobs_NextButtonImage->width;
         area.height = (float)(int)legoGlobs_NextButtonImage->height;

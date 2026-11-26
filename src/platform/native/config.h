@@ -21,7 +21,7 @@
  *
  * And it holds the port's opt-outs from its divergences from the original
  * game (docs/divergences.md), in their own section, [tweaks]:
- * tweaks:Training Save, tweaks:display, tweaks:controls,
+ * tweaks:Training Save, tweaks:display, tweaks:widescreen, tweaks:controls,
  * tweaks:fix_idleness_syndrome, tweaks:fps_overlay, and the touch controls'
  * tweaks:touch keys and tweaks:back_button.
  *
@@ -74,6 +74,7 @@ enum LRR_Setting {
     LRR_SETTING_DEVICE,                /* legorr:3D Device, text */
     LRR_SETTING_TRAINING_SAVE,         /* tweaks:Training Save, a choice */
     LRR_SETTING_DISPLAY,               /* tweaks:display, a choice */
+    LRR_SETTING_WIDESCREEN,            /* tweaks:widescreen, a switch */
     LRR_SETTING_CONTROLS,              /* tweaks:controls, a choice */
     LRR_SETTING_FIX_IDLENESS_SYNDROME, /* tweaks:fix_idleness_syndrome */
     LRR_SETTING_FPS_OVERLAY,           /* tweaks:fps_overlay, a switch */
@@ -114,7 +115,8 @@ void LRR_SetSetting(LRR_Setting setting, const char* value);
  * (Miniwin Emulation)"; empty selects the platform's default device
  * (LRR_ChooseDevice). With tweaks:display = fit (the default), the
  * resolution is the window's size when it opens, any size; the game keeps
- * Init.c's first valid mode, 640x480, and the window fits it. With
+ * Init.c's first valid mode, 640x480, and the window fits it, unless
+ * tweaks:widescreen widens the mode to a window wider than 4:3. With
  * tweaks:display = original, the resolution must be one of Init.c's valid
  * modes (640x480, and 800x600 or 1024x768 with -debug), and the window has
  * the mode's size; otherwise the first valid mode is used. Full screen
@@ -200,6 +202,14 @@ enum LRR_DisplayScaling {
     LRR_DISPLAY_ORIGINAL = 0,
     LRR_DISPLAY_FIT = 1,
 };
+
+/* tweaks:widescreen (docs/divergences.md, "Widescreen"). The original drew
+ * a 4:3 picture. "true", the default, widens the game's mode to the
+ * window's aspect when the window is wider than 4:3 (the desktop's in full
+ * screen): the 3D view shows more at the sides, the in-level interface
+ * keeps to the screen's edges, and the 640x480 screens (the front end, the
+ * rewards, loading) are centred. It needs tweaks:display = fit; "false"
+ * keeps the 4:3 picture, with bars at the sides. */
 
 /* tweaks:controls (docs/divergences.md, "Keyboard and mouse camera
  * controls"). The original pans the top-down view only when the cursor
@@ -305,7 +315,8 @@ const LRR_DisplayConfig* LRR_GetDisplayConfig();
 
 /* The settings the units read, by their types. Each is its row's value
  * (LRR_GetSetting), so its default is the table's: LRR_TRAINING_SAVE_PROMPT,
- * LRR_DISPLAY_FIT, LRR_CONTROLS_MODERN, true, and false for the rest. */
+ * LRR_DISPLAY_FIT, true (tweaks:widescreen), LRR_CONTROLS_MODERN, true
+ * (tweaks:fix_idleness_syndrome), and false for the rest. */
 inline LRR_TrainingSave LRR_GetTrainingSave()
 {
     return static_cast<LRR_TrainingSave>(LRR_GetSetting(LRR_SETTING_TRAINING_SAVE));
@@ -314,6 +325,11 @@ inline LRR_TrainingSave LRR_GetTrainingSave()
 inline LRR_DisplayScaling LRR_GetDisplayScaling()
 {
     return static_cast<LRR_DisplayScaling>(LRR_GetSetting(LRR_SETTING_DISPLAY));
+}
+
+inline bool LRR_GetWidescreen()
+{
+    return LRR_GetSetting(LRR_SETTING_WIDESCREEN) != 0;
 }
 
 inline LRR_Controls LRR_GetControls()

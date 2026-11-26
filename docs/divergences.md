@@ -125,6 +125,48 @@ reference.
   the filtering, the mouse and frame-buffer locks,
   `miniwin/miniwinpresentation.h`).
 
+With `widescreen = true`, the default, a window wider than 4:3 is filled
+instead of fitted with bars; see the next entry.
+
+### Widescreen
+
+- **Original:** draws a 4:3 picture: 640x480, or 800x600 and 1024x768 with
+  `-debug`.
+- **Port:** with `display = fit`, when the window is wider than 4:3 (the
+  desktop, in full screen) the game's mode takes the window's aspect at 480
+  lines, up to 4:1: 853x480 for 16:9, 768x480 for 16:10, about 1140x480 for
+  21:9.
+  - A level fills the screen. The 3D view keeps the 4:3 view's vertical
+    field of view and shows more at the sides; picking follows it.
+  - The level's interface keeps to the screen's edges. The radar, the
+    messages, the information panel and the info dock stay at the left. The
+    top panel, the icon panel, the crystal side bar, the priority list, the
+    encyclopedia and the camera control move to the right edge. The mission
+    briefing, the help window, the in-level dialog, the pause and options
+    menus, and the advisor beside the briefing are centred. Lego.cfg's
+    640x480 layout is moved as it is read; there are no new data files.
+  - The 640x480 screens around the levels are drawn as before, in a 4:3
+    frame centred on the screen, with black at the sides: the front end,
+    level select, saving and loading, the credits, the rewards, the loading
+    and shutdown screens, and the movies. The mouse works in the frame's
+    coordinates. The front end's rock wipe, drawn in 3D, covers the whole
+    screen.
+  - A save game's thumbnail shows the centre of the screen at 4:3.
+  - The shape is chosen when the game starts. Resizing the window to
+    another shape afterwards fits the picture into it with bars.
+- **Why:** on a widescreen display the 4:3 picture leaves black bars at the
+  sides, a third of a 16:9 screen (#915).
+- **Configurable:** `[tweaks]` `widescreen = true` (the default) or `false`,
+  which keeps the 4:3 picture with bars. It needs `display = fit`. The 3DS
+  defaults to `false`, as a wider view draws more of the level each frame.
+- **Where:** `src/gods98/init.c` (the mode), `directdraw.c` (the 4:3 frame
+  and the margin the interface moves by), `input_unit.c`, `viewports.c`,
+  `images_unit.c` and `main.c`; `src/game/lego_unit.c`, `panel_unit.c`,
+  `advisor.c`, `objective_unit.c`, `helpwindow.c`, `frontend_unit.c`,
+  `reward.c`, `screen_effect_quads.c`, `tooltip.c` and `loader.c`
+  (`[divergence:widescreen]`); `patches/miniwin` 0052
+  (`Miniwin_SetViewportFieldAspect`).
+
 ### Keyboard and mouse camera controls
 
 - **Original:** the top-down view pans only when the pointer touches the

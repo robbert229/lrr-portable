@@ -51,7 +51,7 @@ Container* sceneLight;
 
 bool config_variant()
 {
-    return scenario == "fit-config" || scenario == "debug-config" ||
+    return scenario == "fit-config" || scenario == "wide-config" || scenario == "debug-config" ||
            scenario == "resource-reject";
 }
 
@@ -125,7 +125,10 @@ int init_callback()
     CHECK(times.empty(), "initialise before the first tick");
     CHECK(s_main_device != nullptr, "real retained-mode device set up");
     CHECK(s_main_im_device != nullptr, "real immediate-mode device set up");
-    CHECK_EQ(directDrawGlobs.width, scenario == "debug-config" ? 800u : 640u);
+    // wide-config: a 1280x720 window widens the 640x480 mode to its aspect.
+    CHECK_EQ(directDrawGlobs.width, scenario == "debug-config" ? 800u : scenario == "wide-config" ? 853u : 640u);
+    CHECK_EQ(directdraw_widescreen_margin(), scenario == "wide-config" ? 213 : 0);
+    CHECK_EQ(Miniwin_GetViewportFieldAspect(), scenario == "wide-config" ? 4.0f / 3.0f : 0.0f);
     CHECK_EQ(directDrawGlobs.height, scenario == "debug-config" ? 600u : 480u);
     CHECK(block_text_token_pool_resident_peek() != 0, "configuration pool is live");
     CHECK(windowId != 0, "real miniwin window");
@@ -143,19 +146,31 @@ int init_callback()
     if (!CHECK(applicationConfig != nullptr, "read isolated application record")) return 0;
     CHECK_STREQ(block_get_strptr(applicationConfig, "Fixture::Value"), "Example");
     if (config_variant()) {
-        CHECK_EQ(initGlobs.validModeCount, scenario == "debug-config" ? 3u : 1u);
+        // wide-config: 640x480, and the widened mode.
+        CHECK_EQ(initGlobs.validModeCount, scenario == "debug-config" ? 3u : scenario == "wide-config" ? 2u : 1u);
+        if (scenario == "wide-config" && initGlobs.selMode) CHECK_STREQ(initGlobs.selMode->desc, "853x480");
         CHECK(initGlobs.selMode != nullptr, "selected display mode");
         if (initGlobs.selMode) CHECK_EQ(initGlobs.selMode->width, directDrawGlobs.width);
         CHECK(initGlobs.selDevice != nullptr, "selected renderer");
         if (initGlobs.selDevice) CHECK_STREQ(initGlobs.selDevice->desc, LRR_DEVICE_SOFTWARE);
-        const bool fit = scenario == "fit-config";
+        const bool fitConfig = scenario == "fit-config";
+        const bool wide = scenario == "wide-config";
+        const bool fit = fitConfig || wide;
         CHECK_EQ(Miniwin_GetRenderResolution(), fit ? MiniwinRenderResolution::Window :
                                                     MiniwinRenderResolution::Virtual);
         int w = 0, h = 0;
         CHECK(SDL_GetWindowSize(SDL_GetWindowFromID(windowId), &w, &h), "query host window");
-        CHECK_EQ(w, fit ? 713 : scenario == "debug-config" ? 800 : 640);
-        CHECK_EQ(h, fit ? 521 : scenario == "debug-config" ? 600 : 480);
-        CHECK_EQ(block_get_bool_path(applicationConfig, "Fixture::Enabled"), fit ? 1 : 0);
+        CHECK_EQ(w, wide ? 1280 : fitConfig ? 713 : scenario == "debug-config" ? 800 : 640);
+        CHECK_EQ(h, wide ? 720 : fitConfig ? 521 : scenario == "debug-config" ? 600 : 480);
+        // The 4:3 frame: the back buffer while framed, shown centred.
+        CHECK(!directdraw_is_framed(), "not framed before the game frames a screen");
+        CHECK_EQ(directdraw_set_framed(TRUE), 0);
+        CHECK_EQ(directdraw_is_framed(), wide ? 1 : 0);
+        CHECK_EQ(directdraw_frame_width(), wide ? 640 : static_cast<int>(directDrawGlobs.width));
+        CHECK_EQ(directdraw_frame_x(), wide ? 106 : 0);
+        CHECK_EQ(directdraw_set_framed(FALSE), wide ? 1 : 0);
+        CHECK_EQ(directdraw_frame_x(), 0);
+        CHECK_EQ(block_get_bool_path(applicationConfig, "Fixture::Enabled"), fitConfig ? 1 : 0);
         CHECK_EQ(block_get_bool_path(applicationConfig, "Fixture::Optional"), 2);
         const bool ready = setup_scene();
         CHECK_EQ(ready, scenario != "resource-reject");
@@ -343,10 +358,13 @@ int main(int argc, char** argv)
         }
         std::ofstream ini("fixture.ini");
         ini << "[legorr]\nFull Screen = " << (scenario == "fullscreen" ? "true" : "false")
-            << "\nHorizontal Resolution = " << (scenario == "debug-config" ? 800 : config_variant() ? 713 : 640)
-            << "\nVertical Resolution = " << (scenario == "debug-config" ? 600 : config_variant() ? 521 : 480) << "\n"
+            << "\nHorizontal Resolution = "
+            << (scenario == "debug-config" ? 800 : scenario == "wide-config" ? 1280 : config_variant() ? 713 : 640)
+            << "\nVertical Resolution = "
+            << (scenario == "debug-config" ? 600 : scenario == "wide-config" ? 720 : config_variant() ? 521 : 480) << "\n"
             << "3D Device = " << LRR_DEVICE_SOFTWARE << "\n"
-            << "[tweaks]\ndisplay = " << (scenario == "fit-config" ? "fit" : "original") << "\nfps_overlay = "
+            << "[tweaks]\ndisplay = " << (scenario == "fit-config" || scenario == "wide-config" ? "fit" : "original")
+            << "\nwidescreen = " << (scenario == "wide-config" ? "true" : "false") << "\nfps_overlay = "
             << (scenario == "realtime" ? "true" : "false") << "\n";
         ini.close();
         if (!CHECK(ini.good(), "write host preferences")) return lrr_test_result();

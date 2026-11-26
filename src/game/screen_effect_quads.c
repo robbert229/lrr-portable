@@ -74,6 +74,7 @@ static void damage_font_mesh_render_callback(void* mesh, DamageFont_Data* data,
 
 /* Main.c's mainGlobs fields under the port's names (finding 679). */
 #include "gods98/main_globs.h"
+#include "gods98/directdraw.h" // [divergence:widescreen] the 4:3 frame
 
 // FUNCTION: LEGORR 0x0040a0c0
 void credits_play(const char* textFile, struct TextureSurface* font,
@@ -103,12 +104,12 @@ void credits_play(const char* textFile, struct TextureSurface* font,
     lastTime = (DWORD)SDL_GetTicks(); // [library:time]
     destRect.left = 0;
     destRect.top = 0;
-    destRect.right = s_display_w;
+    destRect.right = directdraw_frame_width(); // [divergence:widescreen] the 4:3 frame's
     destRect.bottom = s_display_h;
     lastMslb = 0;
     fontHeight = object_field_be4_dword_get(font);
     linesOnScreen = (unsigned int)s_display_h / fontHeight + 1;
-    centre = s_display_w / 2;
+    centre = directdraw_frame_width() / 2; // [divergence:widescreen]
 
     // STRING: LEGORR 0x004a1d68
     snprintf(cconvName, sizeof(cconvName), "%s.cconv", textFile);

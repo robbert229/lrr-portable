@@ -160,7 +160,9 @@ lrr_unit_test(miniwin_keys SOURCES ${PLATFORM_DIR}/native/test_miniwin_keys.cpp
 
 lrr_unit_test(startup_options SOURCES ${PLATFORM_DIR}/native/test_startup_options.cpp
   LABELS config)
-foreach(scenario IN ITEMS fit original best)
+# wide, wide-tall and wide-cap: tweaks:widescreen's mode for a 2560x1440, a
+# 1280x1024 and a 4000x400 window.
+foreach(scenario IN ITEMS fit original best wide wide-tall wide-cap)
   lrr_unit_test_variant(startup_device_${scenario} OF startup_options
     ARGS ${scenario} LABELS config ENVIRONMENT "SDL_VIDEO_DRIVER=dummy" SKIP_RETURN_CODE 77)
 endforeach()

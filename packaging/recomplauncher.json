@@ -30,6 +30,7 @@
         "legorr/vertical resolution": "480",
         "tweaks/training save": "prompt",
         "tweaks/display": "fit",
+        "tweaks/widescreen": "true",
         "tweaks/controls": "modern",
         "tweaks/fix_idleness_syndrome": "true",
         "tweaks/fps_overlay": "false",
@@ -74,6 +75,17 @@
         { "label": "Original 640x480", "set": { "tweaks/display": "original" } }
       ],
       "defaults": { "tweaks/display": "fit" }
+    },
+    {
+      "id": "widescreen",
+      "label": "Widescreen",
+      "group": "Display",
+      "help": "On fills a wide screen: the 3D view shows more at the sides and the interface keeps to the edges. Off keeps the 4:3 picture with bars at the sides. Needs the sharp picture.",
+      "choices": [
+        { "label": "On", "set": { "tweaks/widescreen": "true" } },
+        { "label": "Off", "set": { "tweaks/widescreen": "false" } }
+      ],
+      "defaults": { "tweaks/widescreen": "true" }
     },
     {
       "id": "fps_overlay",

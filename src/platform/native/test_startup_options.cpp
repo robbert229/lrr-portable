@@ -6,6 +6,7 @@
 #include <SDL3/SDL.h>
 #include <miniwin/windows.h>
 
+#include "gods98/directdraw.h"
 #include "gods98/init.h"
 #include "gods98/main_globs.h"
 #include "platform/native/config.h"
@@ -52,13 +53,19 @@ static int check_device(const std::string& scenario)
     // Match test_config: never read or write the user's real preferences.
     if (prefDir.compare(0, root.size() + 1, root + "/") != 0) return 77;
 
-    const bool fit = scenario == "fit";
+    const bool wide = scenario.compare(0, 4, "wide") == 0;
+    const bool fit = scenario == "fit" || wide;
     const bool best = scenario == "best";
+    /* tweaks:widescreen: the window's aspect at the mode's height, 4:1 at
+     * most; a window no wider than 4:3 keeps 640x480. */
+    const int windowW = scenario == "wide" ? 2560 : scenario == "wide-tall" ? 1280 : scenario == "wide-cap" ? 4000 : 640;
+    const int windowH = scenario == "wide" ? 1440 : scenario == "wide-tall" ? 1024 : scenario == "wide-cap" ? 400 : 480;
+    const unsigned modeW = scenario == "wide" ? 853u : scenario == "wide-cap" ? 1920u : 640u;
     {
         std::ofstream ini("fixture.ini");
         ini << "[legorr]\n"
-            << "Full Screen = false\nHorizontal Resolution = 640\nVertical Resolution = 480\n"
-            << "3D Device = " << (fit ? "Unknown device" : LRR_DEVICE_SOFTWARE) << "\n"
+            << "Full Screen = false\nHorizontal Resolution = " << windowW << "\nVertical Resolution = " << windowH
+            << "\n3D Device = " << (scenario == "fit" ? "Unknown device" : LRR_DEVICE_SOFTWARE) << "\n"
             << "savepath = " << root << "\n"
             << "[tweaks]\ndisplay = " << (fit ? "fit" : "original") << "\n";
         ini.close();
@@ -81,9 +88,10 @@ static int check_device(const std::string& scenario)
         }
         CHECK(initGlobs.selMode != nullptr, "selected mode");
         CHECK_EQ(initGlobs.selFullScreen, 0);
-        CHECK_EQ(initGlobs.validModeCount, fit ? 1u : 3u);
-        CHECK_EQ(directDrawGlobs.width, 640u);
+        CHECK_EQ(initGlobs.validModeCount, fit ? (modeW != 640u ? 2u : 1u) : 3u);
+        CHECK_EQ(directDrawGlobs.width, modeW);
         CHECK_EQ(directDrawGlobs.height, 480u);
+        CHECK_EQ(directdraw_widescreen_margin(), static_cast<int>(modeW) - 640);
         unsigned mode = 0;
         if (initGlobs.selMode) {
             CHECK(init_get_mode(initGlobs.selMode->desc, &mode), "find selected mode by name");
@@ -103,7 +111,9 @@ int main(int argc, char** argv)
         check_options();
         return lrr_test_result();
     }
-    if (!CHECK(scenario == "fit" || scenario == "original" || scenario == "best", "known scenario"))
+    if (!CHECK(scenario == "fit" || scenario == "original" || scenario == "best" || scenario == "wide" ||
+                   scenario == "wide-tall" || scenario == "wide-cap",
+               "known scenario"))
         return lrr_test_result();
     return check_device(scenario);
 }

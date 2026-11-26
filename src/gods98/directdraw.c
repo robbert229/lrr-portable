@@ -21,6 +21,8 @@
 #include "files.h"
 #include "images.h"
 #include "directdraw_imports.h"
+#include "gods98/main_globs.h" // [divergence:widescreen] appWidth, outside the 4:3 frame
+#include "draw.h"                // [divergence:widescreen] Draw.c's clip window, for the 4:3 frame
 
 #include <miniwin/d3d.h>
 #include <miniwin/d3drm.h>
@@ -320,14 +322,159 @@ int directdraw_setup(int fullScreen, const DirectDraw_Driver* driver,
     return FALSE;
 }
 
+/* [divergence:widescreen] PORT-ONLY: the 4:3 frame. A mode wider than 4:3
+ * (Init.c, tweaks:widescreen) is drawn at its full width in a level. The
+ * screens around the levels (the front end, the rewards, the loading and
+ * shutdown screens, the movies) are 640x480 pictures. While one is up, the
+ * game draws into a frame of the mode's height and 4:3 width, an offscreen
+ * surface that stands in for the back buffer (directDrawGlobs.bSurf), and
+ * the flip shows it centred, with black at the sides. The mouse reads in
+ * the frame's coordinates (Input.c). The display's size (Main.c's appWidth
+ * and appHeight) stays the mode's, which the level's interface is laid out
+ * for when the game starts; a 640x480 screen that measures itself by the
+ * display's width reads directdraw_frame_width instead.
+ *
+ * The 3D device draws on the back buffer, not the frame. A screen that
+ * renders 3D over its picture (the front end's rock wipe) has the frame put
+ * on the back buffer first (directdraw_frame_flush, from Viewport_Render);
+ * what it draws after that goes on top, keyed. */
+static unsigned int s_frameWidth = 0;            /* the width Init.c widened the mode from; 0: not widened */
+static IDirectDrawSurface4* s_frameSurf = NULL;  /* the frame */
+static IDirectDrawSurface4* s_screenSurf = NULL; /* the back buffer, while framed */
+static int s_frameFlushed = FALSE;               /* the frame is on the back buffer this frame */
+#define DIRECTDRAW_FRAME_KEY 0x00ff00ffu         /* what the frame holds after a flush */
+
+void directdraw_set_frame_width(unsigned int width)
+{
+    s_frameWidth = width;
+}
+
+/* The frame's width: the width the mode was widened from, or the mode's
+ * width when it was not widened. */
+static unsigned int directdraw_frame_width_for_mode(void)
+{
+    return s_frameWidth != 0 && s_frameWidth < directDrawGlobs.width ? s_frameWidth : directDrawGlobs.width;
+}
+
+int directdraw_set_framed(int framed)
+{
+    DDSURFACEDESC2 ddsd;
+    unsigned int width = directdraw_frame_width_for_mode();
+    int wasFramed = s_screenSurf != NULL;
+
+    if (framed && s_screenSurf == NULL && width < directDrawGlobs.width && directDrawGlobs.bSurf != NULL) {
+        if (s_frameSurf == NULL) {
+            memset(&ddsd, 0, sizeof(ddsd));
+            ddsd.dwSize = sizeof(ddsd);
+            ddsd.dwFlags = DDSD_CAPS | DDSD_WIDTH | DDSD_HEIGHT;
+            ddsd.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
+            ddsd.dwWidth = width;
+            ddsd.dwHeight = directDrawGlobs.height;
+            if (directDrawGlobs.lpDirectDraw->CreateSurface(&ddsd, &s_frameSurf, NULL) != DD_OK) {
+                s_frameSurf = NULL;
+                return wasFramed;
+            }
+        }
+        s_screenSurf = directDrawGlobs.bSurf;
+        directDrawGlobs.bSurf = s_frameSurf;
+        s_frameFlushed = FALSE;
+        directdraw_clear(NULL, 0);
+        viewport_subrectangle_set(NULL); /* Draw.c's clip window: the frame */
+    } else if (!framed && s_screenSurf != NULL) {
+        directDrawGlobs.bSurf = s_screenSurf;
+        s_screenSurf = NULL;
+        directdraw_clear(NULL, 0);
+        viewport_subrectangle_set(NULL); /* Draw.c's clip window: the screen */
+    }
+    return wasFramed;
+}
+
+int directdraw_is_framed(void)
+{
+    return s_screenSurf != NULL;
+}
+
+int directdraw_frame_width(void)
+{
+    if (s_screenSurf == NULL) return s_display_w;
+    return (int)directdraw_frame_width_for_mode();
+}
+
+int directdraw_frame_x(void)
+{
+    if (s_screenSurf == NULL) return 0;
+    return (int)(directDrawGlobs.width - directdraw_frame_width_for_mode()) / 2;
+}
+
+int directdraw_widescreen_margin(void)
+{
+    return (int)(directDrawGlobs.width - directdraw_frame_width_for_mode());
+}
+
+static void directdraw_frame_fill(IDirectDrawSurface4* surf, unsigned int colour)
+{
+    DDBLTFX ddbltfx;
+
+    memset(&ddbltfx, 0, sizeof(ddbltfx));
+    ddbltfx.dwSize = sizeof(ddbltfx);
+    ddbltfx.dwFillColor = directdraw_get_colour(surf, colour);
+    surf->Blt(NULL, NULL, NULL, DDBLT_COLORFILL | DDBLT_WAIT, &ddbltfx);
+}
+
+/* Draws the frame on the back buffer, centred: over black, or keyed over
+ * what is there. */
+static void directdraw_frame_draw(int keyed)
+{
+    DDCOLORKEY key;
+    RECT dest;
+    int x = directdraw_frame_x();
+
+    if (!keyed) directdraw_frame_fill(s_screenSurf, 0);
+    dest.left = x;
+    dest.top = 0;
+    dest.right = x + (LONG)directdraw_frame_width_for_mode();
+    dest.bottom = (LONG)directDrawGlobs.height;
+    if (keyed) {
+        key.dwColorSpaceLowValue = key.dwColorSpaceHighValue = directdraw_get_colour(s_frameSurf, DIRECTDRAW_FRAME_KEY);
+        s_frameSurf->SetColorKey(DDCKEY_SRCBLT, &key);
+        s_screenSurf->Blt(&dest, s_frameSurf, NULL, DDBLT_KEYSRC | DDBLT_WAIT, NULL);
+        s_frameSurf->SetColorKey(DDCKEY_SRCBLT, NULL);
+    } else {
+        s_screenSurf->Blt(&dest, s_frameSurf, NULL, DDBLT_WAIT, NULL);
+    }
+}
+
+void directdraw_frame_flush(void)
+{
+    if (s_screenSurf == NULL || s_frameFlushed) return;
+    directdraw_frame_draw(FALSE);
+    directdraw_frame_fill(s_frameSurf, DIRECTDRAW_FRAME_KEY);
+    s_frameFlushed = TRUE;
+}
+
+/* Puts the frame on the back buffer before a flip. */
+static void directdraw_frame_present(void)
+{
+    if (s_screenSurf == NULL) return;
+    directdraw_frame_draw(s_frameFlushed);
+    if (s_frameFlushed) {
+        /* The next frame starts black, as one that was never flushed. */
+        directdraw_frame_fill(s_frameSurf, 0);
+        s_frameFlushed = FALSE;
+    }
+    directDrawGlobs.bSurf = s_screenSurf;
+}
+
 // FUNCTION: LEGORR 0x0047c8d0
 void directdraw_flip(void)
 {
+    directdraw_frame_present(); // [divergence:widescreen]
     if (directDrawGlobs.fullScreen) {
         directDrawGlobs.fSurf->Flip(NULL, DDFLIP_WAIT);
-        return;
+    } else {
+        directdraw_blit_buffers();
     }
-    directdraw_blit_buffers();
+    if (s_screenSurf != NULL) directDrawGlobs.bSurf = s_frameSurf; // [divergence:widescreen]
 }
 
 // FUNCTION: LEGORR 0x0047c8f0
@@ -406,8 +553,16 @@ int directdraw_save_bmp(IDirectDrawSurface4* surface, const char* fname)
 // FUNCTION: LEGORR 0x0047cc20
 void directdraw_return_front_buffer(void)
 {
+    RECT centre; // [divergence:widescreen]
+
     if (directDrawGlobs.fullScreen) {
-        directDrawGlobs.bSurf->Blt(NULL, directDrawGlobs.fSurf, NULL, DDBLT_WAIT, NULL);
+        /* [divergence:widescreen] Into the 4:3 frame, the screen's centre
+         * at 4:3, where the frame was shown. */
+        centre.left = directdraw_frame_x();
+        centre.top = 0;
+        centre.right = centre.left + (LONG)directdraw_frame_width_for_mode();
+        centre.bottom = (LONG)directDrawGlobs.height;
+        directDrawGlobs.bSurf->Blt(NULL, directDrawGlobs.fSurf, s_screenSurf != NULL ? &centre : NULL, DDBLT_WAIT, NULL);
     }
 }
 
@@ -436,6 +591,12 @@ void directdraw_blit_buffers(void)
 // FUNCTION: LEGORR 0x0047ccf0
 void directdraw_shutdown(void)
 {
+    /* [divergence:widescreen] The back buffer again, and the frame freed. */
+    directdraw_set_framed(FALSE);
+    if (s_frameSurf) {
+        s_frameSurf->Release();
+        s_frameSurf = NULL;
+    }
     if (directDrawGlobs.fSurf) directDrawGlobs.fSurf->Release();
     if (directDrawGlobs.lpFrontClipper) directDrawGlobs.lpFrontClipper->Release();
     if (directDrawGlobs.lpBackClipper) directDrawGlobs.lpBackClipper->Release();
