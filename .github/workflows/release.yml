@@ -135,7 +135,8 @@ jobs:
       # Flatpaks, renamed to carry the version; and two test builds, named
       # as such: Android's debug-signed APK, and the 3DS .3dsx and .cia in a
       # ZIP with the licence and notices. FreeBSD has no package, and the
-      # web build is not shipped (docs/releasing.md).
+      # web build is not shipped (docs/releasing.md). The source of the
+      # FFmpeg the macOS packages bundle joins them after the check below.
       - name: Collect the release assets
         run: |
           set -euo pipefail
@@ -204,6 +205,13 @@ jobs:
               *) echo "::error::the build reports '$reported'"; exit 1 ;;
             esac
           fi
+
+      # The source of the FFmpeg the macOS packages bundle, which the LGPL
+      # asks to go with them: the same release tarball, checked against the
+      # same SHA-256 (packaging/macos/ffmpeg/build.sh). It is added after the
+      # package check, which reads only packages.
+      - name: Add the bundled FFmpeg's source
+        run: packaging/macos/ffmpeg/build.sh fetch release
 
       - name: Write the checksums and the notes
         run: |

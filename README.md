@@ -70,8 +70,9 @@ what you were doing when it happened.
   them the game plays without music, the same as the original with no CD in
   the drive.
 - **Optional: FFmpeg 7 or newer, for the movies.** The intro and cutscene
-  movies play through [FFmpeg](https://ffmpeg.org/). If it isn't installed,
-  the game skips them and carries on.
+  movies play through [FFmpeg](https://ffmpeg.org/). The macOS app comes
+  with its own; elsewhere, if it isn't installed, the game skips them and
+  carries on.
 
 ## Getting the game running
 

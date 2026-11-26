@@ -287,6 +287,35 @@ if(LRR_MOVIES)
     set(LRR_VIDEO_LIBAVCODEC "libavcodec.63.dylib,libavcodec.62.dylib,libavcodec.61.dylib,libavcodec.dylib")
     set(LRR_VIDEO_LIBAVUTIL "libavutil.61.dylib,libavutil.60.dylib,libavutil.59.dylib,libavutil.dylib")
     set(LRR_VIDEO_LIBSWSCALE "libswscale.10.dylib,libswscale.9.dylib,libswscale.8.dylib,libswscale.dylib")
+    # The FFmpeg the macOS packages bundle (packaging/macos/ffmpeg/build.sh):
+    # its prefix. Its four libraries go into LegoRR.app/Contents/Frameworks
+    # (packaging/macos), and the game tries them there before the system's.
+    set(LRR_FFMPEG_DIR "" CACHE PATH
+      "An FFmpeg prefix from packaging/macos/ffmpeg/build.sh to bundle in LegoRR.app")
+    set(LRR_BUNDLED_FFMPEG_LIBS "")
+    if(LRR_FFMPEG_DIR)
+      foreach(_lrr_lib IN ITEMS avformat avcodec avutil swscale)
+        # lib<name>.<major>.dylib, the name the libraries link each other by.
+        file(GLOB _lrr_candidates "${LRR_FFMPEG_DIR}/lib/lib${_lrr_lib}.*.dylib")
+        set(_lrr_found "")
+        foreach(_lrr_candidate IN LISTS _lrr_candidates)
+          get_filename_component(_lrr_name "${_lrr_candidate}" NAME)
+          if(_lrr_name MATCHES "^lib${_lrr_lib}\\.[0-9]+\\.dylib$")
+            set(_lrr_found "${_lrr_candidate}")
+          endif()
+        endforeach()
+        if(NOT _lrr_found)
+          message(FATAL_ERROR "LRR_FFMPEG_DIR: no lib${_lrr_lib}.<major>.dylib in ${LRR_FFMPEG_DIR}/lib")
+        endif()
+        get_filename_component(_lrr_name "${_lrr_found}" NAME)
+        string(TOUPPER "LIB${_lrr_lib}" _lrr_key)
+        set(LRR_VIDEO_${_lrr_key} "@executable_path/../Frameworks/${_lrr_name},${LRR_VIDEO_${_lrr_key}}")
+        list(APPEND LRR_BUNDLED_FFMPEG_LIBS "${_lrr_found}")
+      endforeach()
+      if(NOT EXISTS "${LRR_FFMPEG_DIR}/share/ffmpeg/COPYING.LGPLv2.1")
+        message(FATAL_ERROR "LRR_FFMPEG_DIR: no share/ffmpeg/COPYING.LGPLv2.1 in ${LRR_FFMPEG_DIR}")
+      endif()
+    endif()
   elseif(WIN32)
     # The Windows builds' DLL names, for the same library majors as the
     # sonames below (FFmpeg 7 and later).
@@ -484,4 +513,19 @@ endif()
 option(LRR_PACKAGING "Add install rules and CPack packages" ${_lrr_packaging_default})
 if(LRR_PACKAGING)
   add_subdirectory(packaging)
+endif()
+# The bundled FFmpeg (LRR_FFMPEG_DIR) in the build tree's LegoRR.app too, so
+# `make run` plays the movies. install() puts the same files in the package
+# (packaging/CMakeLists.txt). LegoRR is a bundle only with packaging on
+# (packaging/macos).
+if(LRR_PACKAGING AND APPLE AND NOT IOS)
+  foreach(_lrr_lib IN LISTS LRR_BUNDLED_FFMPEG_LIBS)
+    get_filename_component(_lrr_name "${_lrr_lib}" NAME)
+    get_filename_component(_lrr_real "${_lrr_lib}" REALPATH)
+    add_custom_command(TARGET program POST_BUILD
+      COMMAND "${CMAKE_COMMAND}" -E make_directory
+        "$<TARGET_BUNDLE_CONTENT_DIR:program>/Frameworks"
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${_lrr_real}"
+        "$<TARGET_BUNDLE_CONTENT_DIR:program>/Frameworks/${_lrr_name}")
+  endforeach()
 endif()

@@ -6,7 +6,8 @@
 #              the icon; packaging/linux also holds the AppImage and Flatpak
 #              recipes the CI packages workflow runs.
 #   - macOS:   a DragNDrop disk image holding LegoRR.app (packaging/macos),
-#              and a ZIP of the same for RecompLauncher.
+#              and a ZIP of the same for RecompLauncher; with LRR_FFMPEG_DIR,
+#              the app bundles FFmpeg for the movies.
 #   - Windows: a ZIP with LegoRR.exe, SDL3.dll beside it when SDL is shared,
 #              and the Visual C++ runtime DLLs in an MSVC build.
 # Every package carries LICENSE and THIRD-PARTY-NOTICES.txt.
@@ -81,10 +82,29 @@ if(APPLE AND NOT IOS)
   # Here rather than in macos/, so that it runs after the install() of
   # LegoRR.app above.
   # Pull in any shared library the bundle links (none with the fetched, static
-  # SDL3), then sign, so that the signature covers the final contents.
+  # SDL3), add the bundled FFmpeg, which the game loads at run time and so
+  # fixup_bundle never sees, then sign, so that the signature covers the
+  # final contents.
+  set(_lrr_ffmpeg_install "")
+  foreach(_lrr_lib IN LISTS LRR_BUNDLED_FFMPEG_LIBS)
+    # The library itself, under the name the others link it by.
+    get_filename_component(_lrr_name "${_lrr_lib}" NAME)
+    get_filename_component(_lrr_real "${_lrr_lib}" REALPATH)
+    string(APPEND _lrr_ffmpeg_install "
+    file(INSTALL \"${_lrr_real}\"
+      DESTINATION \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/LegoRR.app/Contents/Frameworks\"
+      RENAME \"${_lrr_name}\")")
+  endforeach()
+  if(LRR_BUNDLED_FFMPEG_LIBS)
+    string(APPEND _lrr_ffmpeg_install "
+    file(INSTALL \"${LRR_FFMPEG_DIR}/share/ffmpeg/COPYING.LGPLv2.1\"
+      DESTINATION \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/LegoRR.app/Contents/Resources\"
+      RENAME \"FFmpeg-COPYING.LGPLv2.1.txt\")")
+  endif()
   install(CODE "
     include(BundleUtilities)
     fixup_bundle(\"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/LegoRR.app\" \"\" \"\")
+    ${_lrr_ffmpeg_install}
     execute_process(COMMAND /usr/bin/codesign --force --deep --sign -
       \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/LegoRR.app\"
       COMMAND_ERROR_IS_FATAL ANY)

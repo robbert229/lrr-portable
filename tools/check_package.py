@@ -80,6 +80,8 @@ ALLOWED = [
     r"LegoRR\.app/Contents/Resources/AppIcon\.icns",
     r"LegoRR\.app/Contents/_CodeSignature/CodeResources",
     r"LegoRR\.app/Contents/Frameworks/[^/]+\.dylib",
+    # The bundled FFmpeg's licence (packaging/macos/ffmpeg).
+    r"LegoRR\.app/Contents/Resources/FFmpeg-COPYING\.LGPLv2\.1\.txt",
     r"Applications",
     r"\.HFS\+ Private Directory Data.*",
     r"\[HFS\+ Private Data\].*",
@@ -104,6 +106,12 @@ REQUIRED = [
     ("the licence", re.compile(r"(^|/)LICENSE(\.txt)?$", re.I)),
     ("the third-party notices", re.compile(r"(^|/)THIRD-PARTY-NOTICES\.txt$", re.I)),
 ]
+
+
+# A package that bundles FFmpeg (packaging/macos/ffmpeg) carries its licence,
+# the LGPL it is shipped under.
+FFMPEG_LIBRARY = re.compile(r"(^|/)lib(avformat|avcodec|avutil|swscale)[.-][^/]*\.(dylib|dll|so[.0-9]*)$", re.I)
+FFMPEG_LICENCE = re.compile(r"(^|/)FFmpeg-COPYING\.LGPLv2\.1\.txt$", re.I)
 
 
 def strip_top(paths):
@@ -224,6 +232,9 @@ def problems(files, require=()):
     for what, pattern in REQUIRED:
         if not any(pattern.search(p) for p in files):
             found.append(f"missing {what}")
+    if any(FFMPEG_LIBRARY.search(p) for p in files) and not any(
+            FFMPEG_LICENCE.search(p) for p in files):
+        found.append("missing FFmpeg's licence (FFmpeg-COPYING.LGPLv2.1.txt) beside its libraries")
     for name in require:
         if not any(fnmatch.fnmatch(PurePosixPath(p).name.lower(), name.lower()) for p in files):
             found.append(f"missing {name}")

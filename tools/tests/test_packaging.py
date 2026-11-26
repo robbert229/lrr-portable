@@ -245,6 +245,52 @@ class RecompLauncherTests(unittest.TestCase):
         self.assertEqual(check_package.problems(["recomplauncher.json", "LICENSE", "THIRD-PARTY-NOTICES.txt"]), [])
 
 
+class BundledFFmpegTests(unittest.TestCase):
+    """The FFmpeg the macOS packages bundle (packaging/macos/ffmpeg) stays
+    LGPL, and its notices and source go with it."""
+
+    def setUp(self):
+        self.build = (PACKAGING / "macos/ffmpeg/build.sh").read_text()
+        self.version = re.search(r'^FFMPEG_VERSION="([^"]+)"', self.build, re.M).group(1)
+        self.sha256 = re.search(r'^FFMPEG_SHA256="([0-9a-f]{64})"', self.build, re.M).group(1)
+
+    def test_no_licence_changing_configure_flag(self):
+        flags = self.build.split("CONFIGURE_FLAGS=(", 1)[1].split(")", 1)[0]
+        for flag in ("--enable-gpl", "--enable-version3", "--enable-nonfree"):
+            self.assertNotIn(flag, flags)
+        for flag in ("--disable-autodetect", "--disable-everything", "--enable-shared"):
+            self.assertIn(flag, flags)
+
+    def test_notices_name_the_bundled_source(self):
+        notices = (ROOT / "THIRD-PARTY-NOTICES.txt").read_text()
+        self.assertIn(f"https://ffmpeg.org/releases/ffmpeg-{self.version}.tar.xz", notices)
+        self.assertIn(self.sha256, notices)
+        self.assertIn("LGPLv2.1", notices)
+        self.assertIn("FFmpeg-COPYING.LGPLv2.1.txt", notices)
+
+    def test_the_macos_packages_bundle_it_and_the_release_carries_its_source(self):
+        hosts = (ROOT / ".github/workflows/native-hosts.yml").read_text()
+        self.assertIn('packaging/macos/ffmpeg/build.sh build "$RUNNER_TEMP/ffmpeg"', hosts)
+        self.assertIn('-DLRR_FFMPEG_DIR="$RUNNER_TEMP/ffmpeg"', hosts)
+        release = (ROOT / ".github/workflows/release.yml").read_text()
+        self.assertIn("packaging/macos/ffmpeg/build.sh fetch release", release)
+        cmake = (PACKAGING / "CMakeLists.txt").read_text()
+        self.assertIn("FFmpeg-COPYING.LGPLv2.1.txt", cmake)
+
+    def test_a_package_with_ffmpeg_needs_its_licence(self):
+        sys.path.insert(0, str(ROOT / "tools"))
+        try:
+            import check_package
+        finally:
+            sys.path.pop(0)
+        base = ["LICENSE", "THIRD-PARTY-NOTICES.txt", "LegoRR.app/Contents/MacOS/LegoRR"]
+        lib = ["LegoRR.app/Contents/Frameworks/libavcodec.63.dylib"]
+        licence = ["LegoRR.app/Contents/Resources/FFmpeg-COPYING.LGPLv2.1.txt"]
+        self.assertEqual(check_package.problems(base + lib + licence), [])
+        self.assertTrue(check_package.problems(base + lib))
+        self.assertEqual(check_package.problems(base), [])
+
+
 class IconTests(unittest.TestCase):
     def test_svg_is_well_formed(self):
         root = ET.parse(PACKAGING / "icons/lrr-portable.svg").getroot()
