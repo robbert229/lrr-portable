@@ -225,6 +225,15 @@ class RecompLauncherTests(unittest.TestCase):
     def test_the_packages_carry_it_at_the_top(self):
         cmake = (PACKAGING / "CMakeLists.txt").read_text()
         self.assertIn('install(FILES recomplauncher.json DESTINATION ".")', cmake)
+        self.assertIn('if(WIN32 OR APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")', cmake)
+        # On macOS the launcher installs a ZIP with the .app at its top, not
+        # the disk image.
+        self.assertIn("set(CPACK_GENERATOR DragNDrop ZIP)", cmake)
+        hosts = (ROOT / ".github/workflows/native-hosts.yml").read_text()
+        self.assertIn("build/dist/lrr-portable-*.zip", hosts)
+        release = (ROOT / ".github/workflows/release.yml").read_text()
+        for arch in ("arm64", "x86_64"):
+            self.assertIn(f'"lrr-portable-$VERSION-Darwin-{arch}.zip"', release)
         # An AppImage installs under /usr; the manifest belongs at its root.
         build = (PACKAGING / "linux/appimage/build.sh").read_text()
         self.assertIn('mv "$APPDIR/usr/recomplauncher.json" "$APPDIR/recomplauncher.json"', build)

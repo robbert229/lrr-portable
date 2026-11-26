@@ -131,7 +131,7 @@ jobs:
           path: artifacts
 
       # The release ships these, and only these: the MSVC ZIPs (the MinGW64
-      # one duplicates x64), the DMGs, the Linux TGZ and AppImage, and both
+      # one duplicates x64), the macOS DMGs and ZIPs, the Linux TGZ and AppImage, and both
       # Flatpaks, renamed to carry the version; and two test builds, named
       # as such: Android's debug-signed APK, and the 3DS .3dsx and .cia in a
       # ZIP with the licence and notices. FreeBSD has no package, and the
@@ -150,6 +150,8 @@ jobs:
           done
           take "macos-arm64/lrr-portable-$VERSION-Darwin-arm64.dmg" "lrr-portable-$VERSION-Darwin-arm64.dmg"
           take "macos-intel/lrr-portable-$VERSION-Darwin-x86_64.dmg" "lrr-portable-$VERSION-Darwin-x86_64.dmg"
+          take "macos-arm64/lrr-portable-$VERSION-Darwin-arm64.zip" "lrr-portable-$VERSION-Darwin-arm64.zip"
+          take "macos-intel/lrr-portable-$VERSION-Darwin-x86_64.zip" "lrr-portable-$VERSION-Darwin-x86_64.zip"
           take "linux-x86_64/lrr-portable-$VERSION-Linux-x86_64.tar.gz" "lrr-portable-$VERSION-Linux-x86_64.tar.gz"
           take "linux-x86_64/lrr-portable-$VERSION-Linux-x86_64.AppImage" "lrr-portable-$VERSION-Linux-x86_64.AppImage"
           for arch in x86_64 aarch64; do
