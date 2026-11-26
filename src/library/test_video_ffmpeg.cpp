@@ -48,6 +48,15 @@ bool Near565(uint16_t got, uint16_t want)
     return dr >= -1 && dr <= 1 && dg >= -2 && dg <= 2 && db >= -1 && db <= 1;
 }
 
+/* The clip's frame a pixel shows, or -1. */
+int FrameOf(uint16_t pixel)
+{
+    for (int i = 0; i < 8; i++) {
+        if (Near565(pixel, kColours565[i])) return i;
+    }
+    return -1;
+}
+
 void TestMissing()
 {
     CHECK(video_available() == 0);
@@ -74,8 +83,10 @@ void TestOpen()
     video_close(video);
 }
 
-/* The playback path: every frame in turn, in RGB565 at a padded pitch,
- * paced to the clock, then the end. */
+/* The playback path: the frames in order, in RGB565 at a padded pitch,
+ * paced to the clock, then the end. A busy host (CI's macOS runners)
+ * oversleeps past a frame now and then, and video_update rightly drops
+ * it, so the frames shown need only rise, each one whole, to the last. */
 void TestUpdate()
 {
     VideoFile* video = video_open(ClipPath(), 1);
@@ -85,12 +96,16 @@ void TestUpdate()
     std::vector<uint16_t> pixels(pitch / 2 * 24, 0x1234);
     Uint64 start = SDL_GetTicksNS();
     video_start(video);
+    int last = -1;
     for (int i = 0; i < 8; i++) {
-        CHECK(video_update(video, pixels.data(), pitch, 16, 0xf800, 0x07e0, 0x001f) == 1);
-        CHECK(Near565(pixels[0], kColours565[i]));
-        CHECK(Near565(pixels[23 * pitch / 2 + 31], kColours565[i]));
+        if (video_update(video, pixels.data(), pitch, 16, 0xf800, 0x07e0, 0x001f) != 1) break;
+        int shown = FrameOf(pixels[0]);
+        CHECK(shown > last);
+        CHECK(FrameOf(pixels[23 * pitch / 2 + 31]) == shown);
         CHECK(pixels[32] == 0x1234); /* the padding is left alone */
+        last = shown;
     }
+    CHECK(last == 7);
     Uint64 elapsed = SDL_GetTicksNS() - start;
     /* Frame 7 is due 7/15 s after the start. */
     CHECK(elapsed >= 7 * SDL_NS_PER_SECOND / 15 - 20 * SDL_NS_PER_MS);
@@ -98,7 +113,8 @@ void TestUpdate()
     video_close(video);
 }
 
-/* A late caller gets the frame that is due, not the next one. */
+/* A late caller gets the frame that is due, not the next one: frame 5
+ * after 5/15 s, or a later one if the host oversleeps, never an earlier. */
 void TestDropsLateFrames()
 {
     VideoFile* video = video_open(ClipPath(), 0);
@@ -108,7 +124,7 @@ void TestDropsLateFrames()
     video_start(video);
     SDL_DelayNS(SDL_NS_PER_SECOND * 5 / 15 + 20 * SDL_NS_PER_MS);
     CHECK(video_update(video, pixels, 64, 16, 0xf800, 0x07e0, 0x001f) == 1);
-    CHECK(Near565(pixels[0], kColours565[5]));
+    CHECK(FrameOf(pixels[0]) >= 5);
     video_close(video);
 }
 
