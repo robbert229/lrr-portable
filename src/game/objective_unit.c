@@ -20,6 +20,12 @@
 #include "legoobject_record.h"
 #include "objective_unit_imports.h"
 #include "crt/vc5names.h"
+#include "gods98/directdraw.h" // [divergence:widescreen] directdraw_widescreen_margin
+
+/* [divergence:widescreen] The briefing is centred in a mode wider than 4:3:
+ * its image and its page buttons, which are drawn and hit-tested at
+ * 640x480 positions, move right by half the extra width (DirectDraw.c). */
+#define OBJECTIVE_WIDE_CENTRE (directdraw_widescreen_margin() / 2)
 /* legoGlobs' fields (lego_globs.h, finding 653). lego_unit.h, included
  * above, pays for its symbols (finding 538). */
 #include "lego_globs.h"
@@ -342,7 +348,7 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
         if (OBJECTIVE_DATA(level)->image) image_surface_release(OBJECTIVE_DATA(level)->image);
         OBJECTIVE_DATA(level)->image = image_load_bmp_scaled(argv[0], 0, 0);
         if (OBJECTIVE_DATA(level)->image) resource_record_add_ref(OBJECTIVE_DATA(level)->image);
-        OBJECTIVE_DATA(level)->imagePos[0] = (float)atoi(argv[1]);
+        OBJECTIVE_DATA(level)->imagePos[0] = (float)(atoi(argv[1]) + OBJECTIVE_WIDE_CENTRE); // [divergence:widescreen]
         OBJECTIVE_DATA(level)->imagePos[1] = (float)atoi(argv[2]);
         if (argc == 6 && OBJECTIVE_DATA(level)->image) {
             r = atoi(argv[3]);
@@ -391,7 +397,7 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
         argc = sound_variant_split(s, argv, ",");
         OBJECTIVE_DATA(level)->achievedVideoName = string_duplicate(argv[0]);
         if (argc == 3) {
-            OBJECTIVE_DATA(level)->achievedVideoPos[0] = (float)atoi(argv[1]);
+            OBJECTIVE_DATA(level)->achievedVideoPos[0] = (float)(atoi(argv[1]) + OBJECTIVE_WIDE_CENTRE); // [divergence:widescreen]
             OBJECTIVE_DATA(level)->achievedVideoPos[1] = (float)atoi(argv[2]);
             free(s);
         } else {
@@ -676,8 +682,8 @@ int objective_handle_keys(int nextKeyPressed, int leftButtonReleased,
 
     if ((nextKeyPressed || leftButtonReleased) &&
         objectiveGlobs.currentPage[type] == objectiveGlobs.pageCount[type]) {
-        if ((int)s_renderer_word_a < 130 ||
-            (int)s_renderer_word_a >= (int)legoGlobs_BackButtonImage->width + 130 ||
+        if ((int)s_renderer_word_a < 130 + OBJECTIVE_WIDE_CENTRE ||
+            (int)s_renderer_word_a >= (int)legoGlobs_BackButtonImage->width + 130 + OBJECTIVE_WIDE_CENTRE ||
             (int)s_renderer_word_b < 315 ||
             (int)s_renderer_word_b >= (int)legoGlobs_BackButtonImage->height + 315) {
             if (objectiveGlobs.flags & OBJECTIVE_FLAG_BRIEFING) {
@@ -700,8 +706,8 @@ int objective_handle_keys(int nextKeyPressed, int leftButtonReleased,
 
     if (type != OBJECTIVE_TYPE_COUNT) {
         if (objectiveGlobs.currentPage[type] < objectiveGlobs.pageCount[type]) {
-            if (!((int)s_renderer_word_a < 470 ||
-                (int)s_renderer_word_a >= (int)legoGlobs_NextButtonImage->width + 470 ||
+            if (!((int)s_renderer_word_a < 470 + OBJECTIVE_WIDE_CENTRE ||
+                (int)s_renderer_word_a >= (int)legoGlobs_NextButtonImage->width + 470 + OBJECTIVE_WIDE_CENTRE ||
                 (int)s_renderer_word_b < 315 ||
                 (int)s_renderer_word_b >= (int)legoGlobs_NextButtonImage->height + 315)) {
                 tooltip_activate(0x21);
@@ -717,8 +723,8 @@ next_page_sound:
         }
 
         if (objectiveGlobs.currentPage[type] > 0 &&
-            (int)s_renderer_word_a >= 130 &&
-            (int)s_renderer_word_a < (int)legoGlobs_BackButtonImage->width + 130 &&
+            (int)s_renderer_word_a >= 130 + OBJECTIVE_WIDE_CENTRE &&
+            (int)s_renderer_word_a < (int)legoGlobs_BackButtonImage->width + 130 + OBJECTIVE_WIDE_CENTRE &&
             (int)s_renderer_word_b >= 315 &&
             (int)s_renderer_word_b < (int)legoGlobs_BackButtonImage->height + 315) {
             tooltip_activate(0x22);
@@ -842,14 +848,14 @@ void objective_update(void* textWnd, Lego_Level* level, float elapsedGame,
         float pos[2];
 
         if (objectiveGlobs.currentPage[type] < objectiveGlobs.pageCount[type]) {
-            pos[0] = 470.0f;
+            pos[0] = 470.0f + (float)OBJECTIVE_WIDE_CENTRE; // [divergence:widescreen]
             pos[1] = 315.0f;
             objective_score_text_origin_set(pos);
         } else {
             objective_score_text_origin_set(NULL);
         }
         if (objectiveGlobs.currentPage[type] > 0) {
-            pos[0] = 130.0f;
+            pos[0] = 130.0f + (float)OBJECTIVE_WIDE_CENTRE; // [divergence:widescreen]
             pos[1] = 315.0f;
             lego_objective_task_text_origin_set(pos);
         } else {

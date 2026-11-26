@@ -220,7 +220,9 @@ static void main_fps_overlay_draw(void)
     {
         int shown = (int)(fps + 0.5f);
         uint32_t width = formatted_text_printf_width(s_fpsOverlayFont, "%d FPS", shown);
-        font_print_f(s_fpsOverlayFont, s_display_w - (int)width - 6, 4, "%d FPS", shown);
+        /* [divergence:widescreen] The top right of the 4:3 frame while one
+         * is up, else of the display. */
+        font_print_f(s_fpsOverlayFont, directdraw_frame_width() - (int)width - 6, 4, "%d FPS", shown);
     }
 }
 

@@ -25,6 +25,7 @@
 #include "crt/vc5names.h"
 #include "tooltip.h"
 #include "tooltip_imports.h"
+#include "gods98/directdraw.h" // [divergence:widescreen] the 4:3 frame
 
 /* The unit's functions have C linkage in the native C++ compile too. */
 #ifdef __cplusplus
@@ -404,6 +405,7 @@ void tooltip_draw_box(Area2F box, ColourRGBF rgbNormal,
 // FUNCTION: LEGORR 0x0046bc30
 void tooltip_draw(ToolTip* toolTip, unsigned int mouseX, unsigned int mouseY)
 {
+    unsigned int appWidth; // [divergence:widescreen]
     Area2F box;
     ColourRGBF rgbNormal;
     ColourRGBF rgbHighlight;
@@ -435,12 +437,15 @@ void tooltip_draw(ToolTip* toolTip, unsigned int mouseX, unsigned int mouseY)
         height += (toolTip->textLineCount * toolTipGlobs.fontHeight) + toolTip->iconsHeight;
     }
 
+    /* [divergence:widescreen] In the 4:3 frame (the front end), the frame's
+     * width: the display's is wider. */
+    appWidth = directdraw_is_framed() ? (unsigned int)directdraw_frame_width() : toolTipGlobs.appWidth;
     if (toolTip->flags & TOOLTIP_FLAG_FLAG10) {
-        if ((float)mouseX - -32.0f > (float)toolTipGlobs.appWidth) box.x = (float)(toolTipGlobs.appWidth - width);
+        if ((float)mouseX - -32.0f > (float)appWidth) box.x = (float)(appWidth - width);
         else box.x = ((float)mouseX - -32.0f) - (float)width;
     }
     else {
-        if (mouseX + width > toolTipGlobs.appWidth) box.x = (float)(toolTipGlobs.appWidth - width);
+        if (mouseX + width > appWidth) box.x = (float)(appWidth - width);
         else box.x = (float)mouseX;
     }
     box.y = (float)(toolTipGlobs.offsetY + mouseY);

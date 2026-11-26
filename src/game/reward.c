@@ -152,6 +152,7 @@ void reward_load_item_font(RewardLevelItem* item)
 
 /* Main.c's mainGlobs fields under the port's names (finding 679). */
 #include "gods98/main_globs.h"
+#include "gods98/directdraw.h" // [divergence:widescreen] the 4:3 frame
 
 // FUNCTION: LEGORR 0x0045f290
 void reward_load_item_box_image(RewardLevelItem* item)
@@ -827,7 +828,7 @@ int reward_calculate_score(void)
 int reward_create_scroll(void)
 {
     float screenHeight = (float)s_display_h;
-    float screenWidth = (float)s_display_w;
+    float screenWidth = (float)directdraw_frame_width(); // [divergence:widescreen] the 4:3 frame's
     RewardLegoLevel* level;
     Area2F area;
 

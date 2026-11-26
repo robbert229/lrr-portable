@@ -21,6 +21,7 @@
 #include "crt/vc5names.h"
 #include "gods98/winmm.h"
 #include "platform/native/input.h" // [divergence:touch-keyboard] LRR_InputTextWanted
+#include "gods98/directdraw.h" // [divergence:widescreen] the 4:3 frame
 
 /* Input.c's mouse is signed; the port's words are unsigned. */
 #define FRONT_MSX ((int)s_renderer_word_a)
@@ -2009,7 +2010,7 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
         width = formatted_text_printf_width(menu->menuFont, front_util_replace_text_spaces(menu->fullName));
         /* The original computes both positions before the second
          * ReplaceTextSpaces call, so they are statements (finding 672). */
-        itemX = s_display_w / 2 - ((unsigned int)width >> 1);
+        itemX = directdraw_frame_width() / 2 - ((unsigned int)width >> 1); // [divergence:widescreen] the frame's centre
         itemY = menu->anchoredY + y;
         font_print_f(menu->menuFont, itemX, itemY, front_util_replace_text_spaces(menu->fullName));
     }
@@ -2494,6 +2495,20 @@ void front_run_screen_menu(Front_Menu* menu)
         frontGlobs_overlayCurrTime = 0;
     }
     front_rock_wipe_stop();
+}
+
+/* [divergence:widescreen] PORT-ONLY: moves a menu set's menus, and their
+ * images, right by dx. */
+static void front_menu_set_shift_x(Front_MenuSet* menuSet, int dx)
+{
+    int i;
+
+    if (menuSet == NULL) return;
+    for (i = 0; i < menuSet->menuCount; i++) {
+        if (menuSet->menus[i] == NULL) continue;
+        menuSet->menus[i]->xPos += dx;
+        menuSet->menus[i]->imagePos[0] += (float)dx;
+    }
 }
 
 // FUNCTION: LEGORR 0x00413e20
@@ -3506,7 +3521,7 @@ void front_play_movie(struct G98CMovie* movie, int skippable)
      * original drew it at 640x480, in the top-left corner of a larger mode. */
     rect.left = 0;
     rect.top = 0;
-    rect.right = s_display_w;
+    rect.right = directdraw_frame_width(); // [divergence:widescreen] the 4:3 frame, while one is up
     rect.bottom = s_display_h;
     timer = 0.0f;
     if (movie_update(movie, 1.0f, (struct RECT*)&rect)) {
@@ -3900,6 +3915,10 @@ void front_load_menus(struct BlockRec* config)
     front_level_set_load_level_names(legoGlobs_config, &frontGlobs_tutorialLevels, "TutorialStartLevel");
     front_load_levels(frontGlobs_mainMenuSet);
 
+    /* [divergence:widescreen] The menus shown in a level (paused and
+     * options) are drawn over it at the mode's width, not in the 4:3 frame:
+     * in a mode wider than 4:3 they move right by half the extra width, so
+     * they stay centred. */
     // STRING: LEGORR 0x004a2640
     frontGlobs_pausedMenuSet = front_load_menu_set(config, "PausedMenu",
         &frontGlobs_triggerContinueMission, NULL,
@@ -3926,6 +3945,8 @@ void front_load_menus(struct BlockRec* config)
         &frontGlobs_triggerReplayObjective, front_callback_trigger_replay_objective,
         &frontGlobs_triggerContinueMission, NULL,
         -1);
+    front_menu_set_shift_x(frontGlobs_pausedMenuSet, directdraw_widescreen_margin() / 2);  // [divergence:widescreen]
+    front_menu_set_shift_x(frontGlobs_optionsMenuSet, directdraw_widescreen_margin() / 2); // [divergence:widescreen]
 
     frontGlobs_sliderSFXVolume = 8;
     frontGlobs_triggerContinueMission = 0;
@@ -4453,7 +4474,7 @@ void front_callback_select_mission_item(float elapsed, int selectIndex)
             }
         }
     } else {
-        front_util_print_f(font, s_display_w / 2 - (int)formatted_text_printf_width(font, levelName) / 2,
+        front_util_print_f(font, directdraw_frame_width() / 2 - (int)formatted_text_printf_width(font, levelName) / 2, // [divergence:widescreen]
                            390, levelName);
     }
 

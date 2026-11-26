@@ -52,6 +52,7 @@
 #include "lego_globs.h"
 #include "platform/native/config.h" // [divergence:modern-controls] LRR_GetControls, [divergence:unlimited-oxygen] LRR_GetUnlimitedOxygen
 #include "platform/native/input.h" // [divergence:touch-keyboard] LRR_InputTextWanted
+#include "gods98/directdraw.h" // [divergence:widescreen] directdraw_set_framed
 
 /* ------------------------------------------------------------------ */
 /* State: the unit's .bss and legoGlobs.                               */
@@ -583,6 +584,11 @@ int lego_game_config_init(void)
     float cameraSpeedD;
     float maxDist3DName;
 
+    /* [divergence:widescreen] The screens before the first level (loading,
+     * the intros, the front end) are 640x480 pictures, centred in a mode
+     * wider than 4:3 (DirectDraw.c). */
+    directdraw_set_framed(TRUE);
+
     legoGlobs_dragBoxRGB[0] = 0.2f;
     legoGlobs_dragBoxRGB[1] = 0.7f;
     legoGlobs_dragBoxRGB[2] = 1.0f;
@@ -657,7 +663,9 @@ int lego_game_config_init(void)
     DAT_0055613c = font_atlas_record_create("Interface\\Fonts\\RSFont.bmp");
 
     incident_message_catalog_init(s_lego_text_window_font);
-    interface_initialise(565, 18, s_lego_crystal_count_font);
+    /* [divergence:widescreen] The icon panel keeps to the right edge of a
+     * mode wider than 4:3 (DirectDraw.c). */
+    interface_initialise(565 + directdraw_widescreen_margin(), 18, s_lego_crystal_count_font);
 
     if ((legoGlobs_rootCont = container_initialise_original(s_engine_config_root)) != NULL) {
         scene_end_hook_register((void*)lego_object_trigger_frame_callback_adapter, NULL);
@@ -1189,7 +1197,9 @@ int lego_game_config_init(void)
                         // STRING: LEGORR 0x004a3628
                         "Interface\\AirMeter\\msgpanel_noair.bmp", 21, 0);
                     // STRING: LEGORR 0x004a35d0
-                    panel_resource_handle_and_dimensions_store("Interface\\RightPanel\\crystalsidebar_ore.bmp", 615, 434, 423);
+                    /* [divergence:widescreen] On the crystal side bar, at the right edge. */
+                    panel_resource_handle_and_dimensions_store("Interface\\RightPanel\\crystalsidebar_ore.bmp",
+                                                               615 + directdraw_widescreen_margin(), 434, 423);
                     panel_button_layout_config_load_original(cfgStr, display_width_get(), display_height_get());
                     advisor_tutorial_icon_image_load(cfgStr);
                     interface_init_object_items();
@@ -4485,6 +4495,11 @@ int lego_level_load(const char* levelName)
      * with stack garbage. Start at the first style. */
     uint32_t rockFallStyle = 0;
 
+    /* [divergence:widescreen] The level's movie and the loading screen are
+     * 640x480 pictures, centred in a mode wider than 4:3; the level itself
+     * is drawn at the mode's width (DirectDraw.c). */
+    directdraw_set_framed(TRUE);
+
     movie_play_level_video_adapter(levelName, 1);
     global_linked_record_chain_clear();
     options_apply_from_slot_original();
@@ -4820,6 +4835,7 @@ int lego_level_load(const char* levelName)
                         for (i = 0; i < 10; i++) objects[i] = lego_object_create_adapter(legoGlobs_miniFigureData, 2, 0);
                         for (i = 0; i < 10; i++) entity_teardown((struct Lego_Object*)objects[i]);
                     }
+                    directdraw_set_framed(FALSE); // [divergence:widescreen]
                     return 1;
                 }
             }
@@ -6362,8 +6378,13 @@ void lego_play_movie(const char* fName, const float* screenPt)
     struct G98CMovie* mov;
     int noScreenPt;
     LegoRect2E rect;
+    int wasFramed = TRUE; // [divergence:widescreen]
 
     if (fName) {
+        /* [divergence:widescreen] A movie without a position fills the
+         * screen: in a mode wider than 4:3, the 4:3 frame. The movie draws
+         * on the back buffer it is loaded with. */
+        if (screenPt == NULL) wasFramed = directdraw_set_framed(TRUE);
         mov = movie_load(fName);
         if (mov) {
             if (screenPt) {
@@ -6386,6 +6407,7 @@ void lego_play_movie(const char* fName, const float* screenPt)
             }
             movie_free(mov);
         }
+        if (!wasFramed) directdraw_set_framed(FALSE); // [divergence:widescreen]
     }
 }
 
@@ -9198,11 +9220,19 @@ void lego_panels_config_entry_apply(struct BlockRec* config,
     for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, buff, (const char*)NULL));
          arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
         if (ui_panel_name_table_lookup(arrayItem->key, &panelType)) {
+            int shift = 0;
             strcpy(buff, arrayItem->value);
             sound_variant_split(buff, argv, ",");
             legacy_overlay_image_record_load(argv[0], panelType, 4);
-            panel_category_bounds_set(panelType, atoi(argv[1]), atoi(argv[2]),
-                                      atoi(argv[3]), atoi(argv[4]));
+            /* [divergence:widescreen] In a mode wider than 4:3, the panels
+             * at the right of the 640x480 layout keep to the right edge:
+             * the crystal side bar, the top panel, the priority list, the
+             * camera control and the encyclopedia. The rest keep to the
+             * left (DirectDraw.c). */
+            if (panelType == 5 || panelType == 6 || panelType == 8 || panelType == 9 || panelType == 11)
+                shift = directdraw_widescreen_margin();
+            panel_category_bounds_set(panelType, atoi(argv[1]) + shift, atoi(argv[2]),
+                                      atoi(argv[3]) + shift, atoi(argv[4]));
         }
     }
 }
@@ -9677,14 +9707,33 @@ int ledger_stub_00435550_GlobalStateZeroTransitionDetect(void)
 int lego_global_handle_position_apply_if_present(void)
 {
     float pos[2];
+    float size[2]; // [divergence:widescreen]
 
     pos[0] = 0.0f;
     pos[1] = 0.0f;
     if (s_position_handle) {
-        image_display_scaled((struct Image*)s_position_handle, NULL, (const struct Point2F*)pos, NULL);
+        /* [divergence:widescreen] The overlay, a 640x480 picture, covers the
+         * whole of a widened mode; in the 4:3 frame, the frame, at its size. */
+        size[0] = (float)s_display_w;
+        size[1] = (float)s_display_h;
+        image_display_scaled((struct Image*)s_position_handle, NULL, (const struct Point2F*)pos,
+                             directdraw_widescreen_margin() > 0 && !directdraw_is_framed() ? (const struct Point2F*)size : NULL);
         return 1;
     }
     return 0;
+}
+
+/* [divergence:widescreen] PORT-ONLY: moves the dialog's text windows, laid
+ * out at start-up around the display's centre, by dx. */
+static void lego_dialog_windows_shift(float dx)
+{
+    TextWindow* windows[4] = { legoGlobs_DialogTextWndTitle, legoGlobs_DialogTextWndMessage,
+                               legoGlobs_DialogTextWndOK, legoGlobs_DialogTextWndCancel };
+    int i;
+
+    for (i = 0; i < 4; i++) {
+        if (windows[i] != NULL) windows[i]->windowSize.x += dx;
+    }
 }
 
 /* MenuOptionPanelTextureUpdate [group 3C]: draws the in-game dialog and
@@ -9701,8 +9750,12 @@ int lego_menu_option_panel_texture_update(const char* title, const char* msg,
     int result = -1;
 
     if (legoGlobs_DialogImage && legoGlobs_DialogTextWndTitle && legoGlobs_DialogTextWndMessage) {
+        /* [divergence:widescreen] In the 4:3 frame (the front end's save
+         * prompt), the dialog is centred in the frame, not the display. */
+        float frameShift = (float)((directdraw_frame_width() - s_display_w) / 2);
+        lego_dialog_windows_shift(frameShift);
         lego_global_handle_position_apply_if_present();
-        pos[0] = (float)(s_display_w / 2) - (float)(legoGlobs_DialogImage->width >> 1);
+        pos[0] = (float)(directdraw_frame_width() / 2) - (float)(legoGlobs_DialogImage->width >> 1); // [divergence:widescreen]
         pos[1] = (float)(s_display_h / 2) - (float)(legoGlobs_DialogImage->height >> 1);
         image_display_scaled(legoGlobs_DialogImage, NULL, (const struct Point2F*)pos, NULL);
         text_buffer_reset_target(legoGlobs_DialogTextWndTitle);
@@ -9755,6 +9808,7 @@ int lego_menu_option_panel_texture_update(const char* title, const char* msg,
         text_buffer_draw_wrapped(legoGlobs_DialogTextWndMessage, 0, 1.0f, NULL);
         text_buffer_draw_wrapped(legoGlobs_DialogTextWndOK, 0, 1.0f, NULL);
         text_buffer_draw_wrapped(legoGlobs_DialogTextWndCancel, 0, 1.0f, NULL);
+        lego_dialog_windows_shift(-frameShift); // [divergence:widescreen]
         return result;
     }
     return -1;
@@ -9772,6 +9826,9 @@ int lego_keep_running(void)
     saveOpen = save_slot_open();
     inGame = is_in_game();
     sound_subsystem_stop_all();
+    /* [divergence:widescreen] The rewards and the front end are 640x480
+     * pictures, centred in a mode wider than 4:3 (DirectDraw.c). */
+    directdraw_set_framed(TRUE);
     if (frontend_enabled_original()) {
         reward_prepare_level();
         reward_prepare_results();

@@ -20,6 +20,7 @@
 #include "viewports.h"
 #include "viewports_imports.h"
 #include "dxerror.h"
+#include "directdraw.h" // [divergence:widescreen] directdraw_frame_flush
 
 #include <miniwin/d3drm.h>
 #include "gods98/container_record.h"
@@ -254,6 +255,10 @@ void viewport_clear(Viewport* vp, int full)
 void viewport_render(Viewport* vp, Container* root, float delta)
 {
     HRESULT r;
+
+    /* [divergence:widescreen] A 640x480 screen in the 4:3 frame goes on the
+     * back buffer before the 3D view draws over it (DirectDraw.c). */
+    directdraw_frame_flush();
 
     vp->rendering = 1;
 

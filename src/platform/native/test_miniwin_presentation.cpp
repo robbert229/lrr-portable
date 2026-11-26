@@ -85,6 +85,37 @@ static void CheckFit()
     CHECK(w == 320 && h == 240);
 }
 
+// ---- the field of view of a viewport wider than 4:3 ------------------------
+
+static void CheckFieldAspect()
+{
+    float sx = 0.0f, sy = 0.0f;
+    const float front = 1.0f, field = 0.5f; // base scale 2
+
+    // D3DRM's framing, the default: the field spans the width.
+    CHECK(Miniwin_GetViewportFieldAspect() == 0.0f);
+    Miniwin_ViewportProjectionScales(4.0f / 3.0f, front, field, &sx, &sy);
+    CHECK(Near(sx, 2.0f) && Near(sy, 2.0f * 4.0f / 3.0f));
+    Miniwin_ViewportProjectionScales(16.0f / 9.0f, front, field, &sx, &sy);
+    CHECK(Near(sx, 2.0f) && Near(sy, 2.0f * 16.0f / 9.0f)); // less above and below
+
+    // Framing a 4:3 area: 4:3 is unchanged, a wider viewport keeps the
+    // vertical field and widens, a narrower one keeps D3DRM's framing.
+    Miniwin_SetViewportFieldAspect(4.0f / 3.0f);
+    CHECK(Near(Miniwin_GetViewportFieldAspect(), 4.0f / 3.0f));
+    Miniwin_ViewportProjectionScales(4.0f / 3.0f, front, field, &sx, &sy);
+    CHECK(Near(sx, 2.0f) && Near(sy, 2.0f * 4.0f / 3.0f));
+    Miniwin_ViewportProjectionScales(16.0f / 9.0f, front, field, &sx, &sy);
+    CHECK(Near(sy, 2.0f * 4.0f / 3.0f));
+    CHECK(Near(sx, 2.0f * 0.75f)); // 4:3 over 16:9 of the width's scale: a third more at the sides
+    Miniwin_ViewportProjectionScales(1.0f, front, field, &sx, &sy);
+    CHECK(Near(sx, 2.0f) && Near(sy, 2.0f));
+
+    // A negative aspect is D3DRM's framing again.
+    Miniwin_SetViewportFieldAspect(-1.0f);
+    CHECK(Miniwin_GetViewportFieldAspect() == 0.0f);
+}
+
 // ---- the window and its messages -------------------------------------------
 
 struct Seen {
@@ -285,6 +316,7 @@ int main()
 {
     SDL_SetLogPriority(SDL_LOG_CATEGORY_CUSTOM, SDL_LOG_PRIORITY_CRITICAL);
     CheckFit();
+    CheckFieldAspect();
 
     SDL_SetHint(SDL_HINT_VIDEO_DRIVER, MiniwinTestVideoDriver());
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");

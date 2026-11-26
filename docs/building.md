@@ -115,7 +115,10 @@ window on SDL GPU.
 
 miniwin fits the game's 640x480 picture into a window of any size, as
 isle-portable does: the largest 4:3 area of the window, with black bars at
-the sides or above and below. SDL GPU draws the 3D view at the window's
+the sides or above and below. With `[tweaks]` `widescreen = true`, the
+default, a window wider than 4:3 widens the game's mode to its aspect
+instead (853x480 for 16:9): levels fill it, and the 640x480 screens are
+drawn in a 4:3 frame centred in it ([divergences](divergences.md)). SDL GPU draws the 3D view at the window's
 resolution and scales the interface up, nearest-neighbour at whole-number
 scales and bilinear otherwise; the software renderer draws the whole picture
 at 640x480 and scales it. The mouse follows the fit. `[tweaks]` `display =

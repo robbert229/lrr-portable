@@ -26,6 +26,7 @@
 
 #include "images_unit.h"
 #include "images_imports.h"
+#include "directdraw.h" // [divergence:widescreen] directdraw_widescreen_margin
 
 
 #define IMAGE_GLOB_FLAG_INITIALISED 0x00000001
@@ -647,6 +648,7 @@ void Image_GetScreenshot(Image* image, unsigned int xsize, unsigned int ysize)
     DDSURFACEDESC2 desc;
     IDirectDrawSurface4* surf;
     RECT rect;
+    RECT centre; // [divergence:widescreen]
     long r;
 
     memset(&desc, 0, sizeof(desc));
@@ -667,7 +669,13 @@ void Image_GetScreenshot(Image* image, unsigned int xsize, unsigned int ysize)
     rect.top = 0;
     rect.right = xsize;
     rect.bottom = ysize;
-    surf->Blt(&rect, DirectDraw_bSurf(), NULL, (DDBltFlags)0, NULL);
+    /* [divergence:widescreen] The thumbnail is 4:3: in a mode wider than
+     * 4:3, the screen's centre at 4:3, not the whole screen squeezed. */
+    centre.left = directdraw_widescreen_margin() / 2;
+    centre.top = 0;
+    centre.right = centre.left + (LONG)directDrawGlobs.height * 4 / 3;
+    centre.bottom = (LONG)directDrawGlobs.height;
+    surf->Blt(&rect, DirectDraw_bSurf(), directdraw_widescreen_margin() > 0 ? &centre : NULL, (DDBltFlags)0, NULL);
 
     Image_InitFromSurface(image, surf, xsize, ysize, 0, 0);
 }

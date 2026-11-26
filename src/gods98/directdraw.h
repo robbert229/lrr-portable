@@ -120,6 +120,32 @@ unsigned int directdraw_get_colour(struct IDirectDrawSurface4* surf,
                                     unsigned int colour);              /* 0047d2d0 */
 unsigned int directdraw_count_mask_bits(unsigned int mask);           /* 0047d3f0 */
 
+/* [divergence:widescreen] PORT-ONLY (DirectDraw.c): the 4:3 frame the
+ * 640x480 screens are drawn in when Init.c has widened the mode
+ * (tweaks:widescreen). directdraw_set_frame_width records the width the
+ * mode was widened from, the frame's; 0, the default, is a mode that was
+ * not widened, which has no frame. Framed, the back buffer
+ * (directDrawGlobs.bSurf) is the frame and each flip shows it centred; the
+ * display's size (Main.c's appWidth) stays the mode's. directdraw_set_framed
+ * does nothing in a mode that was not widened, and returns whether the game
+ * was framed. directdraw_frame_width is the width the game draws in: the
+ * frame's while framed, else the display's. directdraw_frame_x is the
+ * frame's left edge on the screen, 0 when not framed. */
+void directdraw_set_frame_width(unsigned int width);
+int directdraw_set_framed(int framed);
+int directdraw_is_framed(void);
+int directdraw_frame_width(void);
+int directdraw_frame_x(void);
+/* How much Init.c widened the mode, framed or not: 0 in a mode that was not
+ * widened, 213 at 853x480. The level's interface, laid out for 640x480,
+ * moves what belongs at the right edge right by this much, and what is
+ * centred by half of it. */
+int directdraw_widescreen_margin(void);
+/* Puts the frame on the back buffer now, before the 3D device draws over
+ * it; what is drawn after that in the frame goes on top, keyed. Nothing
+ * when not framed, or already done this frame. */
+void directdraw_frame_flush(void);
+
 #ifdef __cplusplus
 }
 #endif
