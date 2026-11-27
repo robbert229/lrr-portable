@@ -169,8 +169,34 @@ installed separately by Flatpak and are not part of the package.
 
 
 -------------------------------------------------------------------------------
-Not included: FFmpeg
+FFmpeg (macOS packages)
 -------------------------------------------------------------------------------
-The game's movies play through FFmpeg 7 or newer (https://ffmpeg.org), which
-lrr-portable loads at run time when it is installed on your system. No
-package includes FFmpeg; your copy comes under its own licence.
+Source:  https://ffmpeg.org/releases/ffmpeg-9.1.tar.xz (SHA-256
+         1a4d394ae63d190a526cd052eb4415c156b5c5e2df37efab41a7de0b8fde2433),
+         unmodified; every lrr-portable release attaches the same file
+Licence: GNU Lesser General Public License, version 2.1 or later (the text
+         is in LegoRR.app/Contents/Resources/FFmpeg-COPYING.LGPLv2.1.txt)
+
+This software uses code of FFmpeg (https://ffmpeg.org) licensed under the
+LGPLv2.1, and its source can be downloaded from the address above.
+
+The macOS app (LegoRR.app) bundles four FFmpeg libraries for the game's
+movies, in LegoRR.app/Contents/Frameworks: libavformat, libavcodec,
+libavutil and libswscale. They are built by packaging/macos/ffmpeg/build.sh
+in the lrr-portable source, which lists the configure options: only the AVI
+demuxer, the file protocol and the decoders the movies need, without
+--enable-gpl, --enable-version3 or --enable-nonfree. libavcodec reports
+the options it was built with (avcodec_configuration()).
+
+The game loads these libraries when it starts a movie; it is not linked
+against them. To use another build of FFmpeg 7 or later, replace the files
+in LegoRR.app/Contents/Frameworks with libraries of the same names, then
+sign the app again so macOS will open it:
+
+    codesign --force --deep --sign - LegoRR.app
+
+Copyright (C) 2000-2026 the FFmpeg developers.
+
+On the other systems, no package includes FFmpeg: the game's movies play
+through FFmpeg 7 or newer when it is installed on your system, and your copy
+comes under its own licence.

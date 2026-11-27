@@ -67,6 +67,24 @@ skips its movies. `-DLRR_MOVIES=OFF` builds the video library as a stub that
 always reports no movies; it is off already on Emscripten, iOS, Android, the Nintendo
 targets, Vita and DOS.
 
+The macOS packages bundle their own FFmpeg, so their movies play without
+one installed. `packaging/macos/ffmpeg/build.sh build PREFIX` builds it from
+the pinned FFmpeg release tarball, checked against its SHA-256: a minimal
+LGPL 2.1 build with only the AVI demuxer and the decoders the movies use
+(Indeo 5, Microsoft Video 1, Microsoft ADPCM and PCM) and the test clip's,
+and nothing found on the build machine. It fails if the libraries report
+another licence or link anything outside the system. Configure with
+`-DLRR_FFMPEG_DIR=PREFIX` and the four libraries go into
+`LegoRR.app/Contents/Frameworks`, in the build tree and in the package, with
+FFmpeg's licence in `Contents/Resources`. The game tries
+`@executable_path/../Frameworks/` before the system's names, and the
+`video_bundled` test decodes the test clip through that FFmpeg:
+
+```sh
+packaging/macos/ffmpeg/build.sh build /tmp/lrr-ffmpeg
+cmake -S . -B build -DLRR_FFMPEG_DIR=/tmp/lrr-ffmpeg
+```
+
 miniwin emulates a 16-bit RGB565 display and describes its software renderer
 as a hardware device, which is what `-best` looks for (see the
 `MINIWIN_PIXELFORMAT` and `MINIWIN_SOFTWARE_HAL` definitions in
@@ -749,7 +767,8 @@ needs:
   It is neither Developer ID signed nor notarized, so Gatekeeper asks on the
   first launch (right-click, Open). With packaging on, the build tree's
   program is `build/LegoRR.app/Contents/MacOS/LegoRR`, which `make run` finds.
-  `packaging/macos/verify.sh` checks a DMG.
+  CI bundles FFmpeg in it (`LRR_FFMPEG_DIR`, above). `packaging/macos/verify.sh`
+  checks a DMG, the bundled FFmpeg included.
 - **Windows:** a ZIP with `LegoRR.exe`, `LICENSE.txt`,
   `THIRD-PARTY-NOTICES.txt`, the Visual C++ runtime DLLs in an MSVC build
   (`InstallRequiredSystemLibraries`), and `SDL3.dll` for a shared SDL3.

@@ -24,6 +24,13 @@ lrr_unit_test(video_missing
     "LRR_VIDEO_LIBSWSCALE=\"liblrr-missing-swscale.so\""
   LINK SDL3::SDL3
   LABELS video)
+# The FFmpeg the macOS packages bundle (LRR_FFMPEG_DIR), found first on
+# DYLD_LIBRARY_PATH: with no SKIP_RETURN_CODE, failing to load it fails.
+if(APPLE AND LRR_BUNDLED_FFMPEG_LIBS)
+  lrr_unit_test_variant(video_bundled OF video
+    LABELS video
+    ENVIRONMENT "SDL_AUDIO_DRIVER=dummy" "DYLD_LIBRARY_PATH=${LRR_FFMPEG_DIR}/lib")
+endif()
 # The LRR_MOVIES=OFF stub, which every build checks whatever the option.
 lrr_unit_test(video_stub
   SOURCES ${SRC_ROOT}/library/test_video_ffmpeg.cpp ${SRC_ROOT}/library/video_ffmpeg.cpp

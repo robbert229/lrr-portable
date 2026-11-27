@@ -82,6 +82,7 @@ workflows that build every pull request, and attaches these:
 | `lrr-portable-<v>-Linux-x86_64.flatpak`, `-aarch64.flatpak` | `native-packages`, Flatpak jobs |
 | `lrr-portable-<v>-Android-debug-test.apk` (test build) | `native-hosts`, `android` |
 | `lrr-portable-<v>-3DS-homebrew-test.zip` (test build) | `native-hosts`, `nintendo-3ds`, zipped by the release workflow |
+| `ffmpeg-<FFmpeg version>.tar.xz`, the source of the FFmpeg the macOS packages bundle | the release workflow, from ffmpeg.org (`packaging/macos/ffmpeg/build.sh fetch`) |
 | `SHA256SUMS` | the release workflow |
 
 A pull request that changes `release.yml`, the release tools, the two
@@ -97,7 +98,11 @@ Each Windows ZIP holds `LegoRR.exe`, `LICENSE.txt`, `THIRD-PARTY-NOTICES.txt`,
 it runs without the Visual C++ Redistributable installed. Each DMG holds
 `LegoRR.app`, with the licence and notices in `Contents/Resources` and
 beside the app, and `recomplauncher.json`; each macOS ZIP holds the same
-files, for RecompLauncher. The Linux packages hold them in `share/doc/lrr-portable`.
+files, for RecompLauncher. The app bundles FFmpeg for the movies in
+`Contents/Frameworks`, with FFmpeg's licence (LGPL 2.1) in
+`Contents/Resources`; `THIRD-PARTY-NOTICES.txt` says where its source is,
+and the release attaches that source, the unmodified FFmpeg tarball, as the
+LGPL asks. The Linux packages hold them in `share/doc/lrr-portable`.
 
 `recomplauncher.json` (`packaging/recomplauncher.json`) is
 [RecompLauncher](https://recomplauncher.com)'s manifest: it says how to ask
@@ -305,9 +310,12 @@ decision for the owner. Each part needs the following.
   1. Import the certificate into a temporary keychain.
   2. Sign `LegoRR.app` with `codesign --options runtime --timestamp`. The
      `install(CODE)` step in `packaging/CMakeLists.txt` does the ad-hoc
-     signing today. The hardened runtime blocks loading FFmpeg's
-     Homebrew dylibs, so the app needs the
-     `com.apple.security.cs.disable-library-validation` entitlement.
+     signing today. Sign the bundled FFmpeg libraries in
+     `Contents/Frameworks` with the same identity. Keep the
+     `com.apple.security.cs.disable-library-validation` entitlement too:
+     without it the hardened runtime loads only libraries signed by the
+     same team, so a player could no longer replace the bundled FFmpeg
+     with their own build, which the LGPL lets them do.
   3. Sign the DMG, submit it with `xcrun notarytool submit --wait`, and
      staple it with `xcrun stapler staple`.
 

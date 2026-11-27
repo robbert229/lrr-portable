@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: LGPL-3.0-or-later
 # Checks a macOS package: mounts the disk image CPack wrote and examines the
-# app bundle inside it, then runs LegoRR once.
+# app bundle inside it, then runs LegoRR once. The bundle must carry the
+# FFmpeg of packaging/macos/ffmpeg (a build with LRR_FFMPEG_DIR): its four
+# libraries, linking only the system and each other, built without a
+# licence-changing configure flag, and its licence.
 #
 #   packaging/macos/verify.sh build/dist/lrr-portable-*-Darwin-*.dmg
 #
@@ -34,6 +37,25 @@ plutil -lint "$plist"
 test "$(plutil -extract CFBundleIdentifier raw "$plist")" = "io.github.robbert229.LegoRR"
 test "$(plutil -extract CFBundleExecutable raw "$plist")" = "LegoRR"
 test "$(plutil -extract CFBundleIconFile raw "$plist")" = "AppIcon.icns"
+frameworks="$app/Contents/Frameworks"
+test -f "$app/Contents/Resources/FFmpeg-COPYING.LGPLv2.1.txt"
+for lib in avformat avcodec avutil swscale; do
+    dylib="$(find "$frameworks" -name "lib$lib.[0-9]*.dylib" | head -n 1)"
+    test -n "$dylib" || { echo "verify.sh: no lib$lib in $frameworks" >&2; exit 1; }
+    otool -L "$dylib" | tail -n +2 | awk '{print $1}' | while read -r dep; do
+        case "$dep" in
+            @loader_path/*|/usr/lib/*|/System/Library/*) ;;
+            *) echo "verify.sh: $dylib links $dep" >&2; exit 1 ;;
+        esac
+    done
+done
+# libavcodec keeps its configure line (avcodec_configuration()).
+configuration="$(strings "$frameworks"/libavcodec.*.dylib | grep -e '--disable-everything' | head -n 1)"
+test -n "$configuration" || { echo "verify.sh: libavcodec has no configure line" >&2; exit 1; }
+case "$configuration" in
+    *--enable-gpl*|*--enable-version3*|*--enable-nonfree*)
+        echo "verify.sh: the bundled FFmpeg is not LGPL 2.1: $configuration" >&2; exit 1 ;;
+esac
 codesign --verify --deep --strict --verbose=2 "$app"
 lipo -archs "$app/Contents/MacOS/LegoRR"
 otool -L "$app/Contents/MacOS/LegoRR"
