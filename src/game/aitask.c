@@ -55,6 +55,20 @@ static int aitask_fix_idleness_syndrome(void)
     return LRR_GetFixIdlenessSyndrome(); // [library:config]
 }
 
+/* [divergence:player-job-pause] PORT-ONLY: tweaks:fix_idleness_syndrome
+ * (docs/divergences.md, "Raiders take the job they were sent to"). A job
+ * the player asked for (flag 0x10000, set by 00402000 when the player sends
+ * a unit to dig, clear or collect it) that is paused (timeIn) turns away the
+ * unit the player sent, once it stands at the job; the unit then takes
+ * other work and the order is lost. With the fix, the idle unit update
+ * (00404280) checks such a job as though it were not paused. A job that
+ * takes any unit, wherever it stands (0x100000), keeps its pause. */
+static int aitask_player_job_ignores_pause(const AITask* task)
+{
+    return aitask_fix_idleness_syndrome() && (task->flags & 0x10000) &&
+           !(task->flags & 0x100000) && task->timeIn > 0.0f;
+}
+
 /* x87 constants. MSVC pools float literals itself, so a literal in the code
  * may replace an item (priorities.c does); an annotated static (config.c)
  * binds the address explicitly. Keep whichever matches.
@@ -4453,11 +4467,23 @@ int aitask_cmd_entity_command_chain_tick(struct Lego_Object* object, void* data)
                                                     object, NULL))) {
                         AITaskPoint2I taskPos;
                         int noRoute;
+                        int eligible;
+                        /* [divergence:player-job-pause] The unit takes the
+                         * job below only when it stands at it, so the pause
+                         * (which keeps units from routing to the job) is
+                         * set aside for the check and kept. */
+                        float pausedTimeIn = task->timeIn;
+                        int ignorePause = aitask_player_job_ignores_pause(task);
                         taskPos.x = task->blockX;
                         taskPos.y = task->blockY;
-                        if (aitask_place_command_eligibility_check(task, object, NULL, &taskPos.x,
-                                                                   &noRoute, 1, 1) &&
-                            !noRoute) {
+                        if (ignorePause)
+                            task->timeIn = 0.0f;
+                        eligible = aitask_place_command_eligibility_check(task, object, NULL,
+                                                                          &taskPos.x, &noRoute,
+                                                                          1, 1);
+                        if (ignorePause)
+                            task->timeIn = pausedTimeIn;
+                        if (eligible && !noRoute) {
                             AITaskPoint2I pos;
                             if (task->flags & 0x100000)
                                 break;
